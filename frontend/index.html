@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vagas.io | Gestão de Candidaturas Profissional</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: "#F9F8F6",
+            ink: "#1C1917",
+            graphite: "#292524",
+            taupe: "#57534E",
+            stone: "#A8A29E",
+            borderLight: "#E7E5E4",
+            accessible: { yellow: "#FFFF00", blue: "#00FFFF", red: "#FF0000" }
+          },
+          fontFamily: {
+            serif: ['"Instrument Serif"', "serif"],
+            sans: ['"Plus Jakarta Sans"', "sans-serif"]
+          },
+          borderRadius: { xl: "1rem", "2xl": "1.5rem", "3xl": "2rem" }
+        }
+      }
+    };
+  </script>
+
+  <link rel="stylesheet" href="./src/styles/app.css" />
+</head>
+
+<body class="min-h-screen font-sans">
+  <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+
+  <nav class="border-b border-borderLight px-8 py-6 flex justify-between items-center bg-paper/90 backdrop-blur-xl sticky top-0 z-50">
+    <div class="flex items-center gap-10">
+      <span class="font-serif text-3xl italic tracking-tighter cursor-default">vagas.io</span>
+      <div class="hidden md:flex items-center gap-6 border-l border-borderLight pl-10">
+        <button data-toggle-contrast class="text-[10px] font-bold uppercase tracking-[0.2em] hover:opacity-70 transition-colors flex items-center gap-2">
+          ◑ Modo Acessibilidade
+        </button>
+      </div>
+    </div>
+    <div id="nav-actions" class="flex items-center gap-6"></div>
+  </nav>
+
+  <main id="main-content" class="max-w-[1400px] mx-auto px-6 lg:px-12">
+    <section id="view-landing" class="hidden py-32 text-center space-y-12">
+      <h1 class="font-serif text-8xl lg:text-[10rem] tracking-tighter leading-none">Gestão.<br />Carreira.</h1>
+      <p class="text-taupe max-w-xl mx-auto text-lg font-light leading-relaxed">
+        Um ecossistema local e acessível para gerenciar suas candidaturas com precisão editorial e design inclusivo.
+      </p>
+      <div class="flex justify-center gap-6 pt-8">
+        <button data-open-auth="login" class="bg-ink text-paper px-12 py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-taupe transition-all editorial-shadow">Acessar Painel</button>
+        <button data-open-auth="register" class="border border-borderLight px-12 py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-white transition-all">Criar Conta</button>
+      </div>
+    </section>
+
+    <section id="view-dashboard" class="hidden py-16 space-y-16 modal-enter">
+      <header class="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-borderLight pb-16">
+        <div class="space-y-4">
+          <h1 class="font-serif text-8xl lg:text-9xl tracking-tighter leading-none">Fluxo.</h1>
+          <p class="text-taupe uppercase tracking-[0.4em] text-[10px] font-bold">Arquivo de Candidaturas Ativas</p>
+        </div>
+        <div class="flex flex-wrap gap-4">
+          <button data-open-job class="px-10 py-5 bg-ink text-paper text-[10px] font-bold uppercase tracking-[0.3em] rounded-full hover:bg-taupe transition-all editorial-shadow">
+            + Registrar Vaga
+          </button>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 p-10 editorial-card rounded-3xl editorial-shadow">
+        <div class="space-y-3">
+          <label for="filter-q" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Busca Textual</label>
+          <input type="text" id="filter-q" placeholder="Ex: Desenvolvedor..." class="editorial-input text-sm" />
+        </div>
+
+        <div class="space-y-3">
+          <label for="filter-status" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Filtrar Status</label>
+          <select id="filter-status" class="editorial-input text-sm bg-white">
+            <option value="">Todos os Registros</option>
+            <option value="Ativa">Candidatura Ativa</option>
+            <option value="Pausada">Pausada</option>
+            <option value="Encerrada">Encerrada</option>
+          </select>
+        </div>
+
+        <div class="space-y-3">
+          <label for="filter-fase" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Filtrar Fase</label>
+          <input type="text" id="filter-fase" placeholder="Ex: Entrevista" class="editorial-input text-sm" />
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse" aria-label="Tabela de candidaturas">
+          <thead class="bg-paper border-y border-borderLight text-left">
+            <tr>
+              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Registro</th>
+              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Estágio</th>
+              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Status</th>
+              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-stone text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-list" class="divide-y divide-borderLight"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Auth Modal -->
+  <div id="auth-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-label="Autenticação">
+    <div class="absolute inset-0 bg-ink/40 backdrop-blur-md" data-close-auth></div>
+    <div class="editorial-card w-full max-w-lg relative z-10 p-12 rounded-3xl editorial-shadow modal-enter">
+      <header class="mb-10 text-center">
+        <h2 id="auth-title" class="font-serif text-5xl tracking-tight">Entrar.</h2>
+      </header>
+
+      <form id="form-login" class="space-y-6 hidden">
+        <input type="email" id="login-email" placeholder="Seu e-mail" required class="editorial-input" />
+        <input type="password" id="login-password" placeholder="Sua senha" required class="editorial-input" />
+        <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Acessar Sistema</button>
+        <p class="text-center text-[10px] uppercase tracking-widest opacity-40">
+          Novo aqui?
+          <button type="button" onclick="window.__uiSwitchAuth?.('register')" class="underline font-bold">Criar conta</button>
+        </p>
+      </form>
+
+      <form id="form-register" class="space-y-6 hidden">
+        <input type="text" id="reg-name" placeholder="Nome Completo" required class="editorial-input" />
+        <input type="email" id="reg-email" placeholder="E-mail" required class="editorial-input" />
+        <input type="password" id="reg-password" placeholder="Senha (mín. 6 caracteres)" required class="editorial-input" minlength="6" />
+        <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Registrar Profissional</button>
+        <button type="button" onclick="window.__uiSwitchAuth?.('login')" class="w-full text-[10px] uppercase tracking-widest opacity-40 font-bold underline">Já possuo cadastro</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Job Modal -->
+  <div id="job-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Gestão de vaga">
+    <div class="absolute inset-0 bg-ink/20 backdrop-blur-sm" data-close-job></div>
+    <div class="editorial-card w-full max-w-5xl max-h-[90vh] overflow-y-auto relative z-10 p-12 lg:p-16 rounded-3xl editorial-shadow modal-enter">
+      <h2 id="job-modal-title" class="font-serif text-6xl tracking-tight mb-16">Ficha.</h2>
+
+      <form id="form-job" class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <input type="hidden" id="job-id" />
+
+        <div class="space-y-6">
+          <input type="text" id="job-title" placeholder="Título da Vaga *" required class="editorial-input font-medium" />
+          <input type="text" id="job-company" placeholder="Empresa *" required class="editorial-input font-medium" />
+          <input type="url" id="job-link" placeholder="Link da Vaga *" required class="editorial-input text-sm" />
+          <input type="url" id="job-cv" placeholder="Link do Currículo *" required class="editorial-input text-sm" />
+        </div>
+
+        <div class="space-y-6">
+          <div class="grid grid-cols-2 gap-6">
+            <input type="date" id="job-date" required class="editorial-input" />
+            <select id="job-status-field" required class="editorial-input bg-white">
+              <option value="Ativa">Ativa</option>
+              <option value="Pausada">Pausada</option>
+              <option value="Encerrada">Encerrada</option>
+            </select>
+          </div>
+
+          <input type="text" id="job-fase-field" placeholder="Fase Atual (Ex: Entrevista)" required class="editorial-input" />
+
+          <div class="p-6 border border-borderLight rounded-2xl flex items-center justify-between">
+            <label for="job-action-bool" class="text-[10px] font-bold uppercase tracking-[0.2em]">Exige Ação?</label>
+            <input type="checkbox" id="job-action-bool" class="w-7 h-7 accent-ink" />
+          </div>
+
+          <div id="job-action-fields" class="hidden space-y-6">
+            <input type="text" id="job-qual-acao" placeholder="Qual ação? (obrigatório se Exige Ação)" class="editorial-input" />
+            <input type="date" id="job-prazo-acao" placeholder="Prazo da ação (opcional)" class="editorial-input" />
+          </div>
+
+          <div class="p-6 border border-borderLight rounded-2xl flex items-center justify-between">
+            <label for="job-feedback-bool" class="text-[10px] font-bold uppercase tracking-[0.2em]">Recebeu feedback?</label>
+            <input type="checkbox" id="job-feedback-bool" class="w-7 h-7 accent-ink" />
+          </div>
+
+          <div id="job-feedback-fields" class="hidden space-y-6">
+            <textarea id="job-feedback-txt" rows="3" placeholder="Resumo do feedback (obrigatório se recebeu feedback)" class="editorial-input"></textarea>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 flex justify-end gap-8 pt-10 border-t border-borderLight mt-6">
+          <button type="button" data-close-job class="text-[10px] font-bold uppercase tracking-[0.3em] opacity-30">Cancelar</button>
+          <button type="submit" class="bg-ink text-paper px-16 py-5 rounded-full font-bold uppercase tracking-widest text-xs">Arquivar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-root" class="fixed bottom-10 right-10 z-[250] flex flex-col gap-4" role="alert" aria-live="polite"></div>
+
+  <div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
+  <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+
+  <script type="module">
+    import { ui } from "./src/js/ui.js";
+    window.__uiSwitchAuth = (type) => ui.switchAuth(type);
+    // Abrir modal por botões inline antigos
+  </script>
+  <script type="module" src="./src/js/main.js"></script>
+</body>
+</html>

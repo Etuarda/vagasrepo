@@ -1,0 +1,104 @@
+:root {
+  --paper: #F9F8F6;
+  --ink: #1C1917;
+  --taupe: #57534E;
+  --borderLight: #E7E5E4;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  transition: background-color 0.5s var(--ease-standard), color 0.5s var(--ease-standard);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.editorial-shadow {
+  box-shadow: 0 10px 40px -10px rgba(28, 25, 23, 0.08);
+}
+
+.editorial-card {
+  background-color: #ffffff;
+  border: 1px solid var(--borderLight);
+}
+
+.editorial-input {
+  width: 100%;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid rgba(168, 162, 158, 0.2);
+  border-radius: 1rem;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.editorial-input:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px rgba(28, 25, 23, 0.05);
+}
+
+.skip-link {
+  position: absolute;
+  top: -5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.75rem 1.5rem;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  border-radius: 9999px;
+}
+.skip-link:focus { top: 1.5rem; }
+
+/* High contrast mode */
+body.high-contrast {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+body.high-contrast .editorial-card {
+  background-color: #000 !important;
+  border: 3px solid #ffff00 !important;
+  color: #fff !important;
+}
+body.high-contrast .editorial-input {
+  background-color: #000 !important;
+  border: 2px solid #fff !important;
+  color: #ffff00 !important;
+}
+body.high-contrast button {
+  border: 2px solid #00ffff !important;
+  background-color: #000 !important;
+  color: #00ffff !important;
+}
+body.high-contrast button.bg-ink {
+  background-color: #00ffff !important;
+  color: #000 !important;
+  font-weight: 900 !important;
+}
+body.high-contrast .text-stone,
+body.high-contrast .text-taupe {
+  color: #fff !important;
+  opacity: 1 !important;
+}
+
+*:focus-visible {
+  outline: 4px solid #1c1917 !important;
+  outline-offset: 4px;
+}
+body.high-contrast *:focus-visible {
+  outline: 4px solid #ff0000 !important;
+}
+
+.modal-enter {
+  animation: modalFadeIn 0.4s var(--ease-standard) forwards;
+}
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
