@@ -21,7 +21,7 @@ export const ui = {
     const nav = document.getElementById("nav-actions");
     if (state.user) {
       nav.innerHTML = `
-        <span class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">Profissional: ${state.user.name}</span>
+        <span class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40"> voce so precisa de um SIM, ${state.user.name}</span>
         <button data-action="logout" class="text-[10px] font-bold uppercase tracking-[0.2em] underline">Sair</button>
       `;
     } else {
