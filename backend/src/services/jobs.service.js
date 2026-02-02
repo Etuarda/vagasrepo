@@ -1,21 +1,57 @@
 const { prisma } = require("../lib/prisma");
 
-async function listJobs(userId, { q, status, fase }) {
+function startOfDay(d) {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+function endOfDay(d) {
+  const out = new Date(d);
+  out.setHours(23, 59, 59, 999);
+  return out;
+}
+
+function parseYMD(ymd) {
+  // "YYYY-MM-DD" -> Date (local)
+  const [y, m, d] = String(ymd).split("-").map((n) => Number(n));
+  return new Date(y, m - 1, d);
+}
+
+async function listJobs(userId, { q, status, period, dateFrom, dateTo }) {
+  const and = [];
+
+  // A) Busca textual (case-insensitive)
+  if (q) {
+    and.push({
+      OR: [
+        { titulo: { contains: q, mode: "insensitive" } },
+        { empresa: { contains: q, mode: "insensitive" } },
+        { fase: { contains: q, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (status) and.push({ status });
+
+  // B) Filtro por período
+  // Observação: o modelo atual não possui createdAt; usamos o campo "data" (DateTime) como referência temporal.
+  if (period === "last7" || period === "last30") {
+    const days = period === "last7" ? 7 : 30;
+    const now = new Date();
+    const from = startOfDay(new Date(now.getTime() - days * 24 * 60 * 60 * 1000));
+    and.push({ data: { gte: from } });
+  } else if (dateFrom || dateTo) {
+    const range = {};
+    if (dateFrom) range.gte = startOfDay(parseYMD(dateFrom));
+    if (dateTo) range.lte = endOfDay(parseYMD(dateTo));
+    and.push({ data: range });
+  }
+
   return prisma.job.findMany({
     where: {
       userId,
-      AND: [
-        q
-          ? {
-              OR: [
-                { titulo: { contains: q, mode: "insensitive" } },
-                { empresa: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {},
-        status ? { status } : {},
-        fase ? { fase } : {},
-      ],
+      AND: and,
     },
     orderBy: { data: "desc" },
   });

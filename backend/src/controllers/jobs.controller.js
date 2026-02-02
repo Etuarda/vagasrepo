@@ -1,10 +1,22 @@
-const { jobSchema } = require("../schemas/job.schema");
+const { jobSchema, jobListQuerySchema } = require("../schemas/job.schema");
 const jobsService = require("../services/jobs.service");
 
 async function list(req, res, next) {
   try {
-    const { q, status, fase } = req.query;
-    const jobs = await jobsService.listJobs(req.userId, { q, status, fase });
+    const { q, status, period, dateFrom, dateTo } = jobListQuerySchema.parse(req.query);
+
+    // Regras de precedência:
+    // - Se period for last7/last30, ignora dateFrom/dateTo
+    // - Se period for ausente, usa dateFrom/dateTo se existirem
+    const filters = {
+      q,
+      status,
+      period,
+      dateFrom: period ? undefined : dateFrom,
+      dateTo: period ? undefined : dateTo,
+    };
+
+    const jobs = await jobsService.listJobs(req.userId, filters);
     return res.json(jobs);
   } catch (err) {
     return next(err);

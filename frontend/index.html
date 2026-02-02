@@ -15,12 +15,19 @@
       theme: {
         extend: {
           colors: {
-            paper: "#F9F8F6",
-            ink: "#1C1917",
+            // Base com contraste maior (modo normal)
+            paper: "#F7F5F2",
+            ink: "#12100E",
             graphite: "#ffffff",
-            taupe: "#57534E",
-            stone: "#A8A29E",
-            borderLight: "#E7E5E4",
+
+            // Textos secundários
+            taupe: "#3F3A36",
+            stone: "#6B645E",
+
+            // Bordas
+            borderLight: "#CFC9C2",
+
+            // Tokens modo acessibilidade (usados no CSS)
             accessible: { yellow: "#FFFF00", blue: "#00FFFF", red: "#FF0000" }
           },
           fontFamily: {
@@ -34,16 +41,18 @@
   </script>
 
   <link rel="stylesheet" href="./src/styles/app.css" />
+
+  <!-- jsPDF (para exportação PDF) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 
 <body class="min-h-screen font-sans">
-  
-
-  <nav class="border-b border-borderLight px-8 py-6 flex justify-between items-center bg-paper/90 backdrop-blur-xl sticky top-0 z-50">
+  <!-- HEADER/NAV: agora cinza quase preto -->
+  <nav class="border-b border-[#2B2A27] px-8 py-6 flex justify-between items-center bg-[#1F1E1C]/95 backdrop-blur-xl sticky top-0 z-50 text-paper">
     <div class="flex items-center gap-10">
       <span class="font-serif text-3xl italic tracking-tighter cursor-default">vagas.io</span>
-      <div class="hidden md:flex items-center gap-6 border-l border-borderLight pl-10">
-        <button data-toggle-contrast class="text-[10px] font-bold uppercase tracking-[0.2em] hover:opacity-70 transition-colors flex items-center gap-2">
+      <div class="hidden md:flex items-center gap-6 border-l border-[#2B2A27] pl-10">
+        <button data-toggle-contrast class="text-[10px] font-bold uppercase tracking-[0.2em] hover:opacity-80 transition-colors flex items-center gap-2">
           ◑ Modo Acessibilidade
         </button>
       </div>
@@ -93,19 +102,43 @@
         </div>
 
         <div class="space-y-3">
-          <label for="filter-fase" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Filtrar Fase</label>
-          <input type="text" id="filter-fase" placeholder="Ex: Entrevista" class="editorial-input text-sm" />
+          <label for="periodFilter" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Período</label>
+          <select id="periodFilter" class="editorial-input text-sm bg-white">
+            <option value="all">Tudo</option>
+            <option value="last7">Última semana</option>
+            <option value="last30">Último mês</option>
+            <option value="custom">Intervalo</option>
+          </select>
         </div>
+      </div>
+
+      <div id="dateRange" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8 p-10 editorial-card rounded-3xl editorial-shadow">
+        <div class="space-y-3">
+          <label for="dateFrom" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">De</label>
+          <input type="date" id="dateFrom" class="editorial-input text-sm" />
+        </div>
+
+        <div class="space-y-3">
+          <label for="dateTo" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Até</label>
+          <input type="date" id="dateTo" class="editorial-input text-sm" />
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button id="exportPdf" class="px-10 py-5 border border-borderLight rounded-full text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-white transition-all">
+          Exportar PDF
+        </button>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full border-collapse" aria-label="Tabela de candidaturas">
-          <thead class="bg-paper border-y border-borderLight text-left">
+          <!-- THEAD: agora cinza quase preto -->
+          <thead class="bg-[#1F1E1C] border-y border-[#2B2A27] text-left">
             <tr>
-              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Registro</th>
-              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Estágio</th>
-              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Status</th>
-              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-stone text-right">Ações</th>
+              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-paper/70">Registro</th>
+              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-paper/70">Estágio</th>
+              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-paper/70">Status</th>
+              <th scope="col" class="py-8 px-6 text-[9px] font-bold uppercase tracking-[0.4em] text-paper/70 text-right">Ações</th>
             </tr>
           </thead>
           <tbody id="jobs-list" class="divide-y divide-borderLight"></tbody>
@@ -200,13 +233,18 @@
 
   <div id="toast-root" class="fixed bottom-10 right-10 z-[250] flex flex-col gap-4" role="alert" aria-live="polite"></div>
 
-  <div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
-  <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <!-- VLibras: container + script -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper>
+      <div class="vw-plugin-top-wrapper"></div>
+    </div>
+  </div>
+  <script id="vlibras-script" src="https://vlibras.gov.br/app/vlibras-plugin.js" defer></script>
 
   <script type="module">
     import { ui } from "./src/js/ui.js";
     window.__uiSwitchAuth = (type) => ui.switchAuth(type);
-    // Abrir modal por botões inline antigos
   </script>
   <script type="module" src="./src/js/main.js"></script>
 </body>
