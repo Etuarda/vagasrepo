@@ -1,8 +1,20 @@
 :root {
-  --paper: #F9F8F6;
-  --ink: #1C1917;
-  --taupe: #57534E;
-  --borderLight: #E7E5E4;
+  /* Base (modo normal) */
+  --paper: #F7F5F2;
+  --ink: #12100E;
+
+  /* Texto secundário com mais contraste */
+  --taupe: #3F3A36;
+  --stone: #6B645E;
+
+  /* Bordas mais visíveis */
+  --borderLight: #CFC9C2;
+
+  /* Acessibilidade (tokens) */
+  --a11y-yellow: #FFFF00;
+  --a11y-blue: #00FFFF;
+  --a11y-red: #FF0000;
+
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -14,8 +26,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* reforça contraste mesmo usando Tailwind classes no HTML */
+.text-taupe { color: var(--taupe) !important; }
+.text-stone { color: var(--stone) !important; }
+
 .editorial-shadow {
-  box-shadow: 0 10px 40px -10px rgba(28, 25, 23, 0.08);
+  box-shadow: 0 10px 40px -10px rgba(18, 16, 14, 0.14);
 }
 
 .editorial-card {
@@ -27,7 +43,8 @@ body {
   width: 100%;
   padding: 1rem;
   background: #fff;
-  border: 1px solid rgba(168, 162, 158, 0.2);
+  color: var(--ink);
+  border: 1px solid rgba(63, 58, 54, 0.25); /* mais presente */
   border-radius: 1rem;
   outline: none;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -35,7 +52,7 @@ body {
 
 .editorial-input:focus {
   border-color: var(--ink);
-  box-shadow: 0 0 0 2px rgba(28, 25, 23, 0.05);
+  box-shadow: 0 0 0 3px rgba(18, 16, 14, 0.10);
 }
 
 .skip-link {
@@ -52,48 +69,77 @@ body {
 }
 .skip-link:focus { top: 1.5rem; }
 
-/* High contrast mode */
+/* Foco acessível */
+*:focus-visible {
+  outline: 4px solid var(--ink) !important;
+  outline-offset: 4px;
+}
+
+/* =========================
+   High contrast mode
+   - contraste por cores dedicadas
+   ========================= */
 body.high-contrast {
   background-color: #000 !important;
   color: #fff !important;
 }
+
+/* Cards com borda amarela (alto contraste) */
 body.high-contrast .editorial-card {
   background-color: #000 !important;
-  border: 3px solid #ffff00 !important;
+  border: 3px solid var(--a11y-yellow) !important;
   color: #fff !important;
 }
+
+/* Inputs: texto amarelo, borda branca, foco ciano */
 body.high-contrast .editorial-input {
   background-color: #000 !important;
   border: 2px solid #fff !important;
-  color: #ffff00 !important;
+  color: var(--a11y-yellow) !important;
 }
+
+body.high-contrast .editorial-input::placeholder {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+body.high-contrast .editorial-input:focus {
+  border-color: var(--a11y-blue) !important;
+  box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.25) !important;
+}
+
+/* Botões: borda ciano, texto ciano, fundo preto */
 body.high-contrast button {
-  border: 2px solid #00ffff !important;
+  border: 2px solid var(--a11y-blue) !important;
   background-color: #000 !important;
-  color: #00ffff !important;
+  color: var(--a11y-blue) !important;
 }
+
+/* Botões primários (bg-ink): CTA ciano */
 body.high-contrast button.bg-ink {
-  background-color: #00ffff !important;
+  background-color: var(--a11y-blue) !important;
   color: #000 !important;
   font-weight: 900 !important;
+  border-color: var(--a11y-blue) !important;
 }
+
+/* Textos utilitários no alto contraste */
 body.high-contrast .text-stone,
 body.high-contrast .text-taupe {
   color: #fff !important;
   opacity: 1 !important;
 }
 
-*:focus-visible {
-  outline: 4px solid #1c1917 !important;
+/* foco no alto contraste: vermelho */
+body.high-contrast *:focus-visible {
+  outline: 4px solid var(--a11y-red) !important;
   outline-offset: 4px;
 }
-body.high-contrast *:focus-visible {
-  outline: 4px solid #ff0000 !important;
-}
 
+/* animação */
 .modal-enter {
   animation: modalFadeIn 0.4s var(--ease-standard) forwards;
 }
+
 @keyframes modalFadeIn {
   from { opacity: 0; transform: scale(0.95) translateY(10px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
@@ -101,4 +147,10 @@ body.high-contrast *:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
+}
+
+/* VLibras sempre acima */
+[vw-access-button],
+[vw-plugin-wrapper] {
+  z-index: 99999 !important;
 }
