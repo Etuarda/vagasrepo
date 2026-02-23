@@ -1,5 +1,5 @@
 // src/app.js
-require("dotenv").config(); // TEM que rodar antes de ler ./config/env
+require("dotenv").config(); // precisa rodar antes de ./config/env
 
 const express = require("express");
 const cors = require("cors");
@@ -12,43 +12,79 @@ const jobsRoutes = require("./routes/jobs.routes");
 
 const app = express();
 
-// ---- CORS ----
-// Aceita múltiplas origens separadas por vírgula no .env (CORS_ORIGIN)
-// Ex: CORS_ORIGIN=http://127.0.0.1:5500,http://localhost:5500
+/**
+ * =========================
+ * CORS CONFIG
+ * =========================
+ * - Lê múltiplas origens via env (separadas por vírgula)
+ * - Fallback para dev local
+ * - Permite ferramentas sem origin (Postman, curl, healthcheck Render)
+ */
+
 const allowedOrigins = (env.CORS_ORIGIN || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
-// fallback seguro para dev local
-const devFallbackOrigins = ["http://127.0.0.1:5500", "http://localhost:5500"];
+const devFallbackOrigins = [
+  "http://127.0.0.1:5500",
+  "http://localhost:5500",
+];
+
 const origins = allowedOrigins.length ? allowedOrigins : devFallbackOrigins;
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // permite ferramentas sem origin (curl/postman)
-      if (!origin) return cb(null, true);
-      if (origins.includes(origin)) return cb(null, true);
-      return cb(new Error(`CORS bloqueado para: ${origin}`));
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // permite chamadas sem origin (ex: Postman, curl, Render healthcheck)
+    if (!origin) return callback(null, true);
 
-// Preflight (OPTIONS) — essencial para o navegador não bloquear antes do POST
-app.options("*", cors());
+    if (origins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS bloqueado para: ${origin}`));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: false, // true apenas se usar cookies
+};
+
+// Aplica CORS globalmente
+app.use(cors(corsOptions));
+
+// Garante que preflight use a MESMA configuração
+app.options("*", cors(corsOptions));
+
+/**
+ * =========================
+ * MIDDLEWARES
+ * =========================
+ */
 
 app.use(express.json());
 
-// Healthcheck simples (ajuda muito no debug)
-app.get("/health", (req, res) => res.json({ ok: true }));
+/**
+ * =========================
+ * HEALTHCHECK
+ * =========================
+ */
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
+});
 
+/**
+ * =========================
+ * ROUTES
+ * =========================
+ */
 app.use("/auth", authRoutes);
 app.use("/jobs", jobsRoutes);
 
-// Handler de erros por último
+/**
+ * =========================
+ * ERROR HANDLER
+ * =========================
+ */
 app.use(errorHandler);
 
 module.exports = { app };
