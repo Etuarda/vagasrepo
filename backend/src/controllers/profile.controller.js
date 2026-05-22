@@ -42,7 +42,8 @@ async function getProfile(req, res, next) {
 async function updateProfile(req, res, next) {
   try {
     const payload = profileSchema.parse(req.body);
-    const profile = await profileService.updateProfile(req.userId, req.body.profileId, payload);
+    const { profileId } = profileIdSchema.parse(req.body);
+    const profile = await profileService.updateProfile(req.userId, profileId, payload);
     return res.json({ user: profile });
   } catch (err) {
     return next(err);
@@ -52,7 +53,7 @@ async function updateProfile(req, res, next) {
 async function updateSkills(req, res, next) {
   try {
     const payload = skillsSchema.parse(req.body);
-    const profile = await profileService.updateSkills(req.userId, req.body.profileId, payload.skills);
+    const profile = await profileService.updateSkills(req.userId, payload.profileId, payload.skills);
     return res.json({ skills: profile.skills, user: profile });
   } catch (err) {
     return next(err);
@@ -62,7 +63,7 @@ async function updateSkills(req, res, next) {
 async function addProject(req, res, next) {
   try {
     const payload = projectSchema.parse(req.body);
-    const profile = await profileService.addProject(req.userId, req.body.profileId, payload);
+    const profile = await profileService.addProject(req.userId, payload.profileId, payload);
     return res.status(201).json({ projects: profile.projects, user: profile });
   } catch (err) {
     return next(err);
@@ -82,7 +83,7 @@ async function deleteProject(req, res, next) {
 async function addExperience(req, res, next) {
   try {
     const payload = experienceSchema.parse(req.body);
-    const profile = await profileService.addExperience(req.userId, req.body.profileId, payload);
+    const profile = await profileService.addExperience(req.userId, payload.profileId, payload);
     return res.status(201).json({ experiences: profile.experiences, user: profile });
   } catch (err) {
     return next(err);

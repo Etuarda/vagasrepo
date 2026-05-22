@@ -61,9 +61,16 @@ function parseResumeProfile(text) {
 
   const joined = lines.join(" ");
   const email = joined.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
-  const phone = joined.match(/(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?\d{4,5}[-\s]?\d{4}/)?.[0] || "";
-  const linkedin = joined.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s]+/i)?.[0] || "";
-  const github = joined.match(/https?:\/\/(?:www\.)?github\.com\/[^\s]+/i)?.[0] || "";
+  const contactLine = lines.find((line) => line.includes("@")) || joined;
+  const phone =
+    contactLine
+      .match(/(?:\+?55\s*)?\(?\d{2}\)?\s*\d{4,5}\s*[-.]?\s*\d{4}/)?.[0]
+      ?.replace(/\s*-\s*/g, "-")
+      .replace(/\s+/g, " ") || "";
+  const linkedinRaw = joined.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/[^\s|,;]+/i)?.[0] || "";
+  const githubRaw = joined.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[^\s|,;]+/i)?.[0] || "";
+  const linkedin = linkedinRaw && !/^https?:\/\//i.test(linkedinRaw) ? `https://${linkedinRaw}` : linkedinRaw;
+  const github = githubRaw && !/^https?:\/\//i.test(githubRaw) ? `https://${githubRaw}` : githubRaw;
   const firstLine = lines.find((line) => !line.includes("@") && line.length >= 5 && line.length <= 80) || "";
   const titleLine = lines.find((line) => /frontend|backend|fullstack|dados|data|developer|desenvolvedor|desenvolvedora|analista/i.test(line)) || "";
   const normalizedTitle = normalize(titleLine);
@@ -84,6 +91,28 @@ function parseResumeProfile(text) {
       : lines.slice(1, 5).join(" ").slice(0, 1200);
   const normalizedText = normalize(joined);
   const skills = KNOWN_SKILLS.filter((skill) => normalizedText.includes(normalize(skill)));
+  const experienceStart = lines.findIndex((line) => /^(experi[êe]ncia profissional|experi[êe]ncias|hist[oó]rico profissional|atua[cç][aã]o)$/i.test(line));
+  const experienceEnd =
+    experienceStart >= 0
+      ? lines.findIndex((line, index) => index > experienceStart && /^(educa[cç][aã]o|forma[cç][aã]o|forma[cç][aã]o acadêmica|habilidades|skills|projetos|certifica[cç][oõ]es)$/i.test(line))
+      : -1;
+  const experienceLines =
+    experienceStart >= 0
+      ? lines.slice(experienceStart + 1, experienceEnd > experienceStart ? experienceEnd : experienceStart + 9)
+      : [];
+  const experienceDescription = experienceLines.join(" ").slice(0, 1800);
+  const experienceHead = experienceLines.find((line) => /\||:/.test(line)) || "";
+  const experienceMatch = experienceHead.match(/^(.+?)\s*\|\s*(.+?):\s*(.+)$/);
+  const experiences = experienceDescription
+    ? [
+        {
+          role: experienceMatch?.[1]?.trim() || title || "Experiência profissional",
+          company: experienceMatch?.[2]?.trim() || "Extraído do currículo",
+          period: experienceMatch?.[3]?.trim() || "Informado no currículo",
+          description: experienceLines.slice(experienceMatch ? 1 : 0).join(" ").slice(0, 1800) || experienceDescription,
+        },
+      ]
+    : [];
 
   return {
     name: firstLine,
@@ -94,6 +123,7 @@ function parseResumeProfile(text) {
     github,
     summary,
     skills,
+    experiences,
   };
 }
 

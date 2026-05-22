@@ -16,10 +16,14 @@ export async function api(endpoint, options = {}, token = null) {
   }
 
   if (!res.ok) {
-    const message = data?.error || "Erro de comunicação";
+    const details = Array.isArray(data?.issues)
+      ? data.issues.map((issue) => issue.message).filter(Boolean).join("; ")
+      : "";
+    const message = details || data?.error || "Erro de comunicação";
     toast(message, "error");
     const err = new Error(message);
     err.status = res.status;
+    err.issues = data?.issues || [];
     throw err;
   }
 

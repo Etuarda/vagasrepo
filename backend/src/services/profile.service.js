@@ -139,6 +139,30 @@ async function updateProfileFromPdf(userId, profileId, extracted) {
     await updateSkills(userId, profile.id, skills);
   }
 
+  if (extracted.experiences?.length) {
+    const existing = await prisma.experience.findMany({
+      where: { profileId: profile.id },
+      select: { role: true, company: true, description: true },
+    });
+
+    const existingKeys = new Set(
+      existing.map((item) => `${item.company}|${item.role}|${item.description.slice(0, 80)}`)
+    );
+
+    const toCreate = extracted.experiences
+      .filter((item) => item.company && item.role && item.period && item.description)
+      .filter((item) => !existingKeys.has(`${item.company}|${item.role}|${item.description.slice(0, 80)}`))
+      .map((item) => ({
+        ...item,
+        userId,
+        profileId: profile.id,
+      }));
+
+    if (toCreate.length) {
+      await prisma.experience.createMany({ data: toCreate });
+    }
+  }
+
   return getProfile(userId, profile.id);
 }
 
