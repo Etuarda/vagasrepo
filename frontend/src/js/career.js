@@ -106,6 +106,7 @@ function renderProfileForm() {
   const profile = state.profile;
   if (!profile) return;
 
+  setValue("profile-profile-name", profile.profileName);
   setValue("profile-name", profile.name);
   setValue("profile-title-field", profile.title);
   setValue("profile-email-contact", profile.emailContact);
@@ -118,6 +119,17 @@ function renderProfileForm() {
   renderSkills();
   renderProjects();
   renderExperiences();
+}
+
+function renderProfileSelect() {
+  const select = document.getElementById("career-profile-select");
+  if (!select) return;
+
+  select.innerHTML = (state.profiles || [])
+    .map((profile) => `<option value="${profile.id}">${escapeHtml(profile.profileName)}</option>`)
+    .join("");
+
+  if (state.activeProfileId) select.value = state.activeProfileId;
 }
 
 function renderHistory() {
@@ -262,20 +274,36 @@ function renderMatchResult(result) {
 }
 
 export const career = {
+  async loadProfiles() {
+    const profiles = await api("/profiles", {}, state.token);
+    state.profiles = Array.isArray(profiles) ? profiles : [];
+    if (!state.activeProfileId && state.profiles[0]) {
+      state.activeProfileId = state.profiles[0].id;
+      localStorage.setItem("vagas_active_profile_id", state.activeProfileId);
+    }
+    renderProfileSelect();
+  },
+
   async loadProfile() {
-    const profile = await api("/profile", {}, state.token);
+    const query = state.activeProfileId ? `?profileId=${encodeURIComponent(state.activeProfileId)}` : "";
+    const profile = await api(`/profile${query}`, {}, state.token);
     state.profile = profile;
+    state.activeProfileId = profile.id;
+    localStorage.setItem("vagas_active_profile_id", profile.id);
     renderProfileForm();
   },
 
   async loadHistory() {
-    const history = await api("/optimized-resumes", {}, state.token);
+    const query = state.activeProfileId ? `?profileId=${encodeURIComponent(state.activeProfileId)}` : "";
+    const history = await api(`/optimized-resumes${query}`, {}, state.token);
     state.matchHistory = Array.isArray(history) ? history : [];
     renderHistory();
   },
 
   async saveProfile() {
     const payload = {
+      profileId: state.activeProfileId,
+      profileName: document.getElementById("profile-profile-name")?.value || "",
       name: document.getElementById("profile-name")?.value || "",
       title: document.getElementById("profile-title-field")?.value || "",
       emailContact: document.getElementById("profile-email-contact")?.value || "",
@@ -287,6 +315,7 @@ export const career = {
     };
     const out = await api("/profile", { method: "PUT", body: JSON.stringify(payload) }, state.token);
     state.profile = out.user;
+    await career.loadProfiles();
     renderProfileForm();
     ui.notify("Perfil profissional atualizado.");
   },
@@ -294,47 +323,47 @@ export const career = {
   async addSkill(name) {
     const current = state.profile?.skills || [];
     const skills = [...current, name].filter(Boolean);
-    const out = await api("/profile/skills", { method: "PUT", body: JSON.stringify({ skills }) }, state.token);
+    const out = await api("/profile/skills", { method: "PUT", body: JSON.stringify({ profileId: state.activeProfileId, skills }) }, state.token);
     state.profile = out.user;
     renderProfileForm();
   },
 
   async removeSkill(name) {
     const skills = (state.profile?.skills || []).filter((skill) => skill !== name);
-    const out = await api("/profile/skills", { method: "PUT", body: JSON.stringify({ skills }) }, state.token);
+    const out = await api("/profile/skills", { method: "PUT", body: JSON.stringify({ profileId: state.activeProfileId, skills }) }, state.token);
     state.profile = out.user;
     renderProfileForm();
   },
 
   async addProject(payload) {
-    const out = await api("/profile/projects", { method: "POST", body: JSON.stringify(payload) }, state.token);
+    const out = await api("/profile/projects", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
     state.profile = out.user;
     renderProfileForm();
     ui.notify("Projeto cadastrado.");
   },
 
   async removeProject(id) {
-    const out = await api(`/profile/projects/${id}`, { method: "DELETE" }, state.token);
+    const out = await api(`/profile/projects/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
     state.profile = out.user;
     renderProfileForm();
   },
 
   async addExperience(payload) {
-    const out = await api("/profile/experiences", { method: "POST", body: JSON.stringify(payload) }, state.token);
+    const out = await api("/profile/experiences", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
     state.profile = out.user;
     renderProfileForm();
     ui.notify("Experiência cadastrada.");
   },
 
   async removeExperience(id) {
-    const out = await api(`/profile/experiences/${id}`, { method: "DELETE" }, state.token);
+    const out = await api(`/profile/experiences/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
     state.profile = out.user;
     renderProfileForm();
   },
 
   async match(jobDescription) {
     const resumeFileId = document.getElementById("match-resume-file")?.value || undefined;
-    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, resumeFileId }) }, state.token);
+    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, resumeFileId, profileId: state.activeProfileId }) }, state.token);
     renderMatchResult(result);
     await career.loadHistory();
   },
@@ -345,7 +374,8 @@ export const career = {
   },
 
   async loadResumeFiles() {
-    const files = await api("/resume-files", {}, state.token);
+    const query = state.activeProfileId ? `?profileId=${encodeURIComponent(state.activeProfileId)}` : "";
+    const files = await api(`/resume-files${query}`, {}, state.token);
     state.resumeFiles = Array.isArray(files) ? files : [];
     renderResumeFiles();
   },
@@ -353,6 +383,7 @@ export const career = {
   async uploadResumeFile(file) {
     const formData = new FormData();
     formData.append("resume", file);
+    formData.append("profileId", state.activeProfileId);
     const out = await api(
       "/resume-files",
       {
@@ -363,7 +394,9 @@ export const career = {
       state.token
     );
     state.resumeFiles = [out, ...(state.resumeFiles || [])];
+    if (out.profile) state.profile = out.profile;
     renderResumeFiles();
+    renderProfileForm();
     ui.notify("Currículo PDF anexado.");
   },
 
@@ -414,6 +447,25 @@ export const career = {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
+  },
+
+  async createProfile(profileName) {
+    const profile = await api("/profiles", { method: "POST", body: JSON.stringify({ profileName }) }, state.token);
+    state.activeProfileId = profile.id;
+    localStorage.setItem("vagas_active_profile_id", profile.id);
+    await career.loadProfiles();
+    await career.loadProfile();
+    await career.loadResumeFiles();
+    await career.loadHistory();
+    ui.notify("Perfil criado.");
+  },
+
+  async switchProfile(profileId) {
+    state.activeProfileId = profileId;
+    localStorage.setItem("vagas_active_profile_id", profileId);
+    await career.loadProfile();
+    await career.loadResumeFiles();
+    await career.loadHistory();
   },
 
   setTab(tab) {

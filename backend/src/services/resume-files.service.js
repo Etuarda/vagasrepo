@@ -1,5 +1,6 @@
 const { PDFParse } = require("pdf-parse");
 const { prisma } = require("../lib/prisma");
+const profileService = require("./profile.service");
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
@@ -17,6 +18,85 @@ async function extractPdfText(buffer) {
   }
 }
 
+const KNOWN_SKILLS = [
+  "JavaScript",
+  "TypeScript",
+  "React",
+  "Node.js",
+  "Express",
+  "PostgreSQL",
+  "Prisma",
+  "SQL",
+  "Python",
+  "Power BI",
+  "Excel",
+  "HTML",
+  "CSS",
+  "Tailwind",
+  "Git",
+  "Docker",
+  "AWS",
+  "Scrum",
+  "Kanban",
+  "REST",
+  "API",
+  "Frontend",
+  "Backend",
+  "Fullstack",
+  "Dados",
+];
+
+function normalize(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function parseResumeProfile(text) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const joined = lines.join(" ");
+  const email = joined.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
+  const phone = joined.match(/(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?\d{4,5}[-\s]?\d{4}/)?.[0] || "";
+  const linkedin = joined.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s]+/i)?.[0] || "";
+  const github = joined.match(/https?:\/\/(?:www\.)?github\.com\/[^\s]+/i)?.[0] || "";
+  const firstLine = lines.find((line) => !line.includes("@") && line.length >= 5 && line.length <= 80) || "";
+  const titleLine = lines.find((line) => /frontend|backend|fullstack|dados|data|developer|desenvolvedor|desenvolvedora|analista/i.test(line)) || "";
+  const normalizedTitle = normalize(titleLine);
+  const title =
+    normalizedTitle.includes("backend")
+      ? "Desenvolvedora Backend"
+      : normalizedTitle.includes("frontend")
+        ? "Desenvolvedora Frontend"
+        : normalizedTitle.includes("fullstack")
+          ? "Desenvolvedora Fullstack"
+          : normalizedTitle.includes("dados") || normalizedTitle.includes("data")
+            ? "Profissional de Dados"
+            : titleLine.slice(0, 120);
+  const summaryStart = lines.findIndex((line) => /resumo|perfil|objetivo|sobre/i.test(line));
+  const summary =
+    summaryStart >= 0
+      ? lines.slice(summaryStart + 1, summaryStart + 5).join(" ").slice(0, 1200)
+      : lines.slice(1, 5).join(" ").slice(0, 1200);
+  const normalizedText = normalize(joined);
+  const skills = KNOWN_SKILLS.filter((skill) => normalizedText.includes(normalize(skill)));
+
+  return {
+    name: firstLine,
+    title,
+    emailContact: email,
+    phone,
+    linkedin,
+    github,
+    summary,
+    skills,
+  };
+}
+
 function serializeResumeFile(file) {
   return {
     id: file.id,
@@ -28,7 +108,7 @@ function serializeResumeFile(file) {
   };
 }
 
-async function uploadResumeFile(userId, file) {
+async function uploadResumeFile(userId, file, profileId = null) {
   if (!file) {
     const err = new Error("Envie um arquivo PDF");
     err.statusCode = 400;
@@ -48,9 +128,11 @@ async function uploadResumeFile(userId, file) {
   }
 
   const extractedText = await extractPdfText(file.buffer);
+  const profile = await profileService.resolveProfile(userId, profileId);
   const saved = await prisma.resumeFile.create({
     data: {
       userId,
+      profileId: profile.id,
       fileName: file.originalname || "curriculo.pdf",
       mimeType: file.mimetype,
       sizeBytes: file.size,
@@ -59,12 +141,16 @@ async function uploadResumeFile(userId, file) {
     },
   });
 
-  return serializeResumeFile(saved);
+  const extractedProfile = parseResumeProfile(extractedText);
+  const updatedProfile = await profileService.updateProfileFromPdf(userId, profile.id, extractedProfile);
+
+  return { ...serializeResumeFile(saved), profile: updatedProfile };
 }
 
-async function listResumeFiles(userId) {
+async function listResumeFiles(userId, profileId = null) {
+  const profile = await profileService.resolveProfile(userId, profileId);
   const rows = await prisma.resumeFile.findMany({
-    where: { userId },
+    where: { userId, profileId: profile.id },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -109,4 +195,5 @@ module.exports = {
   listResumeFiles,
   getResumeFile,
   deleteResumeFile,
+  parseResumeProfile,
 };

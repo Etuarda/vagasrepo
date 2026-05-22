@@ -3,6 +3,7 @@ const { z } = require("zod");
 const cleanString = (max = 500) => z.string().trim().max(max).default("");
 
 const profileSchema = z.object({
+  profileName: z.string().trim().min(2, "Nome do perfil deve ter pelo menos 2 caracteres").max(80),
   name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(120),
   title: cleanString(160),
   emailContact: z.string().trim().email("E-mail de contato inválido").or(z.literal("")).default(""),
@@ -11,6 +12,14 @@ const profileSchema = z.object({
   linkedin: cleanString(300),
   github: cleanString(300),
   summary: cleanString(3000),
+});
+
+const createProfileSchema = z.object({
+  profileName: z.string().trim().min(2, "Nome do perfil deve ter pelo menos 2 caracteres").max(80),
+});
+
+const profileIdSchema = z.object({
+  profileId: z.string().uuid("Perfil inválido").optional(),
 });
 
 const skillsSchema = z.object({
@@ -43,10 +52,13 @@ const matchSchema = z.object({
     .min(30, "Cole uma descrição de vaga com pelo menos 30 caracteres")
     .max(15000, "A descrição da vaga deve ter no máximo 15.000 caracteres"),
   resumeFileId: z.string().uuid("Currículo PDF inválido").optional(),
+  profileId: z.string().uuid("Perfil inválido").optional(),
 });
 
 module.exports = {
   profileSchema,
+  createProfileSchema,
+  profileIdSchema,
   skillsSchema,
   projectSchema,
   experienceSchema,

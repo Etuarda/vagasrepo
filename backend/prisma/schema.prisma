@@ -21,11 +21,37 @@ model User {
   summary      String @default("")
 
   jobs             Job[]
+  careerProfiles   CareerProfile[]
   skills           Skill[]
   projects         Project[]
   experiences      Experience[]
   optimizedResumes OptimizedResume[]
   resumeFiles      ResumeFile[]
+}
+
+model CareerProfile {
+  id           String   @id @default(uuid())
+  userId       String
+  profileName  String
+  name         String
+  title        String   @default("")
+  emailContact String   @default("")
+  phone        String   @default("")
+  location     String   @default("")
+  linkedin     String   @default("")
+  github       String   @default("")
+  summary      String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills           Skill[]
+  projects         Project[]
+  experiences      Experience[]
+  optimizedResumes OptimizedResume[]
+  resumeFiles      ResumeFile[]
+
+  @@index([userId])
 }
 
 model Job {
@@ -58,12 +84,15 @@ model Skill {
   id        String   @id @default(uuid())
   name      String
   userId    String
+  profileId String?
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, name])
+  @@unique([profileId, name])
   @@index([userId])
+  @@index([profileId])
 }
 
 model Project {
@@ -71,13 +100,16 @@ model Project {
   title       String
   description String
   userId      String
+  profileId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile      CareerProfile?      @relation(fields: [profileId], references: [id], onDelete: Cascade)
   technologies ProjectTechnology[]
 
   @@index([userId])
+  @@index([profileId])
 }
 
 model ProjectTechnology {
@@ -98,11 +130,14 @@ model Experience {
   period      String
   description String
   userId      String
+  profileId   String?
   createdAt   DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([profileId])
 }
 
 model OptimizedResume {
@@ -118,14 +153,17 @@ model OptimizedResume {
   matchedTechnologies String[] @default([])
   missingTechnologies String[] @default([])
   resumeFileId        String?
+  profileId           String?
   generatedPdf        Bytes?
   generatedFileName   String?
   createdAt           DateTime @default(now())
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resumeFile ResumeFile? @relation(fields: [resumeFileId], references: [id], onDelete: SetNull)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile    CareerProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  resumeFile ResumeFile?    @relation(fields: [resumeFileId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([profileId])
   @@index([resumeFileId])
   @@index([createdAt])
 }
@@ -133,6 +171,7 @@ model OptimizedResume {
 model ResumeFile {
   id            String   @id @default(uuid())
   userId        String
+  profileId     String?
   fileName      String
   mimeType      String
   sizeBytes     Int
@@ -141,8 +180,10 @@ model ResumeFile {
   createdAt     DateTime @default(now())
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile          CareerProfile?    @relation(fields: [profileId], references: [id], onDelete: SetNull)
   optimizedResumes OptimizedResume[]
 
   @@index([userId])
+  @@index([profileId])
   @@index([createdAt])
 }

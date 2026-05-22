@@ -16,6 +16,7 @@ let __vlibrasStarted = false;
 
 async function loadDashboardData() {
   await jobs.load();
+  await career.loadProfiles();
   await career.loadProfile();
   await career.loadResumeFiles();
   await career.loadHistory();
@@ -192,6 +193,28 @@ function wireEvents() {
     formProfile.addEventListener("submit", async (e) => {
       e.preventDefault();
       await career.saveProfile();
+    });
+  }
+
+  const profileSelect = document.getElementById("career-profile-select");
+  if (profileSelect) {
+    profileSelect.addEventListener("change", async (e) => {
+      await career.switchProfile(e.target.value);
+    });
+  }
+
+  const formCreateProfile = document.getElementById("form-create-profile");
+  if (formCreateProfile) {
+    formCreateProfile.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("new-profile-name");
+      const profileName = input?.value?.trim() || "";
+      if (!profileName) {
+        ui.notify("Informe um nome para o perfil.", "error");
+        return;
+      }
+      await career.createProfile(profileName);
+      input.value = "";
     });
   }
 

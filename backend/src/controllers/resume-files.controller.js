@@ -2,7 +2,7 @@ const resumeFilesService = require("../services/resume-files.service");
 
 async function upload(req, res, next) {
   try {
-    const file = await resumeFilesService.uploadResumeFile(req.userId, req.file);
+    const file = await resumeFilesService.uploadResumeFile(req.userId, req.file, req.body.profileId || null);
     return res.status(201).json(file);
   } catch (err) {
     return next(err);
@@ -11,7 +11,7 @@ async function upload(req, res, next) {
 
 async function list(req, res, next) {
   try {
-    const files = await resumeFilesService.listResumeFiles(req.userId);
+    const files = await resumeFilesService.listResumeFiles(req.userId, req.query.profileId || null);
     return res.json(files);
   } catch (err) {
     return next(err);

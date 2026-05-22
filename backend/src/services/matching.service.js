@@ -85,14 +85,14 @@ function scorePercent(matched, total) {
   return Math.round((matched / total) * 100);
 }
 
-async function executeMatch(userId, jobDescription, resumeFileId = null) {
-  const profile = await profileService.getProfile(userId);
+async function executeMatch(userId, jobDescription, resumeFileId = null, profileId = null) {
+  const profile = await profileService.getProfile(userId, profileId);
   const text = jobDescription.trim();
   let resumeFile = null;
 
   if (resumeFileId) {
     resumeFile = await prisma.resumeFile.findFirst({
-      where: { id: resumeFileId, userId },
+      where: { id: resumeFileId, userId, profileId: profile.id },
       select: { id: true, fileName: true, extractedText: true, content: true },
     });
 
@@ -191,6 +191,7 @@ async function executeMatch(userId, jobDescription, resumeFileId = null) {
       matchedTechnologies: result.matchedTechnologies,
       missingTechnologies: result.missingTechnologies,
       resumeFileId: resumeFile?.id || null,
+      profileId: profile.id,
       generatedPdf,
       generatedFileName: generatedPdf ? `curriculo-otimizado-${Date.now()}.pdf` : null,
     },
@@ -199,9 +200,10 @@ async function executeMatch(userId, jobDescription, resumeFileId = null) {
   return { ...result, id: saved.id, savedAt: saved.createdAt };
 }
 
-async function listHistory(userId) {
+async function listHistory(userId, profileId = null) {
+  const profile = await profileService.resolveProfile(userId, profileId);
   return prisma.optimizedResume.findMany({
-    where: { userId },
+    where: { userId, profileId: profile.id },
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {

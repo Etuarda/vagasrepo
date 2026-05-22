@@ -4,6 +4,8 @@ const profileController = require("../controllers/profile.controller");
 
 router.use(authMiddleware);
 
+router.get("/profiles", profileController.listProfiles);
+router.post("/profiles", profileController.createProfile);
 router.get("/profile", profileController.getProfile);
 router.put("/profile", profileController.updateProfile);
 router.put("/profile/skills", profileController.updateSkills);

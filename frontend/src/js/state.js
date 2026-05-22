@@ -3,6 +3,8 @@ export const state = {
   token: localStorage.getItem("vagas_token"),
   jobs: [],
   profile: null,
+  profiles: [],
+  activeProfileId: localStorage.getItem("vagas_active_profile_id") || "",
   matchHistory: [],
   resumeFiles: [],
   filters: {

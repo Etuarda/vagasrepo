@@ -166,6 +166,17 @@
             <h2 id="profile-title" class="font-serif text-5xl tracking-tight mt-3">Perfil profissional.</h2>
           </header>
 
+          <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 border border-borderLight rounded-2xl p-6 bg-white" aria-label="Seleção de perfil profissional">
+            <div class="lg:col-span-2">
+              <label for="career-profile-select" class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone mb-2">Perfil ativo</label>
+              <select id="career-profile-select" class="editorial-input text-sm bg-white"></select>
+            </div>
+            <form id="form-create-profile" class="flex gap-3 lg:items-end">
+              <input type="text" id="new-profile-name" placeholder="Ex: Frontend, Dados..." class="editorial-input text-sm" />
+              <button type="submit" class="bg-ink text-paper px-6 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar</button>
+            </form>
+          </section>
+
           <section class="border border-borderLight rounded-2xl p-6 bg-white" aria-labelledby="resume-files-title">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div>
@@ -186,6 +197,7 @@
 
           <form id="form-profile" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <input type="text" id="profile-name" required placeholder="Nome completo" class="editorial-input" />
+            <input type="text" id="profile-profile-name" required placeholder="Nome do perfil (ex: Frontend)" class="editorial-input" />
             <input type="text" id="profile-title-field" placeholder="Cargo de apresentação" class="editorial-input" />
             <input type="email" id="profile-email-contact" placeholder="E-mail de contato" class="editorial-input" />
             <input type="text" id="profile-phone" placeholder="Telefone" class="editorial-input" />
