@@ -245,12 +245,14 @@ function wireEvents() {
       e.preventDefault();
       const title = document.getElementById("project-title")?.value || "";
       const description = document.getElementById("project-description")?.value || "";
+      const repositoryUrl = document.getElementById("project-repository-url")?.value || "";
+      const deployUrl = document.getElementById("project-deploy-url")?.value || "";
       const technologies = (document.getElementById("project-techs")?.value || "")
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
 
-      await career.addProject({ title, description, technologies });
+      await career.addProject({ title, description, repositoryUrl, deployUrl, technologies });
       formProject.reset();
     });
   }

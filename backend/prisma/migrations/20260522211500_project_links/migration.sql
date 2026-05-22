@@ -1,0 +1,2 @@
+ALTER TABLE "Project" ADD COLUMN "repositoryUrl" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "Project" ADD COLUMN "deployUrl" TEXT NOT NULL DEFAULT '';

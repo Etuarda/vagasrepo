@@ -62,6 +62,10 @@ function renderProjects() {
             <div>
               <h4 class="font-serif text-2xl">${escapeHtml(project.title)}</h4>
               <p class="text-sm text-taupe mt-2 leading-relaxed">${escapeHtml(project.description)}</p>
+              <div class="flex flex-wrap gap-4 mt-3">
+                ${project.repositoryUrl ? `<a href="${escapeHtml(project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Repositório</a>` : ""}
+                ${project.deployUrl ? `<a href="${escapeHtml(project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Deploy</a>` : ""}
+              </div>
             </div>
             <button type="button" data-remove-project="${project.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
           </div>
@@ -271,6 +275,10 @@ function renderMatchResult(result) {
                   <span class="font-bold">${item.score}%</span>
                 </div>
                 <p class="text-sm text-taupe mt-2">${escapeHtml(item.reason)}</p>
+                <div class="flex flex-wrap gap-4 mt-3">
+                  ${item.project.repositoryUrl ? `<a href="${escapeHtml(item.project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Repositório</a>` : ""}
+                  ${item.project.deployUrl ? `<a href="${escapeHtml(item.project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Deploy</a>` : ""}
+                </div>
               </article>
             `
           )

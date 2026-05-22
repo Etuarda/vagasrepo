@@ -36,6 +36,8 @@ const projectSchema = z.object({
   profileId: optionalUuid("Perfil invalido"),
   title: z.string().trim().min(2, "Titulo do projeto e obrigatorio").max(160),
   description: z.string().trim().min(10, "Descricao deve ter pelo menos 10 caracteres").max(3000),
+  repositoryUrl: z.string().trim().url("Link do repositorio invalido").or(z.literal("")).default(""),
+  deployUrl: z.string().trim().url("Link do deploy invalido").or(z.literal("")).default(""),
   technologies: z
     .array(z.string().trim().min(1).max(80))
     .min(1, "Informe pelo menos uma tecnologia")

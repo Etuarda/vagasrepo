@@ -27,6 +27,8 @@ function serializeProfile(profile) {
       id: project.id,
       title: project.title,
       description: project.description,
+      repositoryUrl: project.repositoryUrl || "",
+      deployUrl: project.deployUrl || "",
       technologies: (project.technologies || []).map((tech) => tech.name),
     })),
     experiences: (profile.experiences || []).map((experience) => ({
@@ -189,6 +191,8 @@ async function addProject(userId, profileId, data) {
     data: {
       title: data.title,
       description: data.description,
+      repositoryUrl: data.repositoryUrl || "",
+      deployUrl: data.deployUrl || "",
       userId,
       profileId: profile.id,
       technologies: {

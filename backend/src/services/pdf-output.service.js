@@ -123,6 +123,28 @@ async function generateOptimizedResumePdf({ basePdfBuffer, profile, matchResult 
         maxWidth: 500,
         lineHeight: 13,
       });
+      if (project.repositoryUrl) {
+        y = drawWrappedText(page, `Repositório: ${project.repositoryUrl}`, {
+          x: 48,
+          y: y - 6,
+          size: 9,
+          font,
+          color: muted,
+          maxWidth: 500,
+          lineHeight: 13,
+        });
+      }
+      if (project.deployUrl) {
+        y = drawWrappedText(page, `Deploy: ${project.deployUrl}`, {
+          x: 48,
+          y: y - 6,
+          size: 9,
+          font,
+          color: muted,
+          maxWidth: 500,
+          lineHeight: 13,
+        });
+      }
       y -= 16;
     });
   }
