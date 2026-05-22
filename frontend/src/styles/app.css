@@ -55,6 +55,29 @@ body {
   box-shadow: 0 0 0 3px rgba(18, 16, 14, 0.10);
 }
 
+.dashboard-tab.is-active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--borderLight);
+  background: #fff;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.tag-pill button {
+  font-weight: 900;
+  color: #8b1e1e;
+}
+
 .skip-link {
   position: absolute;
   top: -5rem;

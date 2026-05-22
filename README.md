@@ -2,6 +2,13 @@
 
 Aplicacao para gerenciar candidaturas, com frontend estatico e API Node.js/Express usando Prisma.
 
+## Funcionalidades
+
+- Cadastro e acompanhamento de candidaturas.
+- Perfil profissional com resumo, contatos, habilidades, projetos e experiencias.
+- Matching ATS deterministico entre descricao da vaga e perfil cadastrado.
+- Historico de analises salvas no banco.
+
 ## Deploy recomendado
 
 - Frontend: Vercel, usando a pasta `frontend` como root directory.

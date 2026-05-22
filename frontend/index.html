@@ -85,6 +85,19 @@
         </div>
       </header>
 
+      <div class="flex flex-wrap gap-3 border-b border-borderLight pb-6" role="tablist" aria-label="Seções do painel">
+        <button type="button" data-dashboard-tab="jobs" class="dashboard-tab is-active px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
+          Candidaturas
+        </button>
+        <button type="button" data-dashboard-tab="profile" class="dashboard-tab px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
+          Perfil profissional
+        </button>
+        <button type="button" data-dashboard-tab="matching" class="dashboard-tab px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
+          Matching ATS
+        </button>
+      </div>
+
+      <div id="panel-jobs" data-dashboard-panel="jobs" class="space-y-16">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 p-10 editorial-card rounded-3xl editorial-shadow">
         <div class="space-y-3">
           <label for="filter-q" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Busca Textual</label>
@@ -144,6 +157,96 @@
           <tbody id="jobs-list" class="divide-y divide-borderLight"></tbody>
         </table>
       </div>
+      </div>
+
+      <section id="panel-profile" data-dashboard-panel="profile" class="hidden space-y-10" aria-labelledby="profile-title">
+        <div class="editorial-card rounded-3xl editorial-shadow p-10 space-y-8">
+          <header class="max-w-4xl">
+            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Base fiduciária do matching</p>
+            <h2 id="profile-title" class="font-serif text-5xl tracking-tight mt-3">Perfil profissional.</h2>
+          </header>
+
+          <form id="form-profile" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <input type="text" id="profile-name" required placeholder="Nome completo" class="editorial-input" />
+            <input type="text" id="profile-title-field" placeholder="Cargo de apresentação" class="editorial-input" />
+            <input type="email" id="profile-email-contact" placeholder="E-mail de contato" class="editorial-input" />
+            <input type="text" id="profile-phone" placeholder="Telefone" class="editorial-input" />
+            <input type="text" id="profile-location" placeholder="Cidade / Estado" class="editorial-input md:col-span-2" />
+            <input type="url" id="profile-linkedin" placeholder="LinkedIn" class="editorial-input" />
+            <input type="url" id="profile-github" placeholder="GitHub ou portfolio" class="editorial-input" />
+            <textarea id="profile-summary" rows="5" placeholder="Resumo profissional base" class="editorial-input md:col-span-2"></textarea>
+            <div class="md:col-span-2 flex justify-end">
+              <button type="submit" class="bg-ink text-paper px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
+                Salvar perfil
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="skills-title">
+            <h3 id="skills-title" class="font-serif text-3xl">Habilidades.</h3>
+            <form id="form-skill" class="flex gap-3">
+              <input type="text" id="skill-name" placeholder="Ex: React, SQL, comunicação" class="editorial-input text-sm" />
+              <button type="submit" class="bg-ink text-paper px-5 rounded-full text-[10px] font-bold uppercase tracking-widest">+</button>
+            </form>
+            <div id="skills-list" class="flex flex-wrap gap-2"></div>
+          </section>
+
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-2" aria-labelledby="projects-title">
+            <h3 id="projects-title" class="font-serif text-3xl">Projetos.</h3>
+            <form id="form-project" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm" />
+              <input type="text" id="project-techs" required placeholder="Tecnologias separadas por vírgula" class="editorial-input text-sm" />
+              <textarea id="project-description" required rows="3" placeholder="Descrição do projeto" class="editorial-input text-sm md:col-span-2"></textarea>
+              <div class="md:col-span-2 flex justify-end">
+                <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  Cadastrar projeto
+                </button>
+              </div>
+            </form>
+            <div id="projects-list" class="grid grid-cols-1 gap-4"></div>
+          </section>
+
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-3" aria-labelledby="experiences-title">
+            <h3 id="experiences-title" class="font-serif text-3xl">Experiências.</h3>
+            <form id="form-experience" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" id="experience-company" required placeholder="Empresa" class="editorial-input text-sm" />
+              <input type="text" id="experience-role" required placeholder="Cargo" class="editorial-input text-sm" />
+              <input type="text" id="experience-period" required placeholder="Período" class="editorial-input text-sm md:col-span-2" />
+              <textarea id="experience-description" required rows="3" placeholder="Atividades reais e resultados" class="editorial-input text-sm md:col-span-2"></textarea>
+              <div class="md:col-span-2 flex justify-end">
+                <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  Salvar experiência
+                </button>
+              </div>
+            </form>
+            <div id="experiences-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="panel-matching" data-dashboard-panel="matching" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8" aria-labelledby="matching-title">
+        <aside class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-5">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Análise determinística</p>
+            <h2 id="matching-title" class="font-serif text-5xl tracking-tight mt-3">Matching ATS.</h2>
+          </div>
+          <form id="form-match" class="space-y-5">
+            <textarea id="match-job-description" rows="14" required minlength="30" maxlength="15000" placeholder="Cole a descrição completa da vaga" class="editorial-input text-sm leading-relaxed"></textarea>
+            <button type="submit" class="w-full bg-ink text-paper py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
+              Calcular aderência
+            </button>
+          </form>
+          <section aria-labelledby="match-history-title">
+            <h3 id="match-history-title" class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone mb-4">Histórico salvo</h3>
+            <div id="match-history" class="space-y-3"></div>
+          </section>
+        </aside>
+        <div id="match-result" class="lg:col-span-7 min-h-[420px] rounded-3xl border border-dashed border-borderLight p-10 flex items-center justify-center text-center text-taupe">
+          Cole uma vaga para ver score, lacunas e projetos mais aderentes.
+        </div>
+      </section>
     </section>
   </main>
 

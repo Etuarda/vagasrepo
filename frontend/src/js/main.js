@@ -2,6 +2,7 @@ import { state } from "./state.js";
 import { ui } from "./ui.js";
 import { auth } from "./auth.js";
 import { jobs } from "./jobs.js";
+import { career } from "./career.js";
 
 function debounce(fn, wait = 300) {
   let t = null;
@@ -12,6 +13,12 @@ function debounce(fn, wait = 300) {
 }
 
 let __vlibrasStarted = false;
+
+async function loadDashboardData() {
+  await jobs.load();
+  await career.loadProfile();
+  await career.loadHistory();
+}
 
 function forceVlibrasZIndex() {
   // alguns CSS resets/layouts podem esconder o botão do plugin
@@ -67,7 +74,7 @@ function wireEvents() {
       e.preventDefault();
       const email = document.getElementById("login-email")?.value || "";
       const password = document.getElementById("login-password")?.value || "";
-      await auth.login(email, password, () => jobs.load());
+      await auth.login(email, password, loadDashboardData);
     });
   }
 
@@ -175,6 +182,106 @@ function wireEvents() {
   const exportBtn = document.getElementById("exportPdf");
   if (exportBtn) exportBtn.addEventListener("click", () => jobs.exportPdf());
 
+  document.querySelectorAll("[data-dashboard-tab]").forEach((button) => {
+    button.addEventListener("click", () => career.setTab(button.dataset.dashboardTab));
+  });
+
+  const formProfile = document.getElementById("form-profile");
+  if (formProfile) {
+    formProfile.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await career.saveProfile();
+    });
+  }
+
+  const formSkill = document.getElementById("form-skill");
+  if (formSkill) {
+    formSkill.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("skill-name");
+      const name = input?.value?.trim() || "";
+      if (!name) return;
+      await career.addSkill(name);
+      input.value = "";
+    });
+  }
+
+  const skillsList = document.getElementById("skills-list");
+  if (skillsList) {
+    skillsList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-remove-skill]");
+      if (!btn) return;
+      await career.removeSkill(btn.dataset.removeSkill);
+    });
+  }
+
+  const formProject = document.getElementById("form-project");
+  if (formProject) {
+    formProject.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = document.getElementById("project-title")?.value || "";
+      const description = document.getElementById("project-description")?.value || "";
+      const technologies = (document.getElementById("project-techs")?.value || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      await career.addProject({ title, description, technologies });
+      formProject.reset();
+    });
+  }
+
+  const projectsList = document.getElementById("projects-list");
+  if (projectsList) {
+    projectsList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-remove-project]");
+      if (!btn) return;
+      await career.removeProject(btn.dataset.removeProject);
+    });
+  }
+
+  const formExperience = document.getElementById("form-experience");
+  if (formExperience) {
+    formExperience.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        company: document.getElementById("experience-company")?.value || "",
+        role: document.getElementById("experience-role")?.value || "",
+        period: document.getElementById("experience-period")?.value || "",
+        description: document.getElementById("experience-description")?.value || "",
+      };
+      await career.addExperience(payload);
+      formExperience.reset();
+    });
+  }
+
+  const experiencesList = document.getElementById("experiences-list");
+  if (experiencesList) {
+    experiencesList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-remove-experience]");
+      if (!btn) return;
+      await career.removeExperience(btn.dataset.removeExperience);
+    });
+  }
+
+  const formMatch = document.getElementById("form-match");
+  if (formMatch) {
+    formMatch.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const jobDescription = document.getElementById("match-job-description")?.value || "";
+      await career.match(jobDescription);
+    });
+  }
+
+  const matchHistory = document.getElementById("match-history");
+  if (matchHistory) {
+    matchHistory.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-remove-match]");
+      if (!btn) return;
+      await career.removeMatch(btn.dataset.removeMatch);
+    });
+  }
+
   const jobsList = document.getElementById("jobs-list");
   if (jobsList) {
     jobsList.addEventListener("click", async (e) => {
@@ -215,5 +322,5 @@ window.addEventListener("load", async () => {
   if (localStorage.getItem("vagas_contrast") === "true") ui.toggleContrast();
 
   wireEvents();
-  await auth.init(() => jobs.load());
+  await auth.init(loadDashboardData);
 });
