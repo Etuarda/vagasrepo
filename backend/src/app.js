@@ -31,7 +31,7 @@ const devFallbackOrigins = [
   "http://localhost:5500",
 ];
 
-const origins = allowedOrigins.length ? allowedOrigins : devFallbackOrigins;
+const origins = [...new Set([...allowedOrigins, ...devFallbackOrigins])];
 
 const corsOptions = {
   origin: (origin, callback) => {

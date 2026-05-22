@@ -7,6 +7,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 backend\node_modules/
+backend/prisma/*.db
+backend/prisma/*.db-journal
 # =========================
 # Environment variables
 # =========================

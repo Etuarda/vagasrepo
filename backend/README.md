@@ -1,37 +1,54 @@
-# Vagas.io — Backend (Node.js + Express + Prisma + Zod + JWT)
+# Vagas.io - Backend (Node.js + Express + Prisma + Zod + JWT)
 
 ## Requisitos
-- Node.js 18+
-- Postgres local (ou remoto)
 
-## Setup
-1) Instale dependências:
+- Node.js 18+
+- Postgres local ou Neon
+
+## Setup local
+
+1. Instale dependencias:
+
 ```bash
 npm install
 ```
 
-2) Crie `.env` a partir do `.env.example` e preencha:
-- `DATABASE_URL`
-- `JWT_SECRET` (>= 32 chars)
+2. Crie `.env` a partir de `.env.example` e preencha:
 
-3) Rode migrations e gere o client:
+- `DATABASE_URL`: connection string Postgres do Neon com `sslmode=require`.
+- `JWT_SECRET`: chave com pelo menos 32 caracteres.
+- `CORS_ORIGIN`: origens permitidas, separadas por virgula.
+
+3. Rode migrations e gere o client:
+
 ```bash
 npx prisma migrate dev --name init
 npx prisma generate
 ```
 
-4) Suba a API:
+4. Suba a API:
+
 ```bash
 npm run dev
 ```
 
 API: `http://localhost:3000`
 
+## Deploy com Neon
+
+1. Crie um projeto no Neon.
+2. Copie a connection string Postgres para `DATABASE_URL`.
+3. Configure as mesmas variaveis no provedor da API.
+4. Use `npm install && npm run prisma:deploy` como build command.
+5. Use `npm start` como start command.
+
 ## Endpoints
+
+- `GET /health`
 - `POST /auth/register`
 - `POST /auth/login`
-- `GET /auth/me` (Bearer)
-- `GET /jobs` (Bearer) — filtros: `q`, `status`, `fase`
-- `POST /jobs` (Bearer)
-- `PUT /jobs/:id` (Bearer)
-- `DELETE /jobs/:id` (Bearer)
+- `GET /auth/me` com Bearer token
+- `GET /jobs` com Bearer token; filtros: `q`, `status`, `period`, `dateFrom`, `dateTo`
+- `POST /jobs` com Bearer token
+- `PUT /jobs/:id` com Bearer token
+- `DELETE /jobs/:id` com Bearer token
