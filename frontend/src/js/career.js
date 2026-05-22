@@ -338,6 +338,22 @@ function renderMatchResult(result) {
   `;
 }
 
+function renderMatchLoading() {
+  const root = document.getElementById("match-result");
+  if (!root) return;
+
+  root.className = "lg:col-span-7 space-y-6";
+  root.innerHTML = `
+    <section class="editorial-card rounded-3xl editorial-shadow p-8">
+      <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Processando</p>
+      <h3 class="font-serif text-4xl mt-3">Calculando aderencia ATS.</h3>
+      <p class="text-sm text-taupe leading-relaxed mt-4">
+        Estamos comparando a vaga com o perfil ativo e, se houver PDF-base selecionado, gerando o curriculo otimizado para envio.
+      </p>
+    </section>
+  `;
+}
+
 export const career = {
   async loadProfiles() {
     const profiles = await api("/profiles", {}, state.token);
@@ -453,6 +469,7 @@ export const career = {
   },
 
   async match(jobDescription) {
+    renderMatchLoading();
     const resumeFileId = document.getElementById("match-resume-file")?.value || undefined;
     const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, resumeFileId, profileId: state.activeProfileId }) }, state.token);
     renderMatchResult(result);

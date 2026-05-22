@@ -12,6 +12,43 @@ function debounce(fn, wait = 300) {
   };
 }
 
+async function runWithFeedback(button, options, action) {
+  const target = button || null;
+  if (target?.dataset?.busy === "true") return;
+
+  const originalHtml = target?.innerHTML;
+  const originalDisabled = target?.disabled;
+
+  if (options.notice) ui.notify(options.notice, options.noticeType || "success");
+
+  if (target) {
+    target.dataset.busy = "true";
+    target.setAttribute("aria-busy", "true");
+    target.classList.add("opacity-60", "cursor-not-allowed");
+    if ("disabled" in target) target.disabled = true;
+    if (options.busyText) target.innerHTML = options.busyText;
+  }
+
+  try {
+    return await action();
+  } catch (err) {
+    if (!err?.status) ui.notify(err?.message || "Nao foi possivel concluir a acao.", "error");
+    return undefined;
+  } finally {
+    if (target) {
+      if (originalHtml !== undefined) target.innerHTML = originalHtml;
+      if ("disabled" in target) target.disabled = originalDisabled;
+      target.classList.remove("opacity-60", "cursor-not-allowed");
+      target.removeAttribute("aria-busy");
+      delete target.dataset.busy;
+    }
+  }
+}
+
+function getSubmitButton(event, form) {
+  return event.submitter || form?.querySelector('button[type="submit"], input[type="submit"]');
+}
+
 let __vlibrasStarted = false;
 
 async function loadDashboardData() {
@@ -74,9 +111,15 @@ function wireEvents() {
   if (formLogin) {
     formLogin.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById("login-email")?.value || "";
-      const password = document.getElementById("login-password")?.value || "";
-      await auth.login(email, password, loadDashboardData);
+      await runWithFeedback(
+        getSubmitButton(e, formLogin),
+        { busyText: "Entrando...", notice: "Validando acesso..." },
+        async () => {
+          const email = document.getElementById("login-email")?.value || "";
+          const password = document.getElementById("login-password")?.value || "";
+          await auth.login(email, password, loadDashboardData);
+        }
+      );
     });
   }
 
@@ -84,10 +127,16 @@ function wireEvents() {
   if (formRegister) {
     formRegister.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const name = document.getElementById("reg-name")?.value || "";
-      const email = document.getElementById("reg-email")?.value || "";
-      const password = document.getElementById("reg-password")?.value || "";
-      await auth.register(name, email, password);
+      await runWithFeedback(
+        getSubmitButton(e, formRegister),
+        { busyText: "Criando...", notice: "Criando sua conta..." },
+        async () => {
+          const name = document.getElementById("reg-name")?.value || "";
+          const email = document.getElementById("reg-email")?.value || "";
+          const password = document.getElementById("reg-password")?.value || "";
+          await auth.register(name, email, password);
+        }
+      );
     });
   }
 
@@ -103,23 +152,29 @@ function wireEvents() {
     formJob.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const payload = {
-        id: document.getElementById("job-id")?.value || null,
-        titulo: document.getElementById("job-title")?.value || "",
-        empresa: document.getElementById("job-company")?.value || "",
-        linkVaga: document.getElementById("job-link")?.value || "",
-        linkCV: document.getElementById("job-cv")?.value || "",
-        data: document.getElementById("job-date")?.value || "",
-        status: document.getElementById("job-status-field")?.value || "",
-        fase: document.getElementById("job-fase-field")?.value || "",
-        acaoNecessaria: !!document.getElementById("job-action-bool")?.checked,
-        qualAcao: document.getElementById("job-qual-acao")?.value || "",
-        prazoAcao: document.getElementById("job-prazo-acao")?.value || null,
-        feedbackBool: !!document.getElementById("job-feedback-bool")?.checked,
-        feedbackTxt: document.getElementById("job-feedback-txt")?.value || "",
-      };
+      await runWithFeedback(
+        getSubmitButton(e, formJob),
+        { busyText: "Salvando...", notice: "Salvando candidatura..." },
+        async () => {
+          const payload = {
+            id: document.getElementById("job-id")?.value || null,
+            titulo: document.getElementById("job-title")?.value || "",
+            empresa: document.getElementById("job-company")?.value || "",
+            linkVaga: document.getElementById("job-link")?.value || "",
+            linkCV: document.getElementById("job-cv")?.value || "",
+            data: document.getElementById("job-date")?.value || "",
+            status: document.getElementById("job-status-field")?.value || "",
+            fase: document.getElementById("job-fase-field")?.value || "",
+            acaoNecessaria: !!document.getElementById("job-action-bool")?.checked,
+            qualAcao: document.getElementById("job-qual-acao")?.value || "",
+            prazoAcao: document.getElementById("job-prazo-acao")?.value || null,
+            feedbackBool: !!document.getElementById("job-feedback-bool")?.checked,
+            feedbackTxt: document.getElementById("job-feedback-txt")?.value || "",
+          };
 
-      await jobs.save(payload);
+          await jobs.save(payload);
+        }
+      );
     });
   }
 
@@ -182,7 +237,15 @@ function wireEvents() {
   }
 
   const exportBtn = document.getElementById("exportPdf");
-  if (exportBtn) exportBtn.addEventListener("click", () => jobs.exportPdf());
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async () => {
+      await runWithFeedback(
+        exportBtn,
+        { busyText: "Gerando...", notice: "Gerando PDF das candidaturas..." },
+        () => jobs.exportPdf()
+      );
+    });
+  }
 
   document.querySelectorAll("[data-dashboard-tab]").forEach((button) => {
     button.addEventListener("click", () => career.setTab(button.dataset.dashboardTab));
@@ -192,7 +255,11 @@ function wireEvents() {
   if (formProfile) {
     formProfile.addEventListener("submit", async (e) => {
       e.preventDefault();
-      await career.saveProfile();
+      await runWithFeedback(
+        getSubmitButton(e, formProfile),
+        { busyText: "Salvando...", notice: "Salvando perfil profissional..." },
+        () => career.saveProfile()
+      );
     });
   }
 
@@ -213,8 +280,14 @@ function wireEvents() {
         ui.notify("Informe um nome para o perfil.", "error");
         return;
       }
-      await career.createProfile(profileName);
-      input.value = "";
+      await runWithFeedback(
+        getSubmitButton(e, formCreateProfile),
+        { busyText: "Criando...", notice: "Criando subperfil..." },
+        async () => {
+          await career.createProfile(profileName);
+          input.value = "";
+        }
+      );
     });
   }
 
@@ -225,8 +298,14 @@ function wireEvents() {
       const input = document.getElementById("skill-name");
       const name = input?.value?.trim() || "";
       if (!name) return;
-      await career.addSkill(name);
-      input.value = "";
+      await runWithFeedback(
+        getSubmitButton(e, formSkill),
+        { busyText: "Adicionando...", notice: "Adicionando habilidade..." },
+        async () => {
+          await career.addSkill(name);
+          input.value = "";
+        }
+      );
     });
   }
 
@@ -235,7 +314,11 @@ function wireEvents() {
     skillsList.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-remove-skill]");
       if (!btn) return;
-      await career.removeSkill(btn.dataset.removeSkill);
+      await runWithFeedback(
+        btn,
+        { busyText: "Removendo...", notice: "Removendo habilidade..." },
+        () => career.removeSkill(btn.dataset.removeSkill)
+      );
     });
   }
 
@@ -252,8 +335,14 @@ function wireEvents() {
         .map((item) => item.trim())
         .filter(Boolean);
 
-      await career.addProject({ title, description, repositoryUrl, deployUrl, technologies });
-      formProject.reset();
+      await runWithFeedback(
+        getSubmitButton(e, formProject),
+        { busyText: "Salvando...", notice: "Salvando projeto..." },
+        async () => {
+          await career.addProject({ title, description, repositoryUrl, deployUrl, technologies });
+          formProject.reset();
+        }
+      );
     });
   }
 
@@ -262,7 +351,11 @@ function wireEvents() {
     projectsList.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-remove-project]");
       if (!btn) return;
-      await career.removeProject(btn.dataset.removeProject);
+      await runWithFeedback(
+        btn,
+        { busyText: "Removendo...", notice: "Removendo projeto..." },
+        () => career.removeProject(btn.dataset.removeProject)
+      );
     });
   }
 
@@ -276,8 +369,14 @@ function wireEvents() {
         period: document.getElementById("experience-period")?.value || "",
         description: document.getElementById("experience-description")?.value || "",
       };
-      await career.addExperience(payload);
-      formExperience.reset();
+      await runWithFeedback(
+        getSubmitButton(e, formExperience),
+        { busyText: "Salvando...", notice: "Salvando experiencia..." },
+        async () => {
+          await career.addExperience(payload);
+          formExperience.reset();
+        }
+      );
     });
   }
 
@@ -286,7 +385,11 @@ function wireEvents() {
     experiencesList.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-remove-experience]");
       if (!btn) return;
-      await career.removeExperience(btn.dataset.removeExperience);
+      await runWithFeedback(
+        btn,
+        { busyText: "Removendo...", notice: "Removendo experiencia..." },
+        () => career.removeExperience(btn.dataset.removeExperience)
+      );
     });
   }
 
@@ -300,8 +403,14 @@ function wireEvents() {
         period: document.getElementById("course-period")?.value || "",
         description: document.getElementById("course-description")?.value || "",
       };
-      await career.addCourse(payload);
-      formCourse.reset();
+      await runWithFeedback(
+        getSubmitButton(e, formCourse),
+        { busyText: "Salvando...", notice: "Salvando curso..." },
+        async () => {
+          await career.addCourse(payload);
+          formCourse.reset();
+        }
+      );
     });
   }
 
@@ -310,7 +419,11 @@ function wireEvents() {
     coursesList.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-remove-course]");
       if (!btn) return;
-      await career.removeCourse(btn.dataset.removeCourse);
+      await runWithFeedback(
+        btn,
+        { busyText: "Removendo...", notice: "Removendo curso..." },
+        () => career.removeCourse(btn.dataset.removeCourse)
+      );
     });
   }
 
@@ -324,8 +437,14 @@ function wireEvents() {
         period: document.getElementById("certification-period")?.value || "",
         credentialUrl: document.getElementById("certification-url")?.value || "",
       };
-      await career.addCertification(payload);
-      formCertification.reset();
+      await runWithFeedback(
+        getSubmitButton(e, formCertification),
+        { busyText: "Salvando...", notice: "Salvando certificacao..." },
+        async () => {
+          await career.addCertification(payload);
+          formCertification.reset();
+        }
+      );
     });
   }
 
@@ -334,7 +453,11 @@ function wireEvents() {
     certificationsList.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-remove-certification]");
       if (!btn) return;
-      await career.removeCertification(btn.dataset.removeCertification);
+      await runWithFeedback(
+        btn,
+        { busyText: "Removendo...", notice: "Removendo certificacao..." },
+        () => career.removeCertification(btn.dataset.removeCertification)
+      );
     });
   }
 
@@ -343,7 +466,14 @@ function wireEvents() {
     formMatch.addEventListener("submit", async (e) => {
       e.preventDefault();
       const jobDescription = document.getElementById("match-job-description")?.value || "";
-      await career.match(jobDescription);
+      await runWithFeedback(
+        getSubmitButton(e, formMatch),
+        {
+          busyText: "Calculando...",
+          notice: "Calculando aderencia e gerando curriculo otimizado...",
+        },
+        () => career.match(jobDescription)
+      );
     });
   }
 
@@ -352,7 +482,11 @@ function wireEvents() {
     matchResult.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-download-current-optimized]");
       if (!btn) return;
-      await career.downloadOptimizedResume(btn.dataset.downloadCurrentOptimized);
+      await runWithFeedback(
+        btn,
+        { busyText: "Baixando...", notice: "Preparando download do curriculo otimizado..." },
+        () => career.downloadOptimizedResume(btn.dataset.downloadCurrentOptimized)
+      );
     });
   }
 
@@ -366,8 +500,17 @@ function wireEvents() {
         ui.notify("Selecione um PDF para anexar.", "error");
         return;
       }
-      await career.uploadResumeFile(file);
-      input.value = "";
+      await runWithFeedback(
+        getSubmitButton(e, formResumeUpload),
+        {
+          busyText: "Lendo PDF...",
+          notice: "Curriculo recebido. Lendo PDF e preenchendo o perfil...",
+        },
+        async () => {
+          await career.uploadResumeFile(file);
+          input.value = "";
+        }
+      );
     });
   }
 
@@ -376,14 +519,22 @@ function wireEvents() {
     resumeFilesList.addEventListener("click", async (e) => {
       const removeBtn = e.target.closest("[data-remove-resume]");
       if (removeBtn) {
-        await career.removeResumeFile(removeBtn.dataset.removeResume);
+        await runWithFeedback(
+          removeBtn,
+          { busyText: "Removendo...", notice: "Removendo curriculo do historico..." },
+          () => career.removeResumeFile(removeBtn.dataset.removeResume)
+        );
         return;
       }
 
       const downloadLink = e.target.closest("[data-download-resume]");
       if (downloadLink) {
         e.preventDefault();
-        await career.downloadResumeFile(downloadLink.dataset.downloadResume);
+        await runWithFeedback(
+          downloadLink,
+          { busyText: "Baixando...", notice: "Preparando download do PDF original..." },
+          () => career.downloadResumeFile(downloadLink.dataset.downloadResume)
+        );
       }
     });
   }
@@ -394,20 +545,32 @@ function wireEvents() {
       const optimizedLink = e.target.closest("[data-download-optimized]");
       if (optimizedLink) {
         e.preventDefault();
-        await career.downloadOptimizedResume(optimizedLink.dataset.downloadOptimized);
+        await runWithFeedback(
+          optimizedLink,
+          { busyText: "Baixando...", notice: "Preparando download do curriculo otimizado..." },
+          () => career.downloadOptimizedResume(optimizedLink.dataset.downloadOptimized)
+        );
         return;
       }
 
       const downloadLink = e.target.closest("[data-download-resume]");
       if (downloadLink) {
         e.preventDefault();
-        await career.downloadResumeFile(downloadLink.dataset.downloadResume);
+        await runWithFeedback(
+          downloadLink,
+          { busyText: "Baixando...", notice: "Preparando download do PDF original..." },
+          () => career.downloadResumeFile(downloadLink.dataset.downloadResume)
+        );
         return;
       }
 
       const btn = e.target.closest("[data-remove-match]");
       if (!btn) return;
-      await career.removeMatch(btn.dataset.removeMatch);
+      await runWithFeedback(
+        btn,
+        { busyText: "Removendo...", notice: "Removendo analise do historico..." },
+        () => career.removeMatch(btn.dataset.removeMatch)
+      );
     });
   }
 
@@ -420,7 +583,13 @@ function wireEvents() {
       const action = btn.dataset.action;
       const id = btn.dataset.id;
 
-      if (action === "delete") return jobs.remove(id);
+      if (action === "delete") {
+        return runWithFeedback(
+          btn,
+          { busyText: "Removendo...", notice: "Removendo candidatura..." },
+          () => jobs.remove(id)
+        );
+      }
       if (action === "edit") {
         const job = (state.jobs || []).find((j) => j.id === id);
         return ui.openJobModal(job);
