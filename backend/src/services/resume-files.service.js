@@ -113,6 +113,36 @@ function parseResumeProfile(text) {
         },
       ]
     : [];
+  const courseStart = lines.findIndex((line) => /^(cursos|forma[cç][aã]o complementar|educa[cç][aã]o complementar)$/i.test(line));
+  const courseEnd =
+    courseStart >= 0
+      ? lines.findIndex((line, index) => index > courseStart && /^(certifica[cç][oõ]es|habilidades|skills|projetos|experi[êe]ncia profissional)$/i.test(line))
+      : -1;
+  const courseLines =
+    courseStart >= 0
+      ? lines.slice(courseStart + 1, courseEnd > courseStart ? courseEnd : courseStart + 8)
+      : [];
+  const courses = courseLines.slice(0, 6).map((line) => ({
+    title: line.slice(0, 180),
+    institution: "",
+    period: "",
+    description: "",
+  }));
+  const certStart = lines.findIndex((line) => /^(certifica[cç][oõ]es|certificados)$/i.test(line));
+  const certEnd =
+    certStart >= 0
+      ? lines.findIndex((line, index) => index > certStart && /^(habilidades|skills|projetos|experi[êe]ncia profissional|cursos)$/i.test(line))
+      : -1;
+  const certLines =
+    certStart >= 0
+      ? lines.slice(certStart + 1, certEnd > certStart ? certEnd : certStart + 8)
+      : [];
+  const certifications = certLines.slice(0, 6).map((line) => ({
+    title: line.slice(0, 180),
+    issuer: "",
+    period: "",
+    credentialUrl: "",
+  }));
 
   return {
     name: firstLine,
@@ -124,6 +154,8 @@ function parseResumeProfile(text) {
     summary,
     skills,
     experiences,
+    courses,
+    certifications,
   };
 }
 

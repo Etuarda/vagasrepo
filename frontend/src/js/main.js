@@ -290,6 +290,54 @@ function wireEvents() {
     });
   }
 
+  const formCourse = document.getElementById("form-course");
+  if (formCourse) {
+    formCourse.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById("course-title")?.value || "",
+        institution: document.getElementById("course-institution")?.value || "",
+        period: document.getElementById("course-period")?.value || "",
+        description: document.getElementById("course-description")?.value || "",
+      };
+      await career.addCourse(payload);
+      formCourse.reset();
+    });
+  }
+
+  const coursesList = document.getElementById("courses-list");
+  if (coursesList) {
+    coursesList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-remove-course]");
+      if (!btn) return;
+      await career.removeCourse(btn.dataset.removeCourse);
+    });
+  }
+
+  const formCertification = document.getElementById("form-certification");
+  if (formCertification) {
+    formCertification.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById("certification-title")?.value || "",
+        issuer: document.getElementById("certification-issuer")?.value || "",
+        period: document.getElementById("certification-period")?.value || "",
+        credentialUrl: document.getElementById("certification-url")?.value || "",
+      };
+      await career.addCertification(payload);
+      formCertification.reset();
+    });
+  }
+
+  const certificationsList = document.getElementById("certifications-list");
+  if (certificationsList) {
+    certificationsList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-remove-certification]");
+      if (!btn) return;
+      await career.removeCertification(btn.dataset.removeCertification);
+    });
+  }
+
   const formMatch = document.getElementById("form-match");
   if (formMatch) {
     formMatch.addEventListener("submit", async (e) => {

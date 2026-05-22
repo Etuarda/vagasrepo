@@ -52,6 +52,22 @@ const experienceSchema = z.object({
   description: z.string().trim().min(10, "Descricao deve ter pelo menos 10 caracteres").max(3000),
 });
 
+const courseSchema = z.object({
+  profileId: optionalUuid("Perfil invalido"),
+  title: z.string().trim().min(2, "Curso e obrigatorio").max(180),
+  institution: cleanString(180),
+  period: cleanString(120),
+  description: cleanString(1000),
+});
+
+const certificationSchema = z.object({
+  profileId: optionalUuid("Perfil invalido"),
+  title: z.string().trim().min(2, "Certificacao e obrigatoria").max(180),
+  issuer: cleanString(180),
+  period: cleanString(120),
+  credentialUrl: z.string().trim().url("Link da credencial invalido").or(z.literal("")).default(""),
+});
+
 const matchSchema = z.object({
   jobDescription: z
     .string()
@@ -69,5 +85,7 @@ module.exports = {
   skillsSchema,
   projectSchema,
   experienceSchema,
+  courseSchema,
+  certificationSchema,
   matchSchema,
 };

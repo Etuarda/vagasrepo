@@ -4,6 +4,8 @@ const {
   skillsSchema,
   projectSchema,
   experienceSchema,
+  courseSchema,
+  certificationSchema,
   matchSchema,
   profileIdSchema,
 } = require("../schemas/profile.schema");
@@ -100,6 +102,46 @@ async function deleteExperience(req, res, next) {
   }
 }
 
+async function addCourse(req, res, next) {
+  try {
+    const payload = courseSchema.parse(req.body);
+    const profile = await profileService.addCourse(req.userId, payload.profileId, payload);
+    return res.status(201).json({ courses: profile.courses, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function deleteCourse(req, res, next) {
+  try {
+    const { profileId } = profileIdSchema.parse(req.query);
+    const profile = await profileService.deleteCourse(req.userId, profileId, req.params.id);
+    return res.json({ courses: profile.courses, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function addCertification(req, res, next) {
+  try {
+    const payload = certificationSchema.parse(req.body);
+    const profile = await profileService.addCertification(req.userId, payload.profileId, payload);
+    return res.status(201).json({ certifications: profile.certifications, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function deleteCertification(req, res, next) {
+  try {
+    const { profileId } = profileIdSchema.parse(req.query);
+    const profile = await profileService.deleteCertification(req.userId, profileId, req.params.id);
+    return res.json({ certifications: profile.certifications, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function match(req, res, next) {
   try {
     const payload = matchSchema.parse(req.body);
@@ -151,6 +193,10 @@ module.exports = {
   deleteProject,
   addExperience,
   deleteExperience,
+  addCourse,
+  deleteCourse,
+  addCertification,
+  deleteCertification,
   match,
   listOptimized,
   deleteOptimized,

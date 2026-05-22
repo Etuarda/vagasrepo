@@ -255,6 +255,32 @@
             </form>
             <div id="experiences-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </section>
+
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-3" aria-labelledby="courses-title">
+            <h3 id="courses-title" class="font-serif text-3xl">Cursos e certificações.</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <form id="form-course" class="space-y-4">
+                <h4 class="text-[10px] font-bold uppercase tracking-[0.3em] text-stone">Curso</h4>
+                <input type="text" id="course-title" required placeholder="Nome do curso" class="editorial-input text-sm" />
+                <input type="text" id="course-institution" placeholder="Instituição" class="editorial-input text-sm" />
+                <input type="text" id="course-period" placeholder="Período" class="editorial-input text-sm" />
+                <textarea id="course-description" rows="2" placeholder="Descrição curta" class="editorial-input text-sm"></textarea>
+                <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar curso</button>
+              </form>
+              <form id="form-certification" class="space-y-4">
+                <h4 class="text-[10px] font-bold uppercase tracking-[0.3em] text-stone">Certificação</h4>
+                <input type="text" id="certification-title" required placeholder="Nome da certificação" class="editorial-input text-sm" />
+                <input type="text" id="certification-issuer" placeholder="Emissor" class="editorial-input text-sm" />
+                <input type="text" id="certification-period" placeholder="Data ou período" class="editorial-input text-sm" />
+                <input type="url" id="certification-url" placeholder="Link da credencial" class="editorial-input text-sm" />
+                <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar certificação</button>
+              </form>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div id="courses-list" class="space-y-4"></div>
+              <div id="certifications-list" class="space-y-4"></div>
+            </div>
+          </section>
         </div>
       </section>
 

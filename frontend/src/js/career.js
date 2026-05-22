@@ -106,6 +106,55 @@ function renderExperiences() {
     .join("");
 }
 
+function renderCoursesAndCertifications() {
+  const coursesRoot = document.getElementById("courses-list");
+  const certsRoot = document.getElementById("certifications-list");
+
+  if (coursesRoot) {
+    const courses = state.profile?.courses || [];
+    coursesRoot.innerHTML = courses.length
+      ? courses
+          .map(
+            (course) => `
+              <article class="border border-borderLight rounded-2xl p-5 bg-white">
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <h4 class="font-bold">${escapeHtml(course.title)}</h4>
+                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(course.institution || "Instituição não informada")} ${course.period ? `· ${escapeHtml(course.period)}` : ""}</p>
+                    ${course.description ? `<p class="text-sm text-taupe mt-3">${escapeHtml(course.description)}</p>` : ""}
+                  </div>
+                  <button type="button" data-remove-course="${course.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : `<p class="text-sm text-taupe">Nenhum curso cadastrado.</p>`;
+  }
+
+  if (certsRoot) {
+    const certifications = state.profile?.certifications || [];
+    certsRoot.innerHTML = certifications.length
+      ? certifications
+          .map(
+            (certification) => `
+              <article class="border border-borderLight rounded-2xl p-5 bg-white">
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <h4 class="font-bold">${escapeHtml(certification.title)}</h4>
+                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(certification.issuer || "Emissor não informado")} ${certification.period ? `· ${escapeHtml(certification.period)}` : ""}</p>
+                    ${certification.credentialUrl ? `<a href="${escapeHtml(certification.credentialUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest underline">Credencial</a>` : ""}
+                  </div>
+                  <button type="button" data-remove-certification="${certification.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : `<p class="text-sm text-taupe">Nenhuma certificação cadastrada.</p>`;
+  }
+}
+
 function renderProfileForm() {
   const profile = state.profile;
   if (!profile) return;
@@ -123,6 +172,7 @@ function renderProfileForm() {
   renderSkills();
   renderProjects();
   renderExperiences();
+  renderCoursesAndCertifications();
 }
 
 function renderProfileSelect() {
@@ -372,6 +422,32 @@ export const career = {
 
   async removeExperience(id) {
     const out = await api(`/profile/experiences/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+  },
+
+  async addCourse(payload) {
+    const out = await api("/profile/courses", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Curso cadastrado.");
+  },
+
+  async removeCourse(id) {
+    const out = await api(`/profile/courses/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+  },
+
+  async addCertification(payload) {
+    const out = await api("/profile/certifications", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Certificação cadastrada.");
+  },
+
+  async removeCertification(id) {
+    const out = await api(`/profile/certifications/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
     state.profile = out.user;
     renderProfileForm();
   },

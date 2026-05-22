@@ -7,12 +7,15 @@ const profileInclude = {
     include: { technologies: { orderBy: { name: "asc" } } },
   },
   experiences: { orderBy: { createdAt: "desc" } },
+  courses: { orderBy: { createdAt: "desc" } },
+  certifications: { orderBy: { createdAt: "desc" } },
 };
 
 function serializeProfile(profile) {
   return {
     id: profile.id,
     profileName: profile.profileName,
+    isGlobal: !!profile.isGlobal,
     userId: profile.userId,
     name: profile.name,
     title: profile.title || "",
@@ -38,21 +41,47 @@ function serializeProfile(profile) {
       period: experience.period,
       description: experience.description,
     })),
+    courses: (profile.courses || []).map((course) => ({
+      id: course.id,
+      title: course.title,
+      institution: course.institution || "",
+      period: course.period || "",
+      description: course.description || "",
+    })),
+    certifications: (profile.certifications || []).map((certification) => ({
+      id: certification.id,
+      title: certification.title,
+      issuer: certification.issuer || "",
+      period: certification.period || "",
+      credentialUrl: certification.credentialUrl || "",
+    })),
   };
 }
 
 async function ensureDefaultProfile(userId) {
   const existing = await prisma.careerProfile.findFirst({
-    where: { userId },
+    where: { userId, isGlobal: true },
     orderBy: { createdAt: "asc" },
   });
   if (existing) return existing;
+
+  const fallback = await prisma.careerProfile.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+  });
+  if (fallback) {
+    return prisma.careerProfile.update({
+      where: { id: fallback.id },
+      data: { isGlobal: true, profileName: "Perfil Global" },
+    });
+  }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   return prisma.careerProfile.create({
     data: {
       userId,
-      profileName: "Perfil principal",
+      profileName: "Perfil Global",
+      isGlobal: true,
       name: user.name,
       title: user.title || "",
       emailContact: user.emailContact || user.email || "",
@@ -86,22 +115,86 @@ async function listProfiles(userId) {
   return prisma.careerProfile.findMany({
     where: { userId },
     orderBy: { createdAt: "asc" },
-    select: { id: true, profileName: true, title: true, updatedAt: true },
+    select: { id: true, profileName: true, isGlobal: true, title: true, updatedAt: true },
   });
 }
 
 async function createProfile(userId, { profileName }) {
   const base = await ensureDefaultProfile(userId);
+  const fullBase = await getProfile(userId, base.id);
   const profile = await prisma.careerProfile.create({
     data: {
       userId,
       profileName,
       name: base.name,
+      title: base.title,
       emailContact: base.emailContact,
+      phone: base.phone,
+      location: base.location,
+      linkedin: base.linkedin,
+      github: base.github,
+      summary: base.summary,
     },
     include: profileInclude,
   });
-  return serializeProfile(profile);
+
+  await cloneProfileCollections(userId, fullBase, profile.id);
+  return getProfile(userId, profile.id);
+}
+
+async function cloneProfileCollections(userId, source, targetProfileId) {
+  if (source.skills?.length) {
+    await prisma.skill.createMany({
+      data: source.skills.map((name) => ({ name, userId, profileId: targetProfileId })),
+      skipDuplicates: true,
+    });
+  }
+
+  for (const project of source.projects || []) {
+    await prisma.project.create({
+      data: {
+        title: project.title,
+        description: project.description,
+        repositoryUrl: project.repositoryUrl || "",
+        deployUrl: project.deployUrl || "",
+        userId,
+        profileId: targetProfileId,
+        technologies: { create: (project.technologies || []).map((name) => ({ name })) },
+      },
+    });
+  }
+
+  if (source.experiences?.length) {
+    await prisma.experience.createMany({
+      data: source.experiences.map((item) => ({ ...item, userId, profileId: targetProfileId })),
+    });
+  }
+
+  if (source.courses?.length) {
+    await prisma.course.createMany({
+      data: source.courses.map((item) => ({
+        title: item.title,
+        institution: item.institution || "",
+        period: item.period || "",
+        description: item.description || "",
+        userId,
+        profileId: targetProfileId,
+      })),
+    });
+  }
+
+  if (source.certifications?.length) {
+    await prisma.certification.createMany({
+      data: source.certifications.map((item) => ({
+        title: item.title,
+        issuer: item.issuer || "",
+        period: item.period || "",
+        credentialUrl: item.credentialUrl || "",
+        userId,
+        profileId: targetProfileId,
+      })),
+    });
+  }
 }
 
 async function getProfile(userId, profileId = null) {
@@ -163,6 +256,18 @@ async function updateProfileFromPdf(userId, profileId, extracted) {
     if (toCreate.length) {
       await prisma.experience.createMany({ data: toCreate });
     }
+  }
+
+  if (extracted.courses?.length) {
+    await prisma.course.createMany({
+      data: extracted.courses.map((item) => ({ ...item, userId, profileId: profile.id })),
+    });
+  }
+
+  if (extracted.certifications?.length) {
+    await prisma.certification.createMany({
+      data: extracted.certifications.map((item) => ({ ...item, userId, profileId: profile.id })),
+    });
   }
 
   return getProfile(userId, profile.id);
@@ -232,6 +337,40 @@ async function deleteExperience(userId, profileId, id) {
   return getProfile(userId, profile.id);
 }
 
+async function addCourse(userId, profileId, data) {
+  const profile = await resolveProfile(userId, profileId);
+  await prisma.course.create({ data: { ...data, userId, profileId: profile.id } });
+  return getProfile(userId, profile.id);
+}
+
+async function deleteCourse(userId, profileId, id) {
+  const profile = await resolveProfile(userId, profileId);
+  const result = await prisma.course.deleteMany({ where: { id, userId, profileId: profile.id } });
+  if (result.count === 0) {
+    const err = new Error("Curso não encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  return getProfile(userId, profile.id);
+}
+
+async function addCertification(userId, profileId, data) {
+  const profile = await resolveProfile(userId, profileId);
+  await prisma.certification.create({ data: { ...data, userId, profileId: profile.id } });
+  return getProfile(userId, profile.id);
+}
+
+async function deleteCertification(userId, profileId, id) {
+  const profile = await resolveProfile(userId, profileId);
+  const result = await prisma.certification.deleteMany({ where: { id, userId, profileId: profile.id } });
+  if (result.count === 0) {
+    const err = new Error("Certificação não encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
+  return getProfile(userId, profile.id);
+}
+
 module.exports = {
   listProfiles,
   createProfile,
@@ -243,6 +382,10 @@ module.exports = {
   deleteProject,
   addExperience,
   deleteExperience,
+  addCourse,
+  deleteCourse,
+  addCertification,
+  deleteCertification,
   resolveProfile,
   serializeProfile,
   profileInclude,
