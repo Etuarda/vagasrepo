@@ -13,6 +13,7 @@ router.post("/profile/experiences", profileController.addExperience);
 router.delete("/profile/experiences/:id", profileController.deleteExperience);
 router.post("/match", profileController.match);
 router.get("/optimized-resumes", profileController.listOptimized);
+router.get("/optimized-resumes/:id/download", profileController.downloadOptimized);
 router.delete("/optimized-resumes/:id", profileController.deleteOptimized);
 
 module.exports = router;

@@ -103,6 +103,18 @@ async function deleteOptimized(req, res, next) {
   }
 }
 
+async function downloadOptimized(req, res, next) {
+  try {
+    const file = await matchingService.getGeneratedPdf(req.userId, req.params.id);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Length", file.content.length);
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+    return res.send(file.content);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -114,4 +126,5 @@ module.exports = {
   match,
   listOptimized,
   deleteOptimized,
+  downloadOptimized,
 };

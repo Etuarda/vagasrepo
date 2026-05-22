@@ -309,6 +309,13 @@ function wireEvents() {
   const matchHistory = document.getElementById("match-history");
   if (matchHistory) {
     matchHistory.addEventListener("click", async (e) => {
+      const optimizedLink = e.target.closest("[data-download-optimized]");
+      if (optimizedLink) {
+        e.preventDefault();
+        await career.downloadOptimizedResume(optimizedLink.dataset.downloadOptimized);
+        return;
+      }
+
       const downloadLink = e.target.closest("[data-download-resume]");
       if (downloadLink) {
         e.preventDefault();

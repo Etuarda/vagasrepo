@@ -140,7 +140,12 @@ function renderHistory() {
               <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${formatDateTime(item.createdAt)} · ${item.score}%</p>
               ${
                 item.resumeFileId
-                  ? `<a href="#" data-download-resume="${item.resumeFileId}" class="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF usado</a>`
+                  ? `
+                    <div class="mt-2 flex flex-wrap gap-3">
+                      <a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF otimizado</a>
+                      <a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>
+                    </div>
+                  `
                   : ""
               }
             </div>
@@ -383,6 +388,28 @@ export const career = {
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = "curriculo.pdf";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  async downloadOptimizedResume(id) {
+    const { API_URL } = await import("./config.js");
+    const response = await fetch(`${API_URL}/optimized-resumes/${id}/download`, {
+      headers: { Authorization: `Bearer ${state.token}` },
+    });
+
+    if (!response.ok) {
+      ui.notify("Não foi possível baixar o PDF otimizado.", "error");
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "curriculo-otimizado.pdf";
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();

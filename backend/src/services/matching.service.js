@@ -1,5 +1,6 @@
 const { prisma } = require("../lib/prisma");
 const profileService = require("./profile.service");
+const { generateOptimizedResumePdf } = require("./pdf-output.service");
 
 const TECH_KEYWORDS = [
   "javascript",
@@ -92,7 +93,7 @@ async function executeMatch(userId, jobDescription, resumeFileId = null) {
   if (resumeFileId) {
     resumeFile = await prisma.resumeFile.findFirst({
       where: { id: resumeFileId, userId },
-      select: { id: true, fileName: true, extractedText: true },
+      select: { id: true, fileName: true, extractedText: true, content: true },
     });
 
     if (!resumeFile) {
@@ -169,6 +170,14 @@ async function executeMatch(userId, jobDescription, resumeFileId = null) {
     semanticFeedback: `A análise comparou ${fallbackSkills.length} competências e ${fallbackTechs.length} tecnologias com o perfil cadastrado.`,
   };
 
+  const generatedPdf = resumeFile
+    ? await generateOptimizedResumePdf({
+        basePdfBuffer: Buffer.from(resumeFile.content),
+        profile,
+        matchResult: result,
+      })
+    : null;
+
   const saved = await prisma.optimizedResume.create({
     data: {
       userId,
@@ -182,6 +191,8 @@ async function executeMatch(userId, jobDescription, resumeFileId = null) {
       matchedTechnologies: result.matchedTechnologies,
       missingTechnologies: result.missingTechnologies,
       resumeFileId: resumeFile?.id || null,
+      generatedPdf,
+      generatedFileName: generatedPdf ? `curriculo-otimizado-${Date.now()}.pdf` : null,
     },
   });
 
@@ -198,6 +209,7 @@ async function listHistory(userId) {
       targetTitle: true,
       score: true,
       resumeFileId: true,
+      generatedFileName: true,
       createdAt: true,
       resumeFile: {
         select: {
@@ -206,6 +218,27 @@ async function listHistory(userId) {
       },
     },
   });
+}
+
+async function getGeneratedPdf(userId, id) {
+  const row = await prisma.optimizedResume.findFirst({
+    where: { id, userId },
+    select: {
+      generatedPdf: true,
+      generatedFileName: true,
+    },
+  });
+
+  if (!row || !row.generatedPdf) {
+    const err = new Error("PDF otimizado não encontrado para esta análise");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return {
+    fileName: row.generatedFileName || "curriculo-otimizado.pdf",
+    content: Buffer.from(row.generatedPdf),
+  };
 }
 
 async function deleteHistory(userId, id) {
@@ -218,4 +251,4 @@ async function deleteHistory(userId, id) {
   return { message: "Removido" };
 }
 
-module.exports = { executeMatch, listHistory, deleteHistory };
+module.exports = { executeMatch, listHistory, deleteHistory, getGeneratedPdf };
