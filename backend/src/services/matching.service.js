@@ -172,7 +172,6 @@ async function executeMatch(userId, jobDescription, resumeFileId = null, profile
 
   const generatedPdf = resumeFile
     ? await generateOptimizedResumePdf({
-        basePdfBuffer: Buffer.from(resumeFile.content),
         profile,
         matchResult: result,
       })
