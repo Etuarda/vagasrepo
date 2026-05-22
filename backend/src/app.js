@@ -10,6 +10,7 @@ const { errorHandler } = require("./middlewares/errorHandler");
 const authRoutes = require("./routes/auth.routes");
 const jobsRoutes = require("./routes/jobs.routes");
 const profileRoutes = require("./routes/profile.routes");
+const resumeFilesRoutes = require("./routes/resume-files.routes");
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.get("/health", (req, res) => {
  */
 app.use("/auth", authRoutes);
 app.use("/jobs", jobsRoutes);
+app.use("/resume-files", resumeFilesRoutes);
 app.use("/", profileRoutes);
 
 /**

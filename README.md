@@ -7,6 +7,7 @@ Aplicacao para gerenciar candidaturas, com frontend estatico e API Node.js/Expre
 - Cadastro e acompanhamento de candidaturas.
 - Perfil profissional com resumo, contatos, habilidades, projetos e experiencias.
 - Matching ATS deterministico entre descricao da vaga e perfil cadastrado.
+- Anexo de curriculos PDF como base de matching, mantendo o arquivo original para preservar a formatacao.
 - Historico de analises salvas no banco.
 
 ## Deploy recomendado

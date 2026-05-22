@@ -84,9 +84,23 @@ function scorePercent(matched, total) {
   return Math.round((matched / total) * 100);
 }
 
-async function executeMatch(userId, jobDescription) {
+async function executeMatch(userId, jobDescription, resumeFileId = null) {
   const profile = await profileService.getProfile(userId);
   const text = jobDescription.trim();
+  let resumeFile = null;
+
+  if (resumeFileId) {
+    resumeFile = await prisma.resumeFile.findFirst({
+      where: { id: resumeFileId, userId },
+      select: { id: true, fileName: true, extractedText: true },
+    });
+
+    if (!resumeFile) {
+      const err = new Error("Currículo PDF não encontrado");
+      err.statusCode = 404;
+      throw err;
+    }
+  }
 
   const requiredTechnologies = extractFromText(text, TECH_KEYWORDS);
   const requiredSkills = extractFromText(text, SKILL_KEYWORDS);
@@ -95,8 +109,10 @@ async function executeMatch(userId, jobDescription) {
   const fallbackTechs = requiredTechnologies.length ? requiredTechnologies : ["javascript", "html", "css"];
 
   const projectTechs = profile.projects.flatMap((project) => project.technologies);
-  const ownedSkills = profile.skills;
-  const ownedTechnologies = [...profile.skills, ...projectTechs];
+  const resumeText = resumeFile?.extractedText || "";
+  const resumeSkills = [...extractFromText(resumeText, SKILL_KEYWORDS), ...extractFromText(resumeText, TECH_KEYWORDS)];
+  const ownedSkills = [...new Set([...profile.skills, ...resumeSkills])];
+  const ownedTechnologies = [...new Set([...profile.skills, ...projectTechs, ...resumeSkills])];
 
   const skillMatch = compareRequired(fallbackSkills, ownedSkills);
   const techMatch = compareRequired(fallbackTechs, ownedTechnologies);
@@ -142,6 +158,7 @@ async function executeMatch(userId, jobDescription) {
     },
     score: totalScore,
     targetTitle: inferTitle(text),
+    resumeFile: resumeFile ? { id: resumeFile.id, fileName: resumeFile.fileName } : null,
     matchedSkills: skillMatch.matched,
     missingSkills: skillMatch.missing,
     matchedTechnologies: techMatch.matched,
@@ -164,6 +181,7 @@ async function executeMatch(userId, jobDescription) {
       missingSkills: result.missingSkills,
       matchedTechnologies: result.matchedTechnologies,
       missingTechnologies: result.missingTechnologies,
+      resumeFileId: resumeFile?.id || null,
     },
   });
 
@@ -179,7 +197,13 @@ async function listHistory(userId) {
       id: true,
       targetTitle: true,
       score: true,
+      resumeFileId: true,
       createdAt: true,
+      resumeFile: {
+        select: {
+          fileName: true,
+        },
+      },
     },
   });
 }

@@ -138,8 +138,54 @@ function renderHistory() {
             <div>
               <h4 class="font-bold text-sm">${escapeHtml(item.targetTitle)}</h4>
               <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${formatDateTime(item.createdAt)} · ${item.score}%</p>
+              ${
+                item.resumeFileId
+                  ? `<a href="#" data-download-resume="${item.resumeFileId}" class="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF usado</a>`
+                  : ""
+              }
             </div>
             <button type="button" data-remove-match="${item.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderResumeFiles() {
+  const list = document.getElementById("resume-files-list");
+  const select = document.getElementById("match-resume-file");
+  const files = state.resumeFiles || [];
+
+  if (select) {
+    select.innerHTML = `
+      <option value="">Usar apenas perfil cadastrado</option>
+      ${files.map((file) => `<option value="${file.id}">${escapeHtml(file.fileName)}</option>`).join("")}
+    `;
+  }
+
+  if (!list) return;
+
+  if (!files.length) {
+    list.innerHTML = `<p class="text-sm text-taupe">Nenhum currículo PDF anexado ainda.</p>`;
+    return;
+  }
+
+  list.innerHTML = files
+    .map(
+      (file) => `
+        <article class="border border-borderLight rounded-2xl p-5 bg-white">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h4 class="font-bold text-sm">${escapeHtml(file.fileName)}</h4>
+              <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">
+                ${formatDateTime(file.createdAt)} · ${Math.round(file.sizeBytes / 1024)} KB · ${file.extractedTextLength ? "texto lido" : "sem texto extraído"}
+              </p>
+              <a href="#" data-download-resume="${file.id}" class="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest underline">
+                Baixar original
+              </a>
+            </div>
+            <button type="button" data-remove-resume="${file.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
           </div>
         </article>
       `
@@ -282,7 +328,8 @@ export const career = {
   },
 
   async match(jobDescription) {
-    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription }) }, state.token);
+    const resumeFileId = document.getElementById("match-resume-file")?.value || undefined;
+    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, resumeFileId }) }, state.token);
     renderMatchResult(result);
     await career.loadHistory();
   },
@@ -290,6 +337,56 @@ export const career = {
   async removeMatch(id) {
     await api(`/optimized-resumes/${id}`, { method: "DELETE" }, state.token);
     await career.loadHistory();
+  },
+
+  async loadResumeFiles() {
+    const files = await api("/resume-files", {}, state.token);
+    state.resumeFiles = Array.isArray(files) ? files : [];
+    renderResumeFiles();
+  },
+
+  async uploadResumeFile(file) {
+    const formData = new FormData();
+    formData.append("resume", file);
+    const out = await api(
+      "/resume-files",
+      {
+        method: "POST",
+        body: formData,
+        headers: {},
+      },
+      state.token
+    );
+    state.resumeFiles = [out, ...(state.resumeFiles || [])];
+    renderResumeFiles();
+    ui.notify("Currículo PDF anexado.");
+  },
+
+  async removeResumeFile(id) {
+    await api(`/resume-files/${id}`, { method: "DELETE" }, state.token);
+    await career.loadResumeFiles();
+  },
+
+  async downloadResumeFile(id) {
+    const { API_URL } = await import("./config.js");
+    const response = await fetch(`${API_URL}/resume-files/${id}/download`, {
+      headers: { Authorization: `Bearer ${state.token}` },
+    });
+
+    if (!response.ok) {
+      ui.notify("Não foi possível baixar o PDF.", "error");
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "curriculo.pdf";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   },
 
   setTab(tab) {

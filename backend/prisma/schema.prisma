@@ -25,6 +25,7 @@ model User {
   projects         Project[]
   experiences      Experience[]
   optimizedResumes OptimizedResume[]
+  resumeFiles      ResumeFile[]
 }
 
 model Job {
@@ -116,9 +117,29 @@ model OptimizedResume {
   missingSkills       String[] @default([])
   matchedTechnologies String[] @default([])
   missingTechnologies String[] @default([])
+  resumeFileId        String?
   createdAt           DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeFile ResumeFile? @relation(fields: [resumeFileId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([resumeFileId])
+  @@index([createdAt])
+}
+
+model ResumeFile {
+  id            String   @id @default(uuid())
+  userId        String
+  fileName      String
+  mimeType      String
+  sizeBytes     Int
+  content       Bytes
+  extractedText String   @default("")
+  createdAt     DateTime @default(now())
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  optimizedResumes OptimizedResume[]
 
   @@index([userId])
   @@index([createdAt])

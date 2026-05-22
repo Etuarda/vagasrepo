@@ -4,6 +4,7 @@ export const state = {
   jobs: [],
   profile: null,
   matchHistory: [],
+  resumeFiles: [],
   filters: {
     q: "",
     status: "",

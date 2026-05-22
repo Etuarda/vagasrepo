@@ -42,6 +42,7 @@ const matchSchema = z.object({
     .trim()
     .min(30, "Cole uma descrição de vaga com pelo menos 30 caracteres")
     .max(15000, "A descrição da vaga deve ter no máximo 15.000 caracteres"),
+  resumeFileId: z.string().uuid("Currículo PDF inválido").optional(),
 });
 
 module.exports = {

@@ -17,6 +17,7 @@ let __vlibrasStarted = false;
 async function loadDashboardData() {
   await jobs.load();
   await career.loadProfile();
+  await career.loadResumeFiles();
   await career.loadHistory();
 }
 
@@ -273,9 +274,48 @@ function wireEvents() {
     });
   }
 
+  const formResumeUpload = document.getElementById("form-resume-upload");
+  if (formResumeUpload) {
+    formResumeUpload.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("resume-file-input");
+      const file = input?.files?.[0];
+      if (!file) {
+        ui.notify("Selecione um PDF para anexar.", "error");
+        return;
+      }
+      await career.uploadResumeFile(file);
+      input.value = "";
+    });
+  }
+
+  const resumeFilesList = document.getElementById("resume-files-list");
+  if (resumeFilesList) {
+    resumeFilesList.addEventListener("click", async (e) => {
+      const removeBtn = e.target.closest("[data-remove-resume]");
+      if (removeBtn) {
+        await career.removeResumeFile(removeBtn.dataset.removeResume);
+        return;
+      }
+
+      const downloadLink = e.target.closest("[data-download-resume]");
+      if (downloadLink) {
+        e.preventDefault();
+        await career.downloadResumeFile(downloadLink.dataset.downloadResume);
+      }
+    });
+  }
+
   const matchHistory = document.getElementById("match-history");
   if (matchHistory) {
     matchHistory.addEventListener("click", async (e) => {
+      const downloadLink = e.target.closest("[data-download-resume]");
+      if (downloadLink) {
+        e.preventDefault();
+        await career.downloadResumeFile(downloadLink.dataset.downloadResume);
+        return;
+      }
+
       const btn = e.target.closest("[data-remove-match]");
       if (!btn) return;
       await career.removeMatch(btn.dataset.removeMatch);

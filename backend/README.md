@@ -62,3 +62,7 @@ API: `http://localhost:3000`
 - `POST /match` com Bearer token
 - `GET /optimized-resumes` com Bearer token
 - `DELETE /optimized-resumes/:id` com Bearer token
+- `GET /resume-files` com Bearer token
+- `POST /resume-files` com Bearer token e `multipart/form-data` no campo `resume`
+- `GET /resume-files/:id/download` com Bearer token
+- `DELETE /resume-files/:id` com Bearer token

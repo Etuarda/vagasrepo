@@ -78,7 +78,7 @@ async function deleteExperience(req, res, next) {
 async function match(req, res, next) {
   try {
     const payload = matchSchema.parse(req.body);
-    const result = await matchingService.executeMatch(req.userId, payload.jobDescription);
+    const result = await matchingService.executeMatch(req.userId, payload.jobDescription, payload.resumeFileId);
     return res.json(result);
   } catch (err) {
     return next(err);
