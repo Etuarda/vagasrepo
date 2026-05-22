@@ -297,6 +297,15 @@ function wireEvents() {
     });
   }
 
+  const matchResult = document.getElementById("match-result");
+  if (matchResult) {
+    matchResult.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-download-current-optimized]");
+      if (!btn) return;
+      await career.downloadOptimizedResume(btn.dataset.downloadCurrentOptimized);
+    });
+  }
+
   const formResumeUpload = document.getElementById("form-resume-upload");
   if (formResumeUpload) {
     formResumeUpload.addEventListener("submit", async (e) => {

@@ -197,7 +197,13 @@ async function executeMatch(userId, jobDescription, resumeFileId = null, profile
     },
   });
 
-  return { ...result, id: saved.id, savedAt: saved.createdAt };
+  return {
+    ...result,
+    id: saved.id,
+    savedAt: saved.createdAt,
+    generatedPdfAvailable: Boolean(generatedPdf),
+    generatedFileName: saved.generatedFileName,
+  };
 }
 
 async function listHistory(userId, profileId = null) {

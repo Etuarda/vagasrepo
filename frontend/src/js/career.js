@@ -240,6 +240,13 @@ function renderMatchResult(result) {
         </div>
       </div>
       <p class="text-sm text-taupe leading-relaxed mt-6">${escapeHtml(result.semanticFeedback)}</p>
+      <div class="mt-6 flex flex-wrap gap-3">
+        ${
+          result.generatedPdfAvailable
+            ? `<button type="button" data-download-current-optimized="${result.id}" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Baixar curriculo atualizado</button>`
+            : `<p class="text-sm text-taupe">Selecione um currículo-base em PDF antes do matching para gerar o currículo atualizado para aplicar na vaga.</p>`
+        }
+      </div>
     </section>
     <section class="editorial-card rounded-3xl p-8">
       <h4 class="font-serif text-3xl mb-4">Resumo sugerido.</h4>
