@@ -5,6 +5,8 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, "JWT_SECRET deve ter pelo menos 32 caracteres"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatório"),
   CORS_ORIGIN: z.string().optional(),
+  NODE_ENV: z.string().default("development"),
+  REDIS_URL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

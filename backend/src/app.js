@@ -6,6 +6,7 @@ const cors = require("cors");
 
 const env = require("./config/env");
 const { errorHandler } = require("./middlewares/errorHandler");
+const { securityHeaders, requestContext, rateLimit } = require("./middlewares/security");
 
 const authRoutes = require("./routes/auth.routes");
 const jobsRoutes = require("./routes/jobs.routes");
@@ -28,10 +29,13 @@ const allowedOrigins = (env.CORS_ORIGIN || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const devFallbackOrigins = [
-  "http://127.0.0.1:5500",
-  "http://localhost:5500",
-];
+const devFallbackOrigins =
+  env.NODE_ENV === "production"
+    ? []
+    : [
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+      ];
 
 const origins = [...new Set([...allowedOrigins, ...devFallbackOrigins])];
 
@@ -51,19 +55,17 @@ const corsOptions = {
   credentials: false, // true apenas se usar cookies
 };
 
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, keyPrefix: "auth" });
+const heavyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, keyPrefix: "heavy" });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500, keyPrefix: "api" });
+
 // Aplica CORS globalmente
+app.use(requestContext);
+app.use(securityHeaders);
 app.use(cors(corsOptions));
 
 // Garante que preflight use a MESMA configuração
 app.options("*", cors(corsOptions));
-
-/**
- * =========================
- * MIDDLEWARES
- * =========================
- */
-
-app.use(express.json());
 
 /**
  * =========================
@@ -76,12 +78,24 @@ app.get("/health", (req, res) => {
 
 /**
  * =========================
+ * MIDDLEWARES
+ * =========================
+ */
+
+app.use(apiLimiter);
+app.use(express.json({ limit: "1mb" }));
+
+/**
+ * =========================
  * ROUTES
  * =========================
  */
+app.use("/auth/login", authLimiter);
+app.use("/auth/register", authLimiter);
 app.use("/auth", authRoutes);
 app.use("/jobs", jobsRoutes);
-app.use("/resume-files", resumeFilesRoutes);
+app.use("/resume-files", heavyLimiter, resumeFilesRoutes);
+app.use("/match", heavyLimiter);
 app.use("/", profileRoutes);
 
 /**

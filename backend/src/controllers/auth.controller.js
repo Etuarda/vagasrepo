@@ -30,4 +30,13 @@ async function me(req, res, next) {
   }
 }
 
-module.exports = { register, login, me };
+async function logout(req, res, next) {
+  try {
+    const out = await authService.logoutUser(req.token);
+    return res.json(out);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { register, login, logout, me };

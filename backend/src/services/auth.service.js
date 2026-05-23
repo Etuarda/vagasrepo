@@ -2,9 +2,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const { prisma } = require("../lib/prisma");
+const sessionService = require("./session.service");
+
+const ACCESS_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 
 async function registerUser({ name, email, password }) {
-  const userExists = await prisma.user.findUnique({ where: { email } });
+  const userExists = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
   if (userExists) {
     const err = new Error("E-mail já cadastrado");
     err.statusCode = 400;
@@ -20,7 +23,7 @@ async function registerUser({ name, email, password }) {
 }
 
 async function loginUser({ email, password }) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
 
   if (!user) {
     const err = new Error("Credenciais inválidas");
@@ -35,8 +38,18 @@ async function loginUser({ email, password }) {
     throw err;
   }
 
-  const token = jwt.sign({ id: user.id }, env.JWT_SECRET, { expiresIn: "1d" });
+  const token = jwt.sign({ id: user.id }, env.JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL_SECONDS });
+  await sessionService.createSession(
+    user.id,
+    token,
+    new Date(Date.now() + ACCESS_TOKEN_TTL_SECONDS * 1000)
+  );
   return { token, user: { name: user.name, email: user.email } };
+}
+
+async function logoutUser(token) {
+  await sessionService.revokeSession(token);
+  return { message: "Sessao encerrada" };
 }
 
 async function getMe(userId) {
@@ -52,9 +65,10 @@ async function getMe(userId) {
       location: true,
       linkedin: true,
       github: true,
+      lattes: true,
       summary: true,
     },
   });
 }
 
-module.exports = { registerUser, loginUser, getMe };
+module.exports = { registerUser, loginUser, logoutUser, getMe };

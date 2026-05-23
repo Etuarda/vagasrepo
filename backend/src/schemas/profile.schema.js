@@ -25,6 +25,10 @@ const profileIdSchema = z.object({
   profileId: optionalUuid("Perfil invalido"),
 });
 
+const idParamSchema = z.object({
+  id: z.string().uuid("ID invalido"),
+});
+
 const skillsSchema = z.object({
   profileId: optionalUuid("Perfil invalido"),
   skills: z
@@ -89,6 +93,7 @@ module.exports = {
   profileSchema,
   createProfileSchema,
   profileIdSchema,
+  idParamSchema,
   skillsSchema,
   projectSchema,
   experienceSchema,

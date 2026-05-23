@@ -1,8 +1,10 @@
 const resumeFilesService = require("../services/resume-files.service");
+const { idParamSchema, profileIdSchema } = require("../schemas/profile.schema");
 
 async function upload(req, res, next) {
   try {
-    const file = await resumeFilesService.uploadResumeFile(req.userId, req.file, req.body.profileId || null);
+    const { profileId } = profileIdSchema.parse(req.body);
+    const file = await resumeFilesService.uploadResumeFile(req.userId, req.file, profileId || null);
     return res.status(201).json(file);
   } catch (err) {
     return next(err);
@@ -11,7 +13,8 @@ async function upload(req, res, next) {
 
 async function list(req, res, next) {
   try {
-    const files = await resumeFilesService.listResumeFiles(req.userId, req.query.profileId || null);
+    const { profileId } = profileIdSchema.parse(req.query);
+    const files = await resumeFilesService.listResumeFiles(req.userId, profileId || null);
     return res.json(files);
   } catch (err) {
     return next(err);
@@ -20,7 +23,8 @@ async function list(req, res, next) {
 
 async function download(req, res, next) {
   try {
-    const file = await resumeFilesService.getResumeFile(req.userId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const file = await resumeFilesService.getResumeFile(req.userId, id);
     res.setHeader("Content-Type", file.mimeType);
     res.setHeader("Content-Length", file.sizeBytes);
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.fileName)}"`);
@@ -32,7 +36,8 @@ async function download(req, res, next) {
 
 async function remove(req, res, next) {
   try {
-    const out = await resumeFilesService.deleteResumeFile(req.userId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const out = await resumeFilesService.deleteResumeFile(req.userId, id);
     return res.json(out);
   } catch (err) {
     return next(err);

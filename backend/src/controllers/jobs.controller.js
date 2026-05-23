@@ -1,9 +1,9 @@
-const { jobSchema, jobListQuerySchema } = require("../schemas/job.schema");
+const { jobSchema, jobListQuerySchema, idParamSchema } = require("../schemas/job.schema");
 const jobsService = require("../services/jobs.service");
 
 async function list(req, res, next) {
   try {
-    const { q, status, period, dateFrom, dateTo } = jobListQuerySchema.parse(req.query);
+    const { q, status, period, dateFrom, dateTo, page, limit } = jobListQuerySchema.parse(req.query);
 
     // Regras de precedência:
     // - Se period for last7/last30, ignora dateFrom/dateTo
@@ -14,6 +14,8 @@ async function list(req, res, next) {
       period,
       dateFrom: period ? undefined : dateFrom,
       dateTo: period ? undefined : dateTo,
+      page,
+      limit,
     };
 
     const jobs = await jobsService.listJobs(req.userId, filters);
@@ -35,7 +37,7 @@ async function create(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { id } = req.params;
+    const { id } = idParamSchema.parse(req.params);
     const payload = jobSchema.parse(req.body);
     const out = await jobsService.updateJob(req.userId, id, payload);
     return res.json(out);
@@ -46,7 +48,7 @@ async function update(req, res, next) {
 
 async function remove(req, res, next) {
   try {
-    const { id } = req.params;
+    const { id } = idParamSchema.parse(req.params);
     const out = await jobsService.deleteJob(req.userId, id);
     return res.json(out);
   } catch (err) {

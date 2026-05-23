@@ -5,7 +5,7 @@ const resumeFilesController = require("../controllers/resume-files.controller");
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 3 * 1024 * 1024 },
 });
 
 router.use(authMiddleware);

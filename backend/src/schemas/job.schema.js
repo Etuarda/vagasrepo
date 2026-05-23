@@ -48,6 +48,8 @@ const jobListQuerySchema = z.object({
   q: z.preprocess(emptyToUndefined, z.string().trim().max(200).optional()),
   status: z.preprocess(emptyToUndefined, StatusEnum.optional()),
   period: z.preprocess(emptyToUndefined, PeriodEnum.optional()),
+  page: z.preprocess((v) => emptyToUndefined(v) ?? 1, z.coerce.number().int().min(1).max(1000)),
+  limit: z.preprocess((v) => emptyToUndefined(v) ?? 50, z.coerce.number().int().min(1).max(100)),
   dateFrom: z.preprocess(
     emptyToUndefined,
     z
@@ -64,4 +66,8 @@ const jobListQuerySchema = z.object({
   ),
 });
 
-module.exports = { jobSchema, jobListQuerySchema, StatusEnum };
+const idParamSchema = z.object({
+  id: z.string().uuid("ID invalido"),
+});
+
+module.exports = { jobSchema, jobListQuerySchema, idParamSchema, StatusEnum };

@@ -9,6 +9,7 @@ const {
   languageSchema,
   matchSchema,
   profileIdSchema,
+  idParamSchema,
 } = require("../schemas/profile.schema");
 const profileService = require("../services/profile.service");
 const matchingService = require("../services/matching.service");
@@ -76,7 +77,8 @@ async function addProject(req, res, next) {
 async function deleteProject(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
-    const profile = await profileService.deleteProject(req.userId, profileId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const profile = await profileService.deleteProject(req.userId, profileId, id);
     return res.json({ projects: profile.projects, user: profile });
   } catch (err) {
     return next(err);
@@ -96,7 +98,8 @@ async function addExperience(req, res, next) {
 async function deleteExperience(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
-    const profile = await profileService.deleteExperience(req.userId, profileId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const profile = await profileService.deleteExperience(req.userId, profileId, id);
     return res.json({ experiences: profile.experiences, user: profile });
   } catch (err) {
     return next(err);
@@ -116,7 +119,8 @@ async function addCourse(req, res, next) {
 async function deleteCourse(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
-    const profile = await profileService.deleteCourse(req.userId, profileId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const profile = await profileService.deleteCourse(req.userId, profileId, id);
     return res.json({ courses: profile.courses, user: profile });
   } catch (err) {
     return next(err);
@@ -136,7 +140,8 @@ async function addCertification(req, res, next) {
 async function deleteCertification(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
-    const profile = await profileService.deleteCertification(req.userId, profileId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const profile = await profileService.deleteCertification(req.userId, profileId, id);
     return res.json({ certifications: profile.certifications, user: profile });
   } catch (err) {
     return next(err);
@@ -156,7 +161,8 @@ async function addLanguage(req, res, next) {
 async function deleteLanguage(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
-    const profile = await profileService.deleteLanguage(req.userId, profileId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const profile = await profileService.deleteLanguage(req.userId, profileId, id);
     return res.json({ languages: profile.languages, user: profile });
   } catch (err) {
     return next(err);
@@ -185,7 +191,8 @@ async function listOptimized(req, res, next) {
 
 async function deleteOptimized(req, res, next) {
   try {
-    const out = await matchingService.deleteHistory(req.userId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const out = await matchingService.deleteHistory(req.userId, id);
     return res.json(out);
   } catch (err) {
     return next(err);
@@ -194,7 +201,8 @@ async function deleteOptimized(req, res, next) {
 
 async function downloadOptimized(req, res, next) {
   try {
-    const file = await matchingService.getGeneratedPdf(req.userId, req.params.id);
+    const { id } = idParamSchema.parse(req.params);
+    const file = await matchingService.getGeneratedPdf(req.userId, id);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Length", file.content.length);
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.fileName)}"`);

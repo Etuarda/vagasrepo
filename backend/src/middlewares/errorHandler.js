@@ -1,4 +1,9 @@
 function errorHandler(err, req, res, next) {
+  if (err?.name === "MulterError") {
+    const message = err.code === "LIMIT_FILE_SIZE" ? "O PDF deve ter no maximo 3MB" : "Upload invalido";
+    return res.status(400).json({ error: message });
+  }
+
   // Zod validation
   if (err?.name === "ZodError") {
     return res.status(400).json({
@@ -15,7 +20,15 @@ function errorHandler(err, req, res, next) {
   const status = err?.statusCode && Number.isInteger(err.statusCode) ? err.statusCode : 500;
   const message = status === 500 ? "Erro interno" : (err?.message || "Erro");
 
-  if (status === 500) console.error(err);
+  if (status === 500) {
+    console.error(JSON.stringify({
+      requestId: req.requestId,
+      method: req.method,
+      path: req.path,
+      error: err?.message || "Erro interno",
+      stack: err?.stack,
+    }));
+  }
   return res.status(status).json({ error: message });
 }
 

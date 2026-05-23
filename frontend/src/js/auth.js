@@ -51,6 +51,9 @@ export const auth = {
   },
 
   logout() {
+    if (state.token) {
+      api("/auth/logout", { method: "POST" }, state.token).catch(() => {});
+    }
     localStorage.removeItem("vagas_token");
     state.token = null;
     state.user = null;

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "test": "jest --runInBand",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -19,12 +20,14 @@
     "dotenv": "^17.2.3",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
+    "ioredis": "^5.4.1",
     "multer": "^2.1.1",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.1.4",
     "prisma": "^5.18.0"
   }

@@ -93,7 +93,7 @@ async function executeMatch(userId, jobDescription, resumeFileId = null, profile
   if (resumeFileId) {
     resumeFile = await prisma.resumeFile.findFirst({
       where: { id: resumeFileId, userId, profileId: profile.id },
-      select: { id: true, fileName: true, extractedText: true, content: true },
+      select: { id: true, fileName: true, extractedText: true },
     });
 
     if (!resumeFile) {
@@ -170,12 +170,22 @@ async function executeMatch(userId, jobDescription, resumeFileId = null, profile
     semanticFeedback: `A análise comparou ${fallbackSkills.length} competências e ${fallbackTechs.length} tecnologias com o perfil cadastrado.`,
   };
 
+  const pdfStartedAt = Date.now();
   const generatedPdf = resumeFile
     ? await generateOptimizedResumePdf({
         profile,
         matchResult: result,
       })
     : null;
+  if (generatedPdf) {
+    console.warn(JSON.stringify({
+      event: "optimized_resume_pdf_generated",
+      userId,
+      profileId: profile.id,
+      durationMs: Date.now() - pdfStartedAt,
+      sizeBytes: generatedPdf.length,
+    }));
+  }
 
   const saved = await prisma.optimizedResume.create({
     data: {
@@ -191,17 +201,25 @@ async function executeMatch(userId, jobDescription, resumeFileId = null, profile
       missingTechnologies: result.missingTechnologies,
       resumeFileId: resumeFile?.id || null,
       profileId: profile.id,
-      generatedPdf,
-      generatedFileName: generatedPdf ? `curriculo-otimizado-${Date.now()}.pdf` : null,
+      generatedPdf: null,
+      generatedFileName: null,
     },
   });
+
+  const localPdf = generatedPdf
+    ? {
+        fileName: `curriculo-otimizado-${saved.id}.pdf`,
+        contentBase64: generatedPdf.toString("base64"),
+      }
+    : null;
 
   return {
     ...result,
     id: saved.id,
     savedAt: saved.createdAt,
-    generatedPdfAvailable: Boolean(generatedPdf),
-    generatedFileName: saved.generatedFileName,
+    generatedPdfAvailable: Boolean(localPdf),
+    generatedFileName: localPdf?.fileName || null,
+    generatedPdf: localPdf,
   };
 }
 

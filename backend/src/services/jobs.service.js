@@ -18,7 +18,7 @@ function parseYMD(ymd) {
   return new Date(y, m - 1, d);
 }
 
-async function listJobs(userId, { q, status, period, dateFrom, dateTo }) {
+async function listJobs(userId, { q, status, period, dateFrom, dateTo, page = 1, limit = 50 }) {
   const and = [];
 
   // A) Busca textual (case-insensitive)
@@ -54,6 +54,8 @@ async function listJobs(userId, { q, status, period, dateFrom, dateTo }) {
       AND: and,
     },
     orderBy: { data: "desc" },
+    take: limit,
+    skip: (page - 1) * limit,
   });
 }
 

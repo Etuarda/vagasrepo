@@ -278,16 +278,63 @@ async function updateProfileFromPdf(userId, profileId, extracted) {
     }
   }
 
-  if (extracted.courses?.length) {
-    await prisma.course.createMany({
-      data: extracted.courses.map((item) => ({ ...item, userId, profileId: profile.id })),
+  if (extracted.projects?.length) {
+    const existing = await prisma.project.findMany({
+      where: { profileId: profile.id },
+      select: { title: true, description: true },
     });
+    const existingKeys = new Set(existing.map((item) => `${item.title}|${item.description.slice(0, 80)}`));
+    const toCreate = extracted.projects
+      .filter((item) => item.title && item.description)
+      .filter((item) => !existingKeys.has(`${item.title}|${item.description.slice(0, 80)}`));
+
+    for (const project of toCreate) {
+      await prisma.project.create({
+        data: {
+          title: project.title,
+          description: project.description,
+          repositoryUrl: project.repositoryUrl || "",
+          deployUrl: project.deployUrl || "",
+          userId,
+          profileId: profile.id,
+          technologies: {
+            create: [...new Set(project.technologies || [])].map((name) => ({ name })),
+          },
+        },
+      });
+    }
+  }
+
+  if (extracted.courses?.length) {
+    const existing = await prisma.course.findMany({
+      where: { profileId: profile.id },
+      select: { title: true, institution: true, period: true },
+    });
+    const existingKeys = new Set(existing.map((item) => `${item.title}|${item.institution}|${item.period}`));
+    const toCreate = extracted.courses
+      .filter((item) => item.title)
+      .filter((item) => !existingKeys.has(`${item.title}|${item.institution || ""}|${item.period || ""}`))
+      .map((item) => ({ ...item, userId, profileId: profile.id }));
+
+    if (toCreate.length) {
+      await prisma.course.createMany({ data: toCreate });
+    }
   }
 
   if (extracted.certifications?.length) {
-    await prisma.certification.createMany({
-      data: extracted.certifications.map((item) => ({ ...item, userId, profileId: profile.id })),
+    const existing = await prisma.certification.findMany({
+      where: { profileId: profile.id },
+      select: { title: true, issuer: true, period: true },
     });
+    const existingKeys = new Set(existing.map((item) => `${item.title}|${item.issuer}|${item.period}`));
+    const toCreate = extracted.certifications
+      .filter((item) => item.title)
+      .filter((item) => !existingKeys.has(`${item.title}|${item.issuer || ""}|${item.period || ""}`))
+      .map((item) => ({ ...item, userId, profileId: profile.id }));
+
+    if (toCreate.length) {
+      await prisma.certification.createMany({ data: toCreate });
+    }
   }
 
   if (extracted.languages?.length) {

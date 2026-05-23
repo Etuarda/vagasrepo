@@ -322,6 +322,37 @@ function wireEvents() {
     });
   }
 
+  const formLanguage = document.getElementById("form-language");
+  if (formLanguage) {
+    formLanguage.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("language-name")?.value?.trim() || "";
+      const level = document.getElementById("language-level")?.value?.trim() || "";
+      if (!name) return;
+      await runWithFeedback(
+        getSubmitButton(e, formLanguage),
+        { busyText: "Salvando...", notice: "Salvando idioma..." },
+        async () => {
+          await career.addLanguage({ name, level });
+          formLanguage.reset();
+        }
+      );
+    });
+  }
+
+  const languagesList = document.getElementById("languages-list");
+  if (languagesList) {
+    languagesList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-remove-language]");
+      if (!btn) return;
+      await runWithFeedback(
+        btn,
+        { busyText: "Removendo...", notice: "Removendo idioma..." },
+        () => career.removeLanguage(btn.dataset.removeLanguage)
+      );
+    });
+  }
+
   const formProject = document.getElementById("form-project");
   if (formProject) {
     formProject.addEventListener("submit", async (e) => {

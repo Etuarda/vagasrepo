@@ -1,14 +1,16 @@
 const { z } = require("zod");
 
+const emailSchema = z.string().trim().toLowerCase().email("E-mail invalido");
+
 const registerSchema = z.object({
-  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
-  email: z.string().email("E-mail inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+  name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(120),
+  email: emailSchema,
+  password: z.string().min(10, "Senha deve ter pelo menos 10 caracteres"),
 });
 
 const loginSchema = z.object({
-  email: z.string().email("E-mail inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+  email: emailSchema,
+  password: z.string().min(1, "Senha e obrigatoria"),
 });
 
 module.exports = { registerSchema, loginSchema };

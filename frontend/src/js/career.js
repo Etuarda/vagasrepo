@@ -44,6 +44,28 @@ function renderSkills() {
     .join("");
 }
 
+function renderLanguages() {
+  const root = document.getElementById("languages-list");
+  if (!root) return;
+
+  const languages = state.profile?.languages || [];
+  if (!languages.length) {
+    root.innerHTML = `<p class="text-sm text-taupe">Nenhum idioma cadastrado.</p>`;
+    return;
+  }
+
+  root.innerHTML = languages
+    .map(
+      (language) => `
+        <span class="tag-pill">
+          ${escapeHtml([language.name, language.level].filter(Boolean).join(" - "))}
+          <button type="button" data-remove-language="${escapeHtml(language.id)}" aria-label="Remover ${escapeHtml(language.name)}">x</button>
+        </span>
+      `
+    )
+    .join("");
+}
+
 function renderProjects() {
   const root = document.getElementById("projects-list");
   if (!root) return;
@@ -167,9 +189,11 @@ function renderProfileForm() {
   setValue("profile-location", profile.location);
   setValue("profile-linkedin", profile.linkedin);
   setValue("profile-github", profile.github);
+  setValue("profile-lattes", profile.lattes);
   setValue("profile-summary", profile.summary);
 
   renderSkills();
+  renderLanguages();
   renderProjects();
   renderExperiences();
   renderCoursesAndCertifications();
@@ -205,11 +229,11 @@ function renderHistory() {
               <h4 class="font-bold text-sm">${escapeHtml(item.targetTitle)}</h4>
               <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${formatDateTime(item.createdAt)} · ${item.score}%</p>
               ${
-                item.resumeFileId
+                item.generatedFileName || item.resumeFileId
                   ? `
                     <div class="mt-2 flex flex-wrap gap-3">
-                      <a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF otimizado</a>
-                      <a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>
+                      ${item.generatedFileName ? `<a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF otimizado</a>` : ""}
+                      ${item.resumeFileId ? `<a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>` : ""}
                     </div>
                   `
                   : ""
@@ -392,6 +416,7 @@ export const career = {
       location: document.getElementById("profile-location")?.value || "",
       linkedin: document.getElementById("profile-linkedin")?.value || "",
       github: document.getElementById("profile-github")?.value || "",
+      lattes: document.getElementById("profile-lattes")?.value || "",
       summary: document.getElementById("profile-summary")?.value || "",
     };
     const out = await api("/profile", { method: "PUT", body: JSON.stringify(payload) }, state.token);
@@ -412,6 +437,19 @@ export const career = {
   async removeSkill(name) {
     const skills = (state.profile?.skills || []).filter((skill) => skill !== name);
     const out = await api("/profile/skills", { method: "PUT", body: JSON.stringify({ profileId: state.activeProfileId, skills }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+  },
+
+  async addLanguage(payload) {
+    const out = await api("/profile/languages", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Idioma cadastrado.");
+  },
+
+  async removeLanguage(id) {
+    const out = await api(`/profile/languages/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
     state.profile = out.user;
     renderProfileForm();
   },
@@ -472,6 +510,9 @@ export const career = {
     renderMatchLoading();
     const resumeFileId = document.getElementById("match-resume-file")?.value || undefined;
     const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, resumeFileId, profileId: state.activeProfileId }) }, state.token);
+    if (result.generatedPdf?.contentBase64) {
+      state.optimizedPdfCache[result.id] = result.generatedPdf;
+    }
     renderMatchResult(result);
     await career.loadHistory();
   },
@@ -536,6 +577,23 @@ export const career = {
   },
 
   async downloadOptimizedResume(id) {
+    const localPdf = state.optimizedPdfCache?.[id];
+    if (localPdf?.contentBase64) {
+      const binary = atob(localPdf.contentBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = localPdf.fileName || "curriculo-otimizado.pdf";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
     const { API_URL } = await import("./config.js");
     const response = await fetch(`${API_URL}/optimized-resumes/${id}/download`, {
       headers: { Authorization: `Bearer ${state.token}` },

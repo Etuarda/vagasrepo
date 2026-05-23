@@ -1,6 +1,15 @@
 import { state } from "./state.js";
 import { toast } from "./toast.js";
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 export const ui = {
   navigate(view) {
     ["landing", "dashboard"].forEach((v) => {
@@ -27,7 +36,7 @@ export const ui = {
     if (state.user) {
       nav.innerHTML = `
         <span class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">
-          voce so precisa de um SIM, ${state.user.name}
+          voce so precisa de um SIM, ${escapeHtml(state.user.name)}
         </span>
         <button data-action="logout" class="text-[10px] font-bold uppercase tracking-[0.2em] underline">
           Sair
@@ -213,11 +222,11 @@ export const ui = {
         (job) => `
       <tr class="group hover:bg-stone-50 transition-colors">
         <td class="py-10 px-6">
-          <div class="font-bold text-xl">${job.titulo}</div>
-          <div class="text-[9px] uppercase tracking-[0.4em] text-stone mt-2 font-bold">${job.empresa}</div>
+          <div class="font-bold text-xl">${escapeHtml(job.titulo)}</div>
+          <div class="text-[9px] uppercase tracking-[0.4em] text-stone mt-2 font-bold">${escapeHtml(job.empresa)}</div>
         </td>
-        <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest">${job.fase}</td>
-        <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest opacity-40">${job.status}</td>
+        <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest">${escapeHtml(job.fase)}</td>
+        <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest opacity-40">${escapeHtml(job.status)}</td>
         <td class="py-10 px-6 text-right">
           <button data-action="edit" data-id="${job.id}" class="text-[9px] font-bold uppercase tracking-widest hover:underline">
             Editar

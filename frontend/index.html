@@ -204,6 +204,7 @@
             <input type="text" id="profile-location" placeholder="Cidade / Estado" class="editorial-input md:col-span-2" />
             <input type="url" id="profile-linkedin" placeholder="LinkedIn" class="editorial-input" />
             <input type="url" id="profile-github" placeholder="GitHub ou portfolio" class="editorial-input" />
+            <input type="url" id="profile-lattes" placeholder="Curriculo Lattes (opcional)" class="editorial-input md:col-span-2" />
             <textarea id="profile-summary" rows="5" placeholder="Resumo profissional base" class="editorial-input md:col-span-2"></textarea>
             <div class="md:col-span-2 flex justify-end">
               <button type="submit" class="bg-ink text-paper px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
@@ -221,6 +222,16 @@
               <button type="submit" class="bg-ink text-paper px-5 rounded-full text-[10px] font-bold uppercase tracking-widest">+</button>
             </form>
             <div id="skills-list" class="flex flex-wrap gap-2"></div>
+          </section>
+
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-2" aria-labelledby="languages-title">
+            <h3 id="languages-title" class="font-serif text-3xl">Idiomas.</h3>
+            <form id="form-language" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input type="text" id="language-name" required placeholder="Idioma" class="editorial-input text-sm" />
+              <input type="text" id="language-level" placeholder="Nivel" class="editorial-input text-sm" />
+              <button type="submit" class="bg-ink text-paper px-5 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
+            </form>
+            <div id="languages-list" class="flex flex-wrap gap-2"></div>
           </section>
 
           <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-2" aria-labelledby="projects-title">
@@ -337,7 +348,7 @@
       <form id="form-register" class="space-y-6 hidden">
         <input type="text" id="reg-name" placeholder="Nome Completo" required class="editorial-input" />
         <input type="email" id="reg-email" placeholder="E-mail" required class="editorial-input" />
-        <input type="password" id="reg-password" placeholder="Senha (mín. 6 caracteres)" required class="editorial-input" minlength="6" />
+        <input type="password" id="reg-password" placeholder="Senha (min. 10 caracteres)" required class="editorial-input" minlength="10" />
         <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Registrar Profissional</button>
         <button type="button" onclick="window.__uiSwitchAuth?.('login')" class="w-full text-[10px] uppercase tracking-widest opacity-40 font-bold underline">Já possuo cadastro</button>
       </form>
