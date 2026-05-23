@@ -18,6 +18,7 @@ model User {
   location     String @default("")
   linkedin     String @default("")
   github       String @default("")
+  lattes       String @default("")
   summary      String @default("")
 
   jobs             Job[]
@@ -27,6 +28,7 @@ model User {
   experiences      Experience[]
   courses          Course[]
   certifications   Certification[]
+  languages        Language[]
   optimizedResumes OptimizedResume[]
   resumeFiles      ResumeFile[]
 }
@@ -43,6 +45,7 @@ model CareerProfile {
   location     String   @default("")
   linkedin     String   @default("")
   github       String   @default("")
+  lattes       String   @default("")
   summary      String   @default("")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -53,6 +56,7 @@ model CareerProfile {
   experiences      Experience[]
   courses          Course[]
   certifications   Certification[]
+  languages        Language[]
   optimizedResumes OptimizedResume[]
   resumeFiles      ResumeFile[]
 
@@ -173,6 +177,21 @@ model Certification {
   userId        String
   profileId     String?
   createdAt     DateTime @default(now())
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([profileId])
+}
+
+model Language {
+  id        String   @id @default(uuid())
+  name      String
+  level     String   @default("")
+  userId    String
+  profileId String?
+  createdAt DateTime @default(now())
 
   user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)

@@ -44,6 +44,18 @@ const KNOWN_SKILLS = [
   "Backend",
   "Fullstack",
   "Dados",
+  "Java",
+  "Spring",
+  "Next.js",
+  "Vue",
+  "Angular",
+  "MongoDB",
+  "MySQL",
+  "Redis",
+  "Kubernetes",
+  "CI/CD",
+  "Linux",
+  "Figma",
 ];
 
 function normalize(value) {
@@ -51,6 +63,221 @@ function normalize(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function cleanLine(value) {
+  return String(value || "")
+    .replace(/^[\s\-–—•*]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function uniqueBy(items, keyFn) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = keyFn(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+const SECTION_NAMES = [
+  "resumo",
+  "resumo profissional",
+  "perfil",
+  "objetivo",
+  "sobre",
+  "formacao",
+  "formacao academica",
+  "educacao",
+  "projetos",
+  "experiencia",
+  "experiencias",
+  "experiencia profissional",
+  "historico profissional",
+  "habilidades",
+  "skills",
+  "competencias",
+  "cursos",
+  "formacao complementar",
+  "certificacoes",
+  "certificados",
+  "idiomas",
+  "languages",
+];
+
+function isSectionTitle(line) {
+  return SECTION_NAMES.includes(normalize(line).replace(/:$/, ""));
+}
+
+function getSection(lines, names) {
+  const normalizedNames = names.map(normalize);
+  const start = lines.findIndex((line) => normalizedNames.includes(normalize(line).replace(/:$/, "")));
+  if (start < 0) return [];
+  const end = lines.findIndex((line, index) => index > start && isSectionTitle(line));
+  return lines.slice(start + 1, end > start ? end : undefined).map(cleanLine).filter(Boolean);
+}
+
+function looksLikeHeader(line) {
+  return (
+    /\|/.test(line) ||
+    /\b(19|20)\d{2}\b/.test(line) ||
+    /\b(atual|presente|current)\b/i.test(line) ||
+    /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][^.!?]{3,120}$/.test(line)
+  );
+}
+
+function splitEntries(lines) {
+  const entries = [];
+  let current = [];
+
+  lines.forEach((line) => {
+    if (looksLikeHeader(line) && current.length) {
+      entries.push(current);
+      current = [line];
+      return;
+    }
+    current.push(line);
+  });
+
+  if (current.length) entries.push(current);
+  return entries.filter((entry) => entry.some(Boolean));
+}
+
+function compactDescription(lines, limit = 900) {
+  return lines.map(cleanLine).filter(Boolean).join(" ").replace(/\s+/g, " ").slice(0, limit);
+}
+
+function extractPeriod(value) {
+  const text = String(value || "");
+  return (
+    text.match(/(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zç]*\.?\s*\/?\s*\d{4}\s*(?:-|–|—|a|até)\s*(?:atual|presente|current|(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zç]*\.?\s*\/?\s*\d{4}|\d{4})/i)?.[0] ||
+    text.match(/\b(19|20)\d{2}\s*(?:-|–|—|a|até)\s*(?:atual|presente|current|(19|20)\d{2})\b/i)?.[0] ||
+    text.match(/\b(19|20)\d{2}\b/)?.[0] ||
+    ""
+  );
+}
+
+function extractTechnologies(text) {
+  const normalizedText = normalize(text);
+  return KNOWN_SKILLS.filter((skill) => normalizedText.includes(normalize(skill)));
+}
+
+function splitHeaderParts(header) {
+  return String(header || "")
+    .split(/\s+\|\s+|\s+–\s+|\s+—\s+|\s+-\s+/)
+    .map(cleanLine)
+    .filter(Boolean);
+}
+
+function parseExperiences(lines, fallbackTitle) {
+  return uniqueBy(
+    splitEntries(lines)
+      .map((entry) => {
+        const header = entry[0] || "";
+        const parts = splitHeaderParts(header);
+        const period = extractPeriod(header) || extractPeriod(entry.join(" "));
+        const role = parts[0] || fallbackTitle || "Experiencia profissional";
+        const company = parts.find((part, index) => index > 0 && !extractPeriod(part)) || "";
+        const description = compactDescription(entry.slice(1).length ? entry.slice(1) : entry, 1000);
+        return {
+          role,
+          company: company || "Informado no curriculo",
+          period: period || "Informado no curriculo",
+          description,
+        };
+      })
+      .filter((item) => item.description.length >= 10),
+    (item) => `${normalize(item.role)}|${normalize(item.company)}|${normalize(item.description.slice(0, 60))}`
+  ).slice(0, 8);
+}
+
+function normalizeUrl(value) {
+  return value && !/^https?:\/\//i.test(value) ? `https://${value}` : value;
+}
+
+function parseProjects(lines) {
+  return uniqueBy(
+    splitEntries(lines)
+      .map((entry) => {
+        const header = entry[0] || "";
+        const links = entry.join(" ").match(/(?:https?:\/\/)?(?:www\.)?[^\s|,;]+\.[^\s|,;]+\/?[^\s|,;]*/gi) || [];
+        const repositoryUrl = links.find((link) => /github|gitlab|bitbucket/i.test(link)) || "";
+        const deployUrl = links.find((link) => !/github|gitlab|bitbucket/i.test(link)) || "";
+        return {
+          title: splitHeaderParts(header)[0] || "Projeto",
+          description: compactDescription(entry.slice(1).length ? entry.slice(1) : entry, 1000),
+          repositoryUrl: normalizeUrl(repositoryUrl),
+          deployUrl: normalizeUrl(deployUrl),
+          technologies: extractTechnologies(entry.join(" ")),
+        };
+      })
+      .filter((item) => item.title && item.description.length >= 10),
+    (item) => `${normalize(item.title)}|${normalize(item.description.slice(0, 60))}`
+  ).slice(0, 8);
+}
+
+function parseCourses(lines) {
+  return uniqueBy(
+    lines
+      .map((line) => {
+        const parts = splitHeaderParts(line);
+        return {
+          title: (parts[0] || line).slice(0, 180),
+          institution: (parts[1] || "").slice(0, 180),
+          period: extractPeriod(line).slice(0, 120),
+          description: line.match(/\b\d+\s*h(?:oras)?\b/i)?.[0] || "",
+        };
+      })
+      .filter((item) => item.title.length >= 2),
+    (item) => normalize(`${item.title}|${item.institution}|${item.period}`)
+  ).slice(0, 10);
+}
+
+function parseCertifications(lines) {
+  return uniqueBy(
+    lines
+      .map((line) => {
+        const parts = splitHeaderParts(line);
+        const link = line.match(/(?:https?:\/\/)?[^\s|,;]+\.[^\s|,;]+\/?[^\s|,;]*/i)?.[0] || "";
+        return {
+          title: (parts[0] || line).slice(0, 180),
+          issuer: (parts[1] || "").slice(0, 180),
+          period: extractPeriod(line).slice(0, 120),
+          credentialUrl: normalizeUrl(link),
+        };
+      })
+      .filter((item) => item.title.length >= 2),
+    (item) => normalize(`${item.title}|${item.issuer}|${item.period}`)
+  ).slice(0, 10);
+}
+
+function parseLanguages(lines) {
+  const known = {
+    portugues: "Portugues",
+    ingles: "Ingles",
+    espanhol: "Espanhol",
+    frances: "Frances",
+    alemao: "Alemao",
+    italiano: "Italiano",
+  };
+
+  return uniqueBy(
+    lines
+      .flatMap((line) => line.split(/[,;]+/))
+      .map(cleanLine)
+      .map((line) => {
+        const normalized = normalize(line);
+        const key = Object.keys(known).find((language) => normalized.includes(language));
+        if (!key) return null;
+        const level =
+          line.match(/\b(basico|intermediario|avancado|fluente|nativo|iniciante|basic|intermediate|advanced|fluent)\b/i)?.[0] || "";
+        return { name: known[key], level };
+      })
+      .filter(Boolean),
+    (item) => normalize(`${item.name}|${item.level}`)
+  );
 }
 
 function parseResumeProfile(text) {

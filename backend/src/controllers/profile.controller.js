@@ -6,6 +6,7 @@ const {
   experienceSchema,
   courseSchema,
   certificationSchema,
+  languageSchema,
   matchSchema,
   profileIdSchema,
 } = require("../schemas/profile.schema");
@@ -142,6 +143,26 @@ async function deleteCertification(req, res, next) {
   }
 }
 
+async function addLanguage(req, res, next) {
+  try {
+    const payload = languageSchema.parse(req.body);
+    const profile = await profileService.addLanguage(req.userId, payload.profileId, payload);
+    return res.status(201).json({ languages: profile.languages, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function deleteLanguage(req, res, next) {
+  try {
+    const { profileId } = profileIdSchema.parse(req.query);
+    const profile = await profileService.deleteLanguage(req.userId, profileId, req.params.id);
+    return res.json({ languages: profile.languages, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function match(req, res, next) {
   try {
     const payload = matchSchema.parse(req.body);
@@ -197,6 +218,8 @@ module.exports = {
   deleteCourse,
   addCertification,
   deleteCertification,
+  addLanguage,
+  deleteLanguage,
   match,
   listOptimized,
   deleteOptimized,

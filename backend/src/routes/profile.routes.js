@@ -17,6 +17,8 @@ router.post("/profile/courses", profileController.addCourse);
 router.delete("/profile/courses/:id", profileController.deleteCourse);
 router.post("/profile/certifications", profileController.addCertification);
 router.delete("/profile/certifications/:id", profileController.deleteCertification);
+router.post("/profile/languages", profileController.addLanguage);
+router.delete("/profile/languages/:id", profileController.deleteLanguage);
 router.post("/match", profileController.match);
 router.get("/optimized-resumes", profileController.listOptimized);
 router.get("/optimized-resumes/:id/download", profileController.downloadOptimized);

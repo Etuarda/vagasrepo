@@ -13,6 +13,7 @@ const profileSchema = z.object({
   location: cleanString(120),
   linkedin: cleanString(300),
   github: cleanString(300),
+  lattes: cleanString(300),
   summary: cleanString(3000),
 });
 
@@ -68,6 +69,12 @@ const certificationSchema = z.object({
   credentialUrl: z.string().trim().url("Link da credencial invalido").or(z.literal("")).default(""),
 });
 
+const languageSchema = z.object({
+  profileId: optionalUuid("Perfil invalido"),
+  name: z.string().trim().min(2, "Idioma e obrigatorio").max(80),
+  level: cleanString(80),
+});
+
 const matchSchema = z.object({
   jobDescription: z
     .string()
@@ -87,5 +94,6 @@ module.exports = {
   experienceSchema,
   courseSchema,
   certificationSchema,
+  languageSchema,
   matchSchema,
 };

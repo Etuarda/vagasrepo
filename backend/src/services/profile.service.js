@@ -9,6 +9,7 @@ const profileInclude = {
   experiences: { orderBy: { createdAt: "desc" } },
   courses: { orderBy: { createdAt: "desc" } },
   certifications: { orderBy: { createdAt: "desc" } },
+  languages: { orderBy: { createdAt: "desc" } },
 };
 
 function serializeProfile(profile) {
@@ -24,6 +25,7 @@ function serializeProfile(profile) {
     location: profile.location || "",
     linkedin: profile.linkedin || "",
     github: profile.github || "",
+    lattes: profile.lattes || "",
     summary: profile.summary || "",
     skills: (profile.skills || []).map((skill) => skill.name),
     projects: (profile.projects || []).map((project) => ({
@@ -54,6 +56,11 @@ function serializeProfile(profile) {
       issuer: certification.issuer || "",
       period: certification.period || "",
       credentialUrl: certification.credentialUrl || "",
+    })),
+    languages: (profile.languages || []).map((language) => ({
+      id: language.id,
+      name: language.name,
+      level: language.level || "",
     })),
   };
 }
@@ -89,6 +96,7 @@ async function ensureDefaultProfile(userId) {
       location: user.location || "",
       linkedin: user.linkedin || "",
       github: user.github || "",
+      lattes: user.lattes || "",
       summary: user.summary || "",
     },
   });
@@ -133,6 +141,7 @@ async function createProfile(userId, { profileName }) {
       location: base.location,
       linkedin: base.linkedin,
       github: base.github,
+      lattes: base.lattes,
       summary: base.summary,
     },
     include: profileInclude,
@@ -195,6 +204,17 @@ async function cloneProfileCollections(userId, source, targetProfileId) {
       })),
     });
   }
+
+  if (source.languages?.length) {
+    await prisma.language.createMany({
+      data: source.languages.map((item) => ({
+        name: item.name,
+        level: item.level || "",
+        userId,
+        profileId: targetProfileId,
+      })),
+    });
+  }
 }
 
 async function getProfile(userId, profileId = null) {
@@ -220,7 +240,7 @@ async function updateProfileFromPdf(userId, profileId, extracted) {
   const profile = await resolveProfile(userId, profileId);
   const data = {};
 
-  ["name", "title", "emailContact", "phone", "location", "linkedin", "github", "summary"].forEach((key) => {
+  ["name", "title", "emailContact", "phone", "location", "linkedin", "github", "lattes", "summary"].forEach((key) => {
     if (extracted[key]) data[key] = extracted[key];
   });
 
@@ -268,6 +288,22 @@ async function updateProfileFromPdf(userId, profileId, extracted) {
     await prisma.certification.createMany({
       data: extracted.certifications.map((item) => ({ ...item, userId, profileId: profile.id })),
     });
+  }
+
+  if (extracted.languages?.length) {
+    const existing = await prisma.language.findMany({
+      where: { profileId: profile.id },
+      select: { name: true, level: true },
+    });
+    const existingKeys = new Set(existing.map((item) => `${item.name}|${item.level}`));
+    const toCreate = extracted.languages
+      .filter((item) => item.name)
+      .filter((item) => !existingKeys.has(`${item.name}|${item.level || ""}`))
+      .map((item) => ({ ...item, userId, profileId: profile.id }));
+
+    if (toCreate.length) {
+      await prisma.language.createMany({ data: toCreate });
+    }
   }
 
   return getProfile(userId, profile.id);
@@ -371,6 +407,23 @@ async function deleteCertification(userId, profileId, id) {
   return getProfile(userId, profile.id);
 }
 
+async function addLanguage(userId, profileId, data) {
+  const profile = await resolveProfile(userId, profileId);
+  await prisma.language.create({ data: { ...data, userId, profileId: profile.id } });
+  return getProfile(userId, profile.id);
+}
+
+async function deleteLanguage(userId, profileId, id) {
+  const profile = await resolveProfile(userId, profileId);
+  const result = await prisma.language.deleteMany({ where: { id, userId, profileId: profile.id } });
+  if (result.count === 0) {
+    const err = new Error("Idioma nÃ£o encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  return getProfile(userId, profile.id);
+}
+
 module.exports = {
   listProfiles,
   createProfile,
@@ -386,6 +439,8 @@ module.exports = {
   deleteCourse,
   addCertification,
   deleteCertification,
+  addLanguage,
+  deleteLanguage,
   resolveProfile,
   serializeProfile,
   profileInclude,
