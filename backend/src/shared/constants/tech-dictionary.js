@@ -2,7 +2,7 @@ const TECH_ALIASES = {
   nodejs: ["node", "nodejs", "node.js", "node js"],
   postgresql: ["postgres", "postgresql", "postgres sql"],
   react: ["react", "react.js", "reactjs"],
-  "api-rest": ["rest api", "api rest", "apis rest", "restful api", "apis restful"],
+  "api-rest": ["rest api", "api rest", "apis rest", "restful api", "apis restful", "rest"],
   "docker-compose": ["docker compose", "docker-compose"],
   javascript: ["javascript", "java script", "js"],
   typescript: ["typescript", "type script", "ts"],

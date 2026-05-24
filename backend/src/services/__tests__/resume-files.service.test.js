@@ -1,47 +1,47 @@
-const { parseResumeProfile } = require("../resume-files.service");
+jest.mock("../../lib/prisma", () => ({
+  prisma: {
+    resumeFile: {
+      create: jest.fn(),
+    },
+  },
+}));
+jest.mock("../profile.service", () => ({
+  resolveProfile: jest.fn(),
+}));
 
-describe("parseResumeProfile", () => {
-  it("separa projetos, experiencias, links e idiomas do texto extraido", () => {
-    const text = `
-Eduarda Silva Santos
-Desenvolvedora Backend
-eduarda@example.com | (89) 99936-6633 | linkedin.com/in/itseduarda | github.com/etuarda | lattes.cnpq.br/123
+const { prisma } = require("../../lib/prisma");
+const profileService = require("../profile.service");
+const { uploadResumeFile } = require("../resume-files.service");
 
-Resumo Profissional
-Desenvolvedora backend com foco em Node.js, PostgreSQL e APIs REST.
+describe("resume PDF attachment", () => {
+  beforeEach(() => jest.clearAllMocks());
 
-Projetos
-API de Vagas | Node.js | PostgreSQL
-Construcao de API REST com autenticacao JWT e Prisma.
-github.com/etuarda/api-vagas
-app-vagas.vercel.app
+  it("salva apenas o arquivo como referencia sem extrair ou preencher o perfil", async () => {
+    profileService.resolveProfile.mockResolvedValue({ id: "profile" });
+    prisma.resumeFile.create.mockResolvedValue({
+      id: "file",
+      fileName: "cv.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 20,
+      createdAt: new Date("2026-05-24T12:00:00.000Z"),
+    });
 
-Experiencia Profissional
-Desenvolvedora Backend | Empresa XPTO | 2023 - Atual
-Desenvolvimento de APIs, integracao com PostgreSQL e melhorias de performance.
+    const result = await uploadResumeFile("user", {
+      mimetype: "application/pdf",
+      size: 20,
+      buffer: Buffer.from("conteudo PDF nao lido"),
+      originalname: "cv.pdf",
+    }, "profile");
 
-Cursos
-Node.js Avancado | Alura | 2024 | 20h
-
-Certificacoes
-AWS Cloud Practitioner | AWS | 2024
-
-Idiomas
-Ingles avancado, Espanhol intermediario
-`;
-
-    const parsed = parseResumeProfile(text);
-
-    expect(parsed.emailContact).toBe("eduarda@example.com");
-    expect(parsed.phone).toContain("99936");
-    expect(parsed.linkedin).toContain("linkedin.com/in/itseduarda");
-    expect(parsed.github).toContain("github.com/etuarda");
-    expect(parsed.lattes).toContain("lattes.cnpq.br/123");
-    expect(parsed.projects).toHaveLength(1);
-    expect(parsed.projects[0].repositoryUrl).toContain("github.com/etuarda/api-vagas");
-    expect(parsed.experiences).toHaveLength(1);
-    expect(parsed.courses).toHaveLength(1);
-    expect(parsed.certifications).toHaveLength(1);
-    expect(parsed.languages).toHaveLength(2);
+    expect(prisma.resumeFile.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: "user",
+        profileId: "profile",
+        content: expect.any(Buffer),
+        extractedText: "",
+      }),
+    });
+    expect(result).not.toHaveProperty("profile");
+    expect(result).not.toHaveProperty("extractedText");
   });
 });

@@ -182,7 +182,7 @@
               <div>
                 <h3 id="resume-files-title" class="font-serif text-3xl">Currículos PDF.</h3>
                 <p class="text-sm text-taupe mt-2 max-w-2xl">
-                  Anexe currículos-base em PDF. O sistema lê o texto para o matching e mantém o arquivo original para preservar a formatação.
+                  O PDF anexado será usado apenas como referência. Para gerar currículos otimizados corretamente, preencha manualmente as informações estruturadas do perfil.
                 </p>
               </div>
               <form id="form-resume-upload" class="flex flex-col sm:flex-row gap-3">
@@ -323,14 +323,9 @@
               <input type="text" id="match-job-title" placeholder="Cargo da vaga" class="editorial-input text-sm" />
               <input type="text" id="match-company" placeholder="Empresa" class="editorial-input text-sm" />
             </div>
-            <div>
-              <label for="match-resume-file" class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone mb-2">
-                Currículo-base em PDF
-              </label>
-              <select id="match-resume-file" class="editorial-input text-sm bg-white">
-                <option value="">Usar apenas perfil cadastrado</option>
-              </select>
-            </div>
+            <p class="text-sm text-taupe leading-relaxed">
+              A geração usa exclusivamente Perfil Global e Subperfil preenchidos manualmente; PDFs anexados não alimentam o matching.
+            </p>
             <textarea id="match-job-description" rows="14" required minlength="30" maxlength="15000" placeholder="Cole a descrição completa da vaga" class="editorial-input text-sm leading-relaxed"></textarea>
             <button type="submit" class="w-full bg-ink text-paper py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
               Calcular aderência

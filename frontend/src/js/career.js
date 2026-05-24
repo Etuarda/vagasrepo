@@ -277,15 +277,7 @@ function renderHistory() {
 
 function renderResumeFiles() {
   const list = document.getElementById("resume-files-list");
-  const select = document.getElementById("match-resume-file");
   const files = state.resumeFiles || [];
-
-  if (select) {
-    select.innerHTML = `
-      <option value="">Usar apenas perfil cadastrado</option>
-      ${files.map((file) => `<option value="${file.id}">${escapeHtml(file.fileName)}</option>`).join("")}
-    `;
-  }
 
   if (!list) return;
 
@@ -302,9 +294,12 @@ function renderResumeFiles() {
             <div>
               <h4 class="font-bold text-sm">${escapeHtml(file.fileName)}</h4>
               <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">
-                ${formatDateTime(file.createdAt)} · ${Math.round(file.sizeBytes / 1024)} KB · ${file.extractedTextLength ? "texto lido" : "sem texto extraído"}
+                ${formatDateTime(file.createdAt)} · ${Math.round(file.sizeBytes / 1024)} KB · anexo de referência
               </p>
-              <a href="#" data-download-resume="${file.id}" class="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest underline">
+              <a href="#" data-view-resume="${file.id}" class="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest underline">
+                Visualizar
+              </a>
+              <a href="#" data-download-resume="${file.id}" class="inline-block ml-4 mt-3 text-[10px] font-bold uppercase tracking-widest underline">
                 Baixar original
               </a>
             </div>
@@ -353,7 +348,7 @@ function renderMatchResult(result) {
           result.generatedPdfAvailable
             ? `<button type="button" data-download-current-optimized="${result.id}" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Baixar curriculo atualizado</button>
                <button type="button" data-register-application="${result.analysisId}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Registrar candidatura</button>`
-            : `<p class="text-sm text-taupe">Selecione um currículo-base em PDF antes do matching para gerar o currículo atualizado para aplicar na vaga.</p>`
+            : `<p class="text-sm text-taupe">Complete os dados estruturados do perfil para gerar o currículo otimizado.</p>`
         }
       </div>
     </section>
@@ -424,7 +419,7 @@ function renderMatchLoading() {
       <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Processando</p>
       <h3 class="font-serif text-4xl mt-3">Calculando aderencia ATS.</h3>
       <p class="text-sm text-taupe leading-relaxed mt-4">
-        Estamos comparando a vaga com o perfil ativo e, se houver PDF-base selecionado, gerando o curriculo otimizado para envio.
+        Estamos comparando a vaga exclusivamente com os dados estruturados do perfil ativo.
       </p>
     </section>
   `;
@@ -580,10 +575,9 @@ export const career = {
 
   async match(jobDescription) {
     renderMatchLoading();
-    const resumeFileId = document.getElementById("match-resume-file")?.value || undefined;
     const jobTitle = document.getElementById("match-job-title")?.value || "";
     const company = document.getElementById("match-company")?.value || "";
-    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, resumeFileId, profileId: state.activeProfileId }) }, state.token);
+    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, profileId: state.activeProfileId }) }, state.token);
     state.lastMatchResult = result;
     if (result.generatedPdf?.contentBase64) {
       state.optimizedPdfCache[result.id] = result.generatedPdf;
@@ -652,10 +646,8 @@ export const career = {
       state.token
     );
     state.resumeFiles = [out, ...(state.resumeFiles || [])];
-    if (out.profile) state.profile = out.profile;
     renderResumeFiles();
-    renderProfileForm();
-    ui.notify("Currículo PDF anexado.");
+    ui.notify("Currículo PDF anexado somente como referência.");
   },
 
   async removeResumeFile(id) {
@@ -683,6 +675,23 @@ export const career = {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
+  },
+
+  async viewResumeFile(id) {
+    const { API_URL } = await import("./config.js");
+    const previewWindow = window.open("", "_blank");
+    const response = await fetch(`${API_URL}/resume-files/${id}/view`, {
+      headers: { Authorization: `Bearer ${state.token}` },
+    });
+    if (!response.ok) {
+      previewWindow?.close();
+      ui.notify("Não foi possível visualizar o PDF.", "error");
+      return;
+    }
+    const url = URL.createObjectURL(await response.blob());
+    if (previewWindow) previewWindow.location.href = url;
+    else window.open(url, "_blank", "noopener");
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
   },
 
   async downloadOptimizedResume(id) {

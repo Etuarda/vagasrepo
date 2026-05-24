@@ -209,7 +209,7 @@ async function deleteEducation(req, res, next) {
 async function match(req, res, next) {
   try {
     const payload = matchSchema.parse(req.body);
-    const result = await matchingService.executeMatch(req.userId, payload.jobDescription, payload.resumeFileId, payload.profileId, payload);
+    const result = await matchingService.executeMatch(req.userId, payload.jobDescription, payload.profileId, payload);
     return res.json(result);
   } catch (err) {
     return next(err);

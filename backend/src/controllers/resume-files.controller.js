@@ -34,6 +34,19 @@ async function download(req, res, next) {
   }
 }
 
+async function view(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const file = await resumeFilesService.getResumeFile(req.userId, id);
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader("Content-Length", file.sizeBytes);
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(file.fileName)}"`);
+    return res.send(Buffer.from(file.content));
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function remove(req, res, next) {
   try {
     const { id } = idParamSchema.parse(req.params);
@@ -44,4 +57,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { upload, list, download, remove };
+module.exports = { upload, list, view, download, remove };

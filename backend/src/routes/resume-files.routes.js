@@ -12,6 +12,7 @@ router.use(authMiddleware);
 
 router.get("/", resumeFilesController.list);
 router.post("/", upload.single("resume"), resumeFilesController.upload);
+router.get("/:id/view", resumeFilesController.view);
 router.get("/:id/download", resumeFilesController.download);
 router.delete("/:id", resumeFilesController.remove);
 

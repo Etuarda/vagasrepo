@@ -107,7 +107,6 @@ const matchSchema = z.object({
     .trim()
     .min(30, "Cole uma descricao de vaga com pelo menos 30 caracteres")
     .max(15000, "A descricao da vaga deve ter no maximo 15.000 caracteres"),
-  resumeFileId: optionalUuid("Curriculo PDF invalido"),
   profileId: optionalUuid("Perfil invalido"),
   jobTitle: cleanString(160),
   company: cleanString(160),

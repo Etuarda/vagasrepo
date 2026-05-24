@@ -11,11 +11,12 @@ O produto nao utiliza IA generativa, LLM ou servicos externos de geracao textual
 - Perfil Global com contato, resumo, formacao, experiencias, skills, projetos, cursos, certificacoes e idiomas.
 - Subperfis como Backend, Dados ou Fullstack, com heranca por vinculo dos itens globais.
 - Projetos estruturados com stack, links, solucao tecnica, arquitetura e bullets reutilizaveis.
+- Upload de PDF somente como anexo de referencia, com visualizacao, download e remocao.
 - Analise deterministica de descricao de vaga com keywords normalizadas e categoria profissional.
 - Ranking explicavel de skills, projetos, bullets, cursos, certificacoes e experiencias.
 - Curriculo PDF compacto, ATS-friendly, com no maximo dois projetos e tres bullets por projeto.
 - Historico de analises editavel e versionado, com estados `draft`, `reviewed`, `applied`, `archived` e `rejected`.
-- Registro opcional de candidatura a partir do curriculo gerado, vinculado a analise e ao PDF utilizado.
+- Registro opcional de candidatura a partir do curriculo gerado, vinculado a analise e ao curriculo otimizado.
 - Registro da data de aplicacao ao marcar um curriculo como aplicado.
 - Camada preparada para metadados de exportacao Google Docs, sem OAuth no MVP.
 
@@ -72,6 +73,12 @@ backend/src/
 - `GoogleDocsExport`: metadados reservados para exportacao futura.
 
 Dados legados de subperfis clonados continuam legiveis. Novos subperfis usam vinculacao ao Perfil Global.
+
+## Curriculo PDF de referencia
+
+O PDF anexado e armazenado somente como arquivo de referencia para visualizacao ou download. O MVP nao extrai texto, nao cria rascunhos e nao altera Perfil Global ou Subperfis a partir do documento.
+
+O curriculo otimizado consome exclusivamente informacoes preenchidas manualmente nos formularios estruturados. Antes da geracao, o sistema exige dados pessoais com contato, resumo, habilidades, formacao ou experiencia, pelo menos um projeto estruturado e nivel para todo idioma cadastrado.
 
 ## Matching
 
@@ -150,6 +157,7 @@ A suite cobre normalizacao, classificacao, matching sem invencao de skills, rank
 
 - MVP 1: Perfil Global, subperfis vinculados, projetos/bullets, matching deterministico, PDF compacto e historico aplicado/versionado.
 - MVP 2: controles completos de peso/visibilidade por item no editor comparativo de subperfis e aprimoramento de visualizacao do historico.
+- Futuro: importacao automatica de PDF somente com extracao revisavel e confirmacao manual antes de persistir dados estruturados.
 - Futuro: exportacao para Google Docs usando a camada `GoogleDocsExport`, com OAuth implementado separadamente.
 
 ## Decisoes tecnicas

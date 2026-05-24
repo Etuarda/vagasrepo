@@ -225,7 +225,6 @@ function wireEvents() {
       );
     });
   }
-
   const debouncedLoad = debounce(() => jobs.load(), 300);
 
   const filterQ = document.getElementById("filter-q");
@@ -647,8 +646,8 @@ function wireEvents() {
       await runWithFeedback(
         getSubmitButton(e, formResumeUpload),
         {
-          busyText: "Lendo PDF...",
-          notice: "Curriculo recebido. Lendo PDF e preenchendo o perfil...",
+          busyText: "Anexando...",
+          notice: "Armazenando PDF apenas como referência...",
         },
         async () => {
           await career.uploadResumeFile(file);
@@ -668,6 +667,13 @@ function wireEvents() {
           { busyText: "Removendo...", notice: "Removendo curriculo do historico..." },
           () => career.removeResumeFile(removeBtn.dataset.removeResume)
         );
+        return;
+      }
+
+      const viewLink = e.target.closest("[data-view-resume]");
+      if (viewLink) {
+        e.preventDefault();
+        await career.viewResumeFile(viewLink.dataset.viewResume);
         return;
       }
 

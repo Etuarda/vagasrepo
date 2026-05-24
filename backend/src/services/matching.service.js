@@ -29,6 +29,38 @@ function rankItems(items, keywords, sourceFor, limit) {
   }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
+function validStructuredProject(project) {
+  const title = String(project.title || "").trim();
+  return title.length >= 2 &&
+    !/^(modelagem|otimizacao|otimização|implementacao|implementação|construcao|construção|desenvolvimento|integracao|integração)\b/i.test(title) &&
+    Boolean(project.description || project.shortDescription || project.bullets?.length);
+}
+
+function getMissingResumeFields(profile) {
+  const missing = [];
+  if (!String(profile.name || "").trim() || !String(profile.emailContact || profile.phone || "").trim()) {
+    missing.push("dados pessoais (nome e e-mail ou telefone)");
+  }
+  if (!String(profile.summary || "").trim()) missing.push("resumo profissional");
+  if (!(profile.skillItems || []).length) missing.push("habilidades");
+  if (!(profile.educations || []).length && !(profile.experiences || []).length) {
+    missing.push("pelo menos 1 formacao ou experiencia");
+  }
+  if (!(profile.projects || []).some(validStructuredProject)) missing.push("pelo menos 1 projeto estruturado");
+  if ((profile.languages || []).some((language) => !String(language.name || "").trim() || !String(language.level || "").trim())) {
+    missing.push("nivel dos idiomas cadastrados");
+  }
+  return missing;
+}
+
+function assertProfileReadyForResume(profile) {
+  const missing = getMissingResumeFields(profile);
+  if (!missing.length) return;
+  const err = new Error(`Complete o perfil antes de gerar o curriculo otimizado. Campos faltantes: ${missing.join("; ")}.`);
+  err.statusCode = 422;
+  throw err;
+}
+
 function analyzeProfile(profile, jobDescription) {
   const job = classifyJob(jobDescription);
   const required = job.keywords;
@@ -36,7 +68,8 @@ function analyzeProfile(profile, jobDescription) {
   const matchedSkills = required.filter((keyword) => skillMap.has(normalizeTerm(keyword)))
     .map((keyword) => skillMap.get(normalizeTerm(keyword)).name);
   const missingSkills = required.filter((keyword) => !skillMap.has(normalizeTerm(keyword)));
-  const selectedProjects = rankProjects(profile.projects, required, 2);
+  const validProjects = (profile.projects || []).filter(validStructuredProject);
+  const selectedProjects = rankProjects(validProjects, required, 2);
   const selectedCourses = rankItems(profile.courses, required, (item) => `${item.title} ${item.institution} ${item.description}`, 3);
   const selectedCertifications = rankItems(profile.certifications, required, (item) => `${item.title} ${item.issuer}`, 2);
   const selectedExperiences = rankItems(profile.experiences, required, (item) => `${item.role} ${item.company} ${item.description}`, 3)
@@ -51,6 +84,8 @@ function analyzeProfile(profile, jobDescription) {
   const warnings = [];
   if (!required.length) warnings.push("Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.");
   if (missingSkills.length) warnings.push("Skills ausentes sao requisitos identificados na vaga e nao serao exibidas como habilidades do candidato.");
+  if (!validProjects.length) warnings.push("Nao ha projetos estruturados suficientes para gerar um curriculo otimizado com qualidade.");
+  if (validProjects.length !== (profile.projects || []).length) warnings.push("Projetos sem estrutura valida foram ignorados; revise os dados cadastrados no perfil.");
 
   return {
     jobCategory: job.category,
@@ -84,17 +119,10 @@ async function selectProfile(userId, jobDescription, requestedProfileId) {
     .sort((a, b) => b.score - a.score)[0]?.profile || profileService.getProfile(userId);
 }
 
-async function executeMatch(userId, jobDescription, resumeFileId = null, profileId = null, metadata = {}) {
+async function executeMatch(userId, jobDescription, profileId = null, metadata = {}) {
   const text = jobDescription.trim();
   const profile = await selectProfile(userId, text, profileId);
-  if (resumeFileId) {
-    const resumeFile = await prisma.resumeFile.findFirst({ where: { id: resumeFileId, userId } });
-    if (!resumeFile) {
-      const err = new Error("Curriculo PDF nao encontrado");
-      err.statusCode = 404;
-      throw err;
-    }
-  }
+  assertProfileReadyForResume(profile);
 
   const analysis = analyzeProfile(profile, text);
   const targetTitle = metadata.jobTitle || inferTitle(text);
@@ -120,7 +148,6 @@ async function executeMatch(userId, jobDescription, resumeFileId = null, profile
       missingSkills: result.missingSkills,
       matchedTechnologies: result.matchedTechnologies,
       missingTechnologies: result.missingTechnologies,
-      resumeFileId: resumeFileId || null,
       profileId: profile.id,
       generatedPdf,
       generatedFileName: `curriculo-otimizado-${Date.now()}.pdf`,
@@ -263,4 +290,14 @@ async function deleteHistory(userId, id) {
   return { message: "Removido" };
 }
 
-module.exports = { executeMatch, listHistory, deleteHistory, getGeneratedPdf, getAnalysis, updateAnalysis, analyzeProfile };
+module.exports = {
+  executeMatch,
+  listHistory,
+  deleteHistory,
+  getGeneratedPdf,
+  getAnalysis,
+  updateAnalysis,
+  analyzeProfile,
+  getMissingResumeFields,
+  assertProfileReadyForResume,
+};
