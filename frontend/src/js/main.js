@@ -194,10 +194,6 @@ function wireEvents() {
   document.querySelectorAll("[data-close-application]").forEach((el) =>
     el.addEventListener("click", () => ui.closeApplicationModal())
   );
-  document.querySelectorAll("[data-start-application]").forEach((el) =>
-    el.addEventListener("click", () => ui.startApplicationForm())
-  );
-
   const applicationActionBool = document.getElementById("application-action-bool");
   if (applicationActionBool) applicationActionBool.addEventListener("change", ui.syncApplicationConditionalFields);
   const applicationFeedbackBool = document.getElementById("application-feedback-bool");
@@ -297,10 +293,22 @@ function wireEvents() {
     });
   }
 
-  const profileSelect = document.getElementById("career-profile-select");
-  if (profileSelect) {
-    profileSelect.addEventListener("change", async (e) => {
-      await career.switchProfile(e.target.value);
+  const profileCards = document.getElementById("career-profile-cards");
+  if (profileCards) {
+    profileCards.addEventListener("click", async (e) => {
+      const remove = e.target.closest("[data-delete-profile]");
+      if (remove) {
+        const name = remove.dataset.profileName || "este subperfil";
+        if (!window.confirm(`Apagar o subperfil "${name}"? Os dados específicos deste subperfil serão removidos.`)) return;
+        await runWithFeedback(
+          remove,
+          { busyText: "...", notice: "Removendo subperfil..." },
+          () => career.deleteProfile(remove.dataset.deleteProfile)
+        );
+        return;
+      }
+      const select = e.target.closest("[data-select-profile]");
+      if (select) await career.switchProfile(select.dataset.selectProfile);
     });
   }
 
@@ -615,13 +623,17 @@ function wireEvents() {
     matchResult.addEventListener("click", async (e) => {
       const registrationBtn = e.target.closest("[data-register-application]");
       if (registrationBtn) {
-        ui.openApplicationPrompt(state.lastMatchResult || {
+        ui.openApplicationForm(state.lastMatchResult || {
           analysisId: registrationBtn.dataset.registerApplication,
           targetTitle: "Vaga analisada",
           selectedSubprofileName: state.profile?.profileName || "",
           score: 0,
         });
         return;
+      }
+      const linkedJobBtn = e.target.closest("[data-open-analysis-job]");
+      if (linkedJobBtn) {
+        return jobs.open(linkedJobBtn.dataset.openAnalysisJob);
       }
       const btn = e.target.closest("[data-download-current-optimized]");
       if (!btn) return;
@@ -699,6 +711,17 @@ function wireEvents() {
       const linkedJobBtn = e.target.closest("[data-open-linked-job]");
       if (linkedJobBtn) {
         return jobs.open(linkedJobBtn.dataset.openLinkedJob);
+      }
+      const registerBtn = e.target.closest("[data-register-history-application]");
+      if (registerBtn) {
+        const analysis = (state.matchHistory || []).find((item) => item.analysisId === registerBtn.dataset.registerHistoryApplication);
+        ui.openApplicationForm({
+          analysisId: registerBtn.dataset.registerHistoryApplication,
+          targetTitle: analysis?.targetTitle || "Vaga analisada",
+          selectedSubprofileName: state.profile?.profileName || "",
+          score: analysis?.score || 0,
+        });
+        return;
       }
       const appliedBtn = e.target.closest("[data-mark-applied]");
       if (appliedBtn) {

@@ -190,6 +190,19 @@ async function listProfiles(userId) {
 }
 
 async function createProfile(userId, { profileName }) {
+  const duplicate = await prisma.careerProfile.findFirst({
+    where: {
+      userId,
+      profileName: { equals: profileName, mode: "insensitive" },
+    },
+    select: { id: true },
+  });
+  if (duplicate) {
+    const err = new Error("Ja existe um perfil com este nome");
+    err.statusCode = 409;
+    throw err;
+  }
+
   const base = await ensureDefaultProfile(userId);
   const profile = await prisma.careerProfile.create({
     data: {
@@ -211,6 +224,26 @@ async function createProfile(userId, { profileName }) {
 
   await inheritGlobalCollections(profile.id, base.id);
   return getProfile(userId, profile.id);
+}
+
+async function deleteProfile(userId, profileId) {
+  const profile = await prisma.careerProfile.findFirst({
+    where: { id: profileId, userId },
+    select: { id: true, isGlobal: true },
+  });
+  if (!profile) {
+    const err = new Error("Subperfil nao encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  if (profile.isGlobal) {
+    const err = new Error("O Perfil Global nao pode ser excluido");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  await prisma.careerProfile.delete({ where: { id: profile.id } });
+  return { message: "Subperfil removido." };
 }
 
 async function inheritGlobalCollections(subprofileId, globalProfileId) {
@@ -247,6 +280,21 @@ async function getProfile(userId, profileId = null) {
 
 async function updateProfile(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
+  if (data.profileName && data.profileName !== profile.profileName) {
+    const duplicate = await prisma.careerProfile.findFirst({
+      where: {
+        userId,
+        id: { not: profile.id },
+        profileName: { equals: data.profileName, mode: "insensitive" },
+      },
+      select: { id: true },
+    });
+    if (duplicate) {
+      const err = new Error("Ja existe um perfil com este nome");
+      err.statusCode = 409;
+      throw err;
+    }
+  }
   const updated = await prisma.careerProfile.update({
     where: { id: profile.id },
     data,
@@ -469,6 +517,7 @@ async function deleteLanguage(userId, profileId, id) {
 module.exports = {
   listProfiles,
   createProfile,
+  deleteProfile,
   getProfile,
   updateProfile,
   updateSkills,

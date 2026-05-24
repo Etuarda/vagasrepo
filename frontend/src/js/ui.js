@@ -185,27 +185,19 @@ export const ui = {
     document.body.style.overflow = "auto";
   },
 
-  openApplicationPrompt(result) {
+  openApplicationForm(result) {
     const modal = document.getElementById("application-modal");
-    const prompt = document.getElementById("application-prompt");
     const form = document.getElementById("form-application");
-    if (!modal || !prompt || !form) return;
+    if (!modal || !form) return;
     state.pendingApplicationAnalysis = result;
     form.reset();
     document.getElementById("application-analysis-id").value = result.analysisId;
     const context = `${result.targetTitle}${result.selectedSubprofileName ? ` | ${result.selectedSubprofileName}` : ""} | ${result.score}%`;
-    document.getElementById("application-prompt-context").textContent = context;
     document.getElementById("application-form-context").textContent = context;
-    prompt.classList.remove("hidden");
-    form.classList.add("hidden");
+    form.classList.remove("hidden");
     modal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
     ui.syncApplicationConditionalFields();
-  },
-
-  startApplicationForm() {
-    document.getElementById("application-prompt")?.classList.add("hidden");
-    document.getElementById("form-application")?.classList.remove("hidden");
   },
 
   closeApplicationModal() {

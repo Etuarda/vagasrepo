@@ -162,25 +162,26 @@
       <section id="panel-profile" data-dashboard-panel="profile" class="hidden space-y-10" aria-labelledby="profile-title">
         <div class="editorial-card rounded-3xl editorial-shadow p-10 space-y-8">
           <header class="max-w-4xl">
-            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Base fiduciária do matching</p>
+            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Base de dados do currículo</p>
             <h2 id="profile-title" class="font-serif text-5xl tracking-tight mt-3">Perfil profissional.</h2>
+            <p class="text-sm text-taupe leading-relaxed mt-4">Preencha as informações na ordem em que elas serão usadas no currículo otimizado.</p>
           </header>
 
-          <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 border border-borderLight rounded-2xl p-6 bg-white" aria-label="Seleção de perfil profissional">
-            <div class="lg:col-span-2">
-              <label for="career-profile-select" class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone mb-2">Perfil ativo</label>
-              <select id="career-profile-select" class="editorial-input text-sm bg-white"></select>
+          <section class="border border-borderLight rounded-2xl p-6 bg-white space-y-5" aria-label="Seleção de perfil profissional">
+            <div>
+              <p class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone mb-4">Perfis profissionais</p>
+              <div id="career-profile-cards" class="profile-card-grid" role="list"></div>
             </div>
-            <form id="form-create-profile" class="flex gap-3 lg:items-end">
+            <form id="form-create-profile" class="flex flex-col sm:flex-row gap-3 max-w-xl">
               <input type="text" id="new-profile-name" placeholder="Ex: Frontend, Dados..." class="editorial-input text-sm" />
-              <button type="submit" class="bg-ink text-paper px-6 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar</button>
+              <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Criar subperfil</button>
             </form>
           </section>
 
           <section class="border border-borderLight rounded-2xl p-6 bg-white" aria-labelledby="resume-files-title">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div>
-                <h3 id="resume-files-title" class="font-serif text-3xl">Currículos PDF.</h3>
+                <h3 id="resume-files-title" class="font-serif text-3xl">Currículo de referência.</h3>
                 <p class="text-sm text-taupe mt-2 max-w-2xl">
                   O PDF anexado será usado apenas como referência. Para gerar currículos otimizados corretamente, preencha manualmente as informações estruturadas do perfil.
                 </p>
@@ -195,47 +196,36 @@
             <div id="resume-files-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6"></div>
           </section>
 
-          <form id="form-profile" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <input type="text" id="profile-name" required placeholder="Nome completo" class="editorial-input" />
-            <input type="text" id="profile-profile-name" required placeholder="Nome do perfil (ex: Frontend)" class="editorial-input" />
-            <input type="text" id="profile-title-field" placeholder="Cargo de apresentação" class="editorial-input" />
-            <input type="email" id="profile-email-contact" placeholder="E-mail de contato" class="editorial-input" />
-            <input type="text" id="profile-phone" placeholder="Telefone" class="editorial-input" />
-            <input type="text" id="profile-location" placeholder="Cidade / Estado" class="editorial-input md:col-span-2" />
-            <input type="url" id="profile-linkedin" placeholder="LinkedIn" class="editorial-input" />
-            <input type="url" id="profile-github" placeholder="GitHub ou portfolio" class="editorial-input" />
-            <input type="url" id="profile-lattes" placeholder="Curriculo Lattes (opcional)" class="editorial-input md:col-span-2" />
-            <textarea id="profile-summary" rows="5" placeholder="Resumo profissional base" class="editorial-input md:col-span-2"></textarea>
-            <div class="md:col-span-2 flex justify-end">
-              <button type="submit" class="bg-ink text-paper px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
-                Salvar perfil
-              </button>
-            </div>
+          <form id="form-profile" class="space-y-8">
+            <section class="border border-borderLight rounded-2xl p-6 bg-white space-y-5" aria-labelledby="personal-data-title">
+              <h3 id="personal-data-title" class="font-serif text-3xl">Dados pessoais.</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="profile-name" required placeholder="Nome completo" class="editorial-input" />
+                <input type="text" id="profile-profile-name" required placeholder="Nome do perfil (ex: Frontend)" class="editorial-input" />
+                <input type="text" id="profile-title-field" placeholder="Título profissional" class="editorial-input" />
+                <input type="email" id="profile-email-contact" placeholder="E-mail de contato" class="editorial-input" />
+                <input type="text" id="profile-phone" placeholder="Telefone" class="editorial-input" />
+                <input type="text" id="profile-location" placeholder="Cidade / Estado" class="editorial-input" />
+                <input type="url" id="profile-linkedin" placeholder="LinkedIn" class="editorial-input" />
+                <input type="url" id="profile-github" placeholder="GitHub ou portfolio" class="editorial-input" />
+                <input type="url" id="profile-lattes" placeholder="Currículo Lattes (opcional)" class="editorial-input md:col-span-2" />
+              </div>
+            </section>
+            <section class="border border-borderLight rounded-2xl p-6 bg-white space-y-5" aria-labelledby="summary-title">
+              <h3 id="summary-title" class="font-serif text-3xl">Resumo profissional.</h3>
+              <textarea id="profile-summary" rows="5" placeholder="Resumo profissional / objetivo" class="editorial-input"></textarea>
+              <div class="flex justify-end">
+                <button type="submit" class="bg-ink text-paper px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
+                  Salvar perfil
+                </button>
+              </div>
+            </section>
           </form>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="skills-title">
-            <h3 id="skills-title" class="font-serif text-3xl">Habilidades.</h3>
-            <form id="form-skill" class="flex gap-3">
-              <input type="text" id="skill-name" placeholder="Ex: React, SQL, comunicação" class="editorial-input text-sm" />
-              <button type="submit" class="bg-ink text-paper px-5 rounded-full text-[10px] font-bold uppercase tracking-widest">+</button>
-            </form>
-            <div id="skills-list" class="flex flex-wrap gap-2"></div>
-          </section>
-
-          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-2" aria-labelledby="languages-title">
-            <h3 id="languages-title" class="font-serif text-3xl">Idiomas.</h3>
-            <form id="form-language" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <input type="text" id="language-name" required placeholder="Idioma" class="editorial-input text-sm" />
-              <input type="text" id="language-level" placeholder="Nivel" class="editorial-input text-sm" />
-              <button type="submit" class="bg-ink text-paper px-5 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
-            </form>
-            <div id="languages-list" class="flex flex-wrap gap-2"></div>
-          </section>
-
-          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-3" aria-labelledby="education-title">
-            <h3 id="education-title" class="font-serif text-3xl">Formação.</h3>
+        <div class="space-y-8">
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="education-title">
+            <h3 id="education-title" class="font-serif text-3xl">Formação acadêmica.</h3>
             <form id="form-education" class="grid grid-cols-1 md:grid-cols-4 gap-3">
               <input type="text" id="education-title-field" required placeholder="Curso / graduação" class="editorial-input text-sm" />
               <input type="text" id="education-institution" required placeholder="Instituição" class="editorial-input text-sm" />
@@ -245,14 +235,39 @@
             <div id="educations-list" class="space-y-3"></div>
           </section>
 
-          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-2" aria-labelledby="projects-title">
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="skills-title">
+            <h3 id="skills-title" class="font-serif text-3xl">Habilidades técnicas.</h3>
+            <form id="form-skill" class="flex flex-col sm:flex-row gap-3 max-w-2xl">
+              <input type="text" id="skill-name" placeholder="Ex: Node.js, PostgreSQL, Docker" class="editorial-input text-sm" />
+              <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
+            </form>
+            <div id="skills-list" class="flex flex-wrap gap-2"></div>
+          </section>
+
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="experiences-title">
+            <h3 id="experiences-title" class="font-serif text-3xl">Experiências profissionais.</h3>
+            <form id="form-experience" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" id="experience-company" required placeholder="Empresa" class="editorial-input text-sm" />
+              <input type="text" id="experience-role" required placeholder="Cargo" class="editorial-input text-sm" />
+              <input type="text" id="experience-period" required placeholder="Período" class="editorial-input text-sm md:col-span-2" />
+              <textarea id="experience-description" required rows="3" placeholder="Atividades reais e resultados" class="editorial-input text-sm md:col-span-2"></textarea>
+              <div class="md:col-span-2 flex justify-end">
+                <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  Salvar experiência
+                </button>
+              </div>
+            </form>
+            <div id="experiences-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </section>
+
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="projects-title">
             <h3 id="projects-title" class="font-serif text-3xl">Projetos.</h3>
             <form id="form-project" class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm" />
-              <input type="text" id="project-techs" required placeholder="Tecnologias separadas por vírgula" class="editorial-input text-sm" />
               <select id="project-category" class="editorial-input text-sm bg-white">
                 <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="fullstack">Fullstack</option><option value="data">Dados</option><option value="devops">DevOps</option><option value="ai">IA</option>
               </select>
+              <input type="text" id="project-techs" required placeholder="Tecnologias separadas por vírgula" class="editorial-input text-sm" />
               <input type="text" id="project-short-description" placeholder="Resumo curto para currículo" class="editorial-input text-sm" />
               <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
               <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
@@ -268,23 +283,7 @@
             <div id="projects-list" class="grid grid-cols-1 gap-4"></div>
           </section>
 
-          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-3" aria-labelledby="experiences-title">
-            <h3 id="experiences-title" class="font-serif text-3xl">Experiências.</h3>
-            <form id="form-experience" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="text" id="experience-company" required placeholder="Empresa" class="editorial-input text-sm" />
-              <input type="text" id="experience-role" required placeholder="Cargo" class="editorial-input text-sm" />
-              <input type="text" id="experience-period" required placeholder="Período" class="editorial-input text-sm md:col-span-2" />
-              <textarea id="experience-description" required rows="3" placeholder="Atividades reais e resultados" class="editorial-input text-sm md:col-span-2"></textarea>
-              <div class="md:col-span-2 flex justify-end">
-                <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                  Salvar experiência
-                </button>
-              </div>
-            </form>
-            <div id="experiences-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-          </section>
-
-          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-3" aria-labelledby="courses-title">
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="courses-title">
             <h3 id="courses-title" class="font-serif text-3xl">Cursos e certificações.</h3>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <form id="form-course" class="space-y-4">
@@ -308,6 +307,16 @@
               <div id="courses-list" class="space-y-4"></div>
               <div id="certifications-list" class="space-y-4"></div>
             </div>
+          </section>
+
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="languages-title">
+            <h3 id="languages-title" class="font-serif text-3xl">Idiomas.</h3>
+            <form id="form-language" class="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl">
+              <input type="text" id="language-name" required placeholder="Idioma" class="editorial-input text-sm" />
+              <input type="text" id="language-level" placeholder="Nível" class="editorial-input text-sm" />
+              <button type="submit" class="bg-ink text-paper px-5 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
+            </form>
+            <div id="languages-list" class="flex flex-wrap gap-2"></div>
           </section>
         </div>
       </section>
@@ -439,21 +448,9 @@
   <div id="application-modal" class="hidden fixed inset-0 z-[160] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Registrar candidatura">
     <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" data-close-application></div>
     <div class="editorial-card w-full max-w-3xl max-h-[90vh] overflow-y-auto relative z-10 p-10 lg:p-12 rounded-3xl editorial-shadow modal-enter">
-      <section id="application-prompt" class="space-y-6">
-        <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Currículo otimizado pronto</p>
-        <h2 class="font-serif text-5xl tracking-tight">Registrar candidatura?</h2>
-        <p class="text-sm text-taupe leading-relaxed">
-          O currículo foi gerado com base nesta vaga. Deseja salvar essa oportunidade no seu histórico de candidaturas?
-        </p>
-        <p id="application-prompt-context" class="text-sm font-bold"></p>
-        <div class="flex justify-end gap-6 pt-4">
-          <button type="button" data-close-application class="text-[10px] font-bold uppercase tracking-widest">Agora não</button>
-          <button type="button" data-start-application class="bg-ink text-paper px-8 py-4 rounded-full text-[10px] font-bold uppercase tracking-widest">Registrar candidatura</button>
-        </div>
-      </section>
       <form id="form-application" class="hidden space-y-5">
         <input type="hidden" id="application-analysis-id" />
-        <h2 class="font-serif text-4xl tracking-tight">Confirmar candidatura.</h2>
+        <h2 class="font-serif text-4xl tracking-tight">Cadastrar acompanhamento.</h2>
         <p id="application-form-context" class="text-sm text-taupe"></p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input type="url" id="application-link-vaga" required placeholder="Link da vaga *" class="editorial-input text-sm" />

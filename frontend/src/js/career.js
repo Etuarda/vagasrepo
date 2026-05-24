@@ -224,15 +224,29 @@ function renderProfileForm() {
   renderCoursesAndCertifications();
 }
 
-function renderProfileSelect() {
-  const select = document.getElementById("career-profile-select");
-  if (!select) return;
-
-  select.innerHTML = (state.profiles || [])
-    .map((profile) => `<option value="${profile.id}">${escapeHtml(profile.profileName)}</option>`)
+function profileInitials(name) {
+  return String(name || "P")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
     .join("");
+}
 
-  if (state.activeProfileId) select.value = state.activeProfileId;
+function renderProfileCards() {
+  const root = document.getElementById("career-profile-cards");
+  if (!root) return;
+
+  root.innerHTML = (state.profiles || []).map((profile) => `
+    <article class="profile-card ${profile.id === state.activeProfileId ? "is-active" : ""}" role="listitem">
+      <button type="button" class="profile-card__select" data-select-profile="${profile.id}" aria-current="${profile.id === state.activeProfileId ? "true" : "false"}">
+        <span class="profile-card__icon">${escapeHtml(profileInitials(profile.profileName))}</span>
+        <span class="font-bold text-sm leading-tight">${escapeHtml(profile.profileName)}</span>
+        <span class="text-[9px] uppercase tracking-widest text-stone">${profile.isGlobal ? "Principal" : "Subperfil"}</span>
+      </button>
+      ${profile.isGlobal ? "" : `<button type="button" data-delete-profile="${profile.id}" data-profile-name="${escapeHtml(profile.profileName)}" class="profile-card__delete" aria-label="Apagar subperfil ${escapeHtml(profile.profileName)}">x</button>`}
+    </article>
+  `).join("");
 }
 
 function renderHistory() {
@@ -261,6 +275,7 @@ function renderHistory() {
                       ${item.generatedFileName ? `<a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF otimizado</a>` : ""}
                       ${item.resumeFileId ? `<a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>` : ""}
                       ${item.application ? `<button type="button" data-open-linked-job="${item.application.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Abrir candidatura</button>` : ""}
+                      ${!item.application ? `<button type="button" data-register-history-application="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Cadastrar acompanhamento</button>` : ""}
                       ${item.status !== "applied" ? `<button type="button" data-mark-applied="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Marcar aplicado</button>` : ""}
                     </div>
                   `
@@ -347,7 +362,7 @@ function renderMatchResult(result) {
         ${
           result.generatedPdfAvailable
             ? `<button type="button" data-download-current-optimized="${result.id}" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Baixar curriculo atualizado</button>
-               <button type="button" data-register-application="${result.analysisId}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Registrar candidatura</button>`
+               <button type="button" data-register-application="${result.analysisId}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Cadastrar acompanhamento</button>`
             : `<p class="text-sm text-taupe">Complete os dados estruturados do perfil para gerar o currículo otimizado.</p>`
         }
       </div>
@@ -404,7 +419,13 @@ function renderAnalysisEditor(analysis) {
       <select name="status" class="editorial-input text-sm bg-white">
         ${["draft", "reviewed", "applied", "archived", "rejected"].map((status) => `<option value="${status}" ${analysis.status === status ? "selected" : ""}>${status}</option>`).join("")}
       </select>
-      <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Salvar nova versão</button>
+      <div class="flex flex-wrap gap-3">
+        <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Salvar nova versão</button>
+        ${analysis.generatedResume?.id ? `<button type="button" data-download-current-optimized="${analysis.generatedResume.id}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Baixar currículo</button>` : ""}
+        ${analysis.applications?.length
+          ? `<button type="button" data-open-analysis-job="${analysis.applications[0].id}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Abrir acompanhamento</button>`
+          : `<button type="button" data-register-application="${analysis.id}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Cadastrar acompanhamento</button>`}
+      </div>
     </form>
   `;
 }
@@ -433,7 +454,7 @@ export const career = {
       state.activeProfileId = state.profiles[0].id;
       localStorage.setItem("vagas_active_profile_id", state.activeProfileId);
     }
-    renderProfileSelect();
+    renderProfileCards();
   },
 
   async loadProfile() {
@@ -584,7 +605,6 @@ export const career = {
     }
     renderMatchResult(result);
     await career.loadHistory();
-    ui.openApplicationPrompt(result);
   },
 
   async removeMatch(id) {
@@ -600,14 +620,20 @@ export const career = {
 
   async openAnalysis(id) {
     const analysis = await api(`/job-analyses/${id}`, {}, state.token);
+    state.lastMatchResult = {
+      analysisId: analysis.id,
+      targetTitle: analysis.jobTitle,
+      selectedSubprofileName: analysis.selectedSubprofile?.profileName || "",
+      score: analysis.matchScore,
+    };
     renderAnalysisEditor(analysis);
   },
 
   async saveAnalysisVersion(id, payload) {
     const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, state.token);
     ui.notify(out.message);
-    renderAnalysisEditor(out.analysis);
     await career.loadHistory();
+    await career.openAnalysis(out.analysis.id);
   },
 
   async createApplication(analysisId, payload) {
@@ -744,9 +770,26 @@ export const career = {
     ui.notify("Perfil criado.");
   },
 
+  async deleteProfile(profileId) {
+    await api(`/profiles/${profileId}`, { method: "DELETE" }, state.token);
+    if (state.activeProfileId === profileId) {
+      state.activeProfileId = "";
+      localStorage.removeItem("vagas_active_profile_id");
+    }
+    await career.loadProfiles();
+    if (!state.profiles.some((profile) => profile.id === state.activeProfileId)) {
+      state.activeProfileId = state.profiles.find((profile) => profile.isGlobal)?.id || state.profiles[0]?.id || "";
+      if (state.activeProfileId) localStorage.setItem("vagas_active_profile_id", state.activeProfileId);
+    }
+    await career.loadProfile();
+    await Promise.all([career.loadResumeFiles(), career.loadHistory()]);
+    ui.notify("Subperfil removido.");
+  },
+
   async switchProfile(profileId) {
     state.activeProfileId = profileId;
     localStorage.setItem("vagas_active_profile_id", profileId);
+    renderProfileCards();
     await career.loadProfile();
     await career.loadResumeFiles();
     await career.loadHistory();

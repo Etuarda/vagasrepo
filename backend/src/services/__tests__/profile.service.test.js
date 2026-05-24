@@ -1,0 +1,50 @@
+jest.mock("../../lib/prisma", () => ({
+  prisma: {
+    careerProfile: {
+      findFirst: jest.fn(),
+      delete: jest.fn(),
+    },
+  },
+}));
+
+const { prisma } = require("../../lib/prisma");
+const { createProfile, deleteProfile } = require("../profile.service");
+
+describe("subprofile deletion", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("impede criar subperfil com nome ja utilizado", async () => {
+    prisma.careerProfile.findFirst.mockResolvedValue({ id: "existing" });
+
+    await expect(createProfile("user", { profileName: "Backend" })).rejects.toMatchObject({
+      statusCode: 409,
+      message: "Ja existe um perfil com este nome",
+    });
+    expect(prisma.careerProfile.findFirst).toHaveBeenCalledWith({
+      where: { userId: "user", profileName: { equals: "Backend", mode: "insensitive" } },
+      select: { id: true },
+    });
+  });
+
+  it("remove somente subperfil pertencente ao usuario", async () => {
+    prisma.careerProfile.findFirst.mockResolvedValue({ id: "subprofile", isGlobal: false });
+    prisma.careerProfile.delete.mockResolvedValue({ id: "subprofile" });
+
+    await expect(deleteProfile("user", "subprofile")).resolves.toEqual({ message: "Subperfil removido." });
+    expect(prisma.careerProfile.findFirst).toHaveBeenCalledWith({
+      where: { id: "subprofile", userId: "user" },
+      select: { id: true, isGlobal: true },
+    });
+    expect(prisma.careerProfile.delete).toHaveBeenCalledWith({ where: { id: "subprofile" } });
+  });
+
+  it("impede exclusao do Perfil Global", async () => {
+    prisma.careerProfile.findFirst.mockResolvedValue({ id: "global", isGlobal: true });
+
+    await expect(deleteProfile("user", "global")).rejects.toMatchObject({
+      statusCode: 400,
+      message: "O Perfil Global nao pode ser excluido",
+    });
+    expect(prisma.careerProfile.delete).not.toHaveBeenCalled();
+  });
+});

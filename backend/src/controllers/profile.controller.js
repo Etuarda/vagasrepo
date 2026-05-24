@@ -38,6 +38,16 @@ async function createProfile(req, res, next) {
   }
 }
 
+async function deleteProfile(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const result = await profileService.deleteProfile(req.userId, id);
+    return res.json(result);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function getProfile(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
@@ -288,6 +298,7 @@ module.exports = {
   getProfile,
   listProfiles,
   createProfile,
+  deleteProfile,
   updateProfile,
   updateSkills,
   addProject,
