@@ -3,16 +3,21 @@ const {
   createProfileSchema,
   skillsSchema,
   projectSchema,
+  projectBulletSchema,
   experienceSchema,
   courseSchema,
   certificationSchema,
   languageSchema,
+  educationSchema,
   matchSchema,
+  jobAnalysisUpdateSchema,
   profileIdSchema,
   idParamSchema,
 } = require("../schemas/profile.schema");
+const { createApplicationFromAnalysisSchema } = require("../schemas/job.schema");
 const profileService = require("../services/profile.service");
 const matchingService = require("../services/matching.service");
+const applicationTrackingService = require("../modules/application-tracking/application-tracking.service");
 
 async function listProfiles(req, res, next) {
   try {
@@ -80,6 +85,17 @@ async function deleteProject(req, res, next) {
     const { id } = idParamSchema.parse(req.params);
     const profile = await profileService.deleteProject(req.userId, profileId, id);
     return res.json({ projects: profile.projects, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function addProjectBullet(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = projectBulletSchema.parse(req.body);
+    const profile = await profileService.addProjectBullet(req.userId, payload.profileId, id, payload);
+    return res.status(201).json({ projects: profile.projects, user: profile });
   } catch (err) {
     return next(err);
   }
@@ -169,11 +185,67 @@ async function deleteLanguage(req, res, next) {
   }
 }
 
+async function addEducation(req, res, next) {
+  try {
+    const payload = educationSchema.parse(req.body);
+    const profile = await profileService.addEducation(req.userId, payload.profileId, payload);
+    return res.status(201).json({ educations: profile.educations, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function deleteEducation(req, res, next) {
+  try {
+    const { profileId } = profileIdSchema.parse(req.query);
+    const { id } = idParamSchema.parse(req.params);
+    const profile = await profileService.deleteEducation(req.userId, profileId, id);
+    return res.json({ educations: profile.educations, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function match(req, res, next) {
   try {
     const payload = matchSchema.parse(req.body);
-    const result = await matchingService.executeMatch(req.userId, payload.jobDescription, payload.resumeFileId, payload.profileId);
+    const result = await matchingService.executeMatch(req.userId, payload.jobDescription, payload.resumeFileId, payload.profileId, payload);
     return res.json(result);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function updateAnalysis(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = jobAnalysisUpdateSchema.parse(req.body);
+    const analysis = await matchingService.updateAnalysis(req.userId, id, payload);
+    const message = analysis.status === "applied"
+      ? `Curriculo marcado como aplicado para a vaga ${analysis.jobTitle}${analysis.company ? ` na empresa ${analysis.company}` : ""}.`
+      : "Analise atualizada.";
+    return res.json({ analysis, message });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function getAnalysis(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const analysis = await matchingService.getAnalysis(req.userId, id);
+    return res.json(analysis);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function createApplication(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = createApplicationFromAnalysisSchema.parse(req.body);
+    const result = await applicationTrackingService.createFromAnalysis(req.userId, id, payload);
+    return res.status(201).json(result);
   } catch (err) {
     return next(err);
   }
@@ -220,6 +292,7 @@ module.exports = {
   updateSkills,
   addProject,
   deleteProject,
+  addProjectBullet,
   addExperience,
   deleteExperience,
   addCourse,
@@ -228,8 +301,13 @@ module.exports = {
   deleteCertification,
   addLanguage,
   deleteLanguage,
+  addEducation,
+  deleteEducation,
   match,
   listOptimized,
   deleteOptimized,
   downloadOptimized,
+  updateAnalysis,
+  getAnalysis,
+  createApplication,
 };

@@ -15,6 +15,8 @@ const profileSchema = z.object({
   github: cleanString(300),
   lattes: cleanString(300),
   summary: cleanString(3000),
+  objective: z.string().trim().max(500).optional(),
+  category: z.string().trim().max(40).optional(),
 });
 
 const createProfileSchema = z.object({
@@ -41,12 +43,25 @@ const projectSchema = z.object({
   profileId: optionalUuid("Perfil invalido"),
   title: z.string().trim().min(2, "Titulo do projeto e obrigatorio").max(160),
   description: z.string().trim().min(10, "Descricao deve ter pelo menos 10 caracteres").max(3000),
+  category: cleanString(40),
+  shortDescription: cleanString(500),
+  businessProblem: cleanString(1200),
+  technicalSolution: cleanString(1200),
+  architecture: cleanString(1200),
   repositoryUrl: z.string().trim().url("Link do repositorio invalido").or(z.literal("")).default(""),
   deployUrl: z.string().trim().url("Link do deploy invalido").or(z.literal("")).default(""),
   technologies: z
     .array(z.string().trim().min(1).max(80))
     .min(1, "Informe pelo menos uma tecnologia")
     .max(40, "Informe no maximo 40 tecnologias"),
+});
+
+const projectBulletSchema = z.object({
+  profileId: optionalUuid("Perfil invalido"),
+  category: z.enum(["backend", "frontend", "fullstack", "data", "ai", "architecture", "database", "testing", "devops", "business", "accessibility", "security"]),
+  content: z.string().trim().min(10, "Bullet deve ter pelo menos 10 caracteres").max(240),
+  keywords: z.array(z.string().trim().min(1).max(80)).max(15).default([]),
+  weight: z.number().int().min(0).max(100).default(50),
 });
 
 const experienceSchema = z.object({
@@ -79,6 +94,13 @@ const languageSchema = z.object({
   level: cleanString(80),
 });
 
+const educationSchema = z.object({
+  profileId: optionalUuid("Perfil invalido"),
+  title: z.string().trim().min(2, "Curso e obrigatorio").max(180),
+  institution: z.string().trim().min(2, "Instituicao e obrigatoria").max(180),
+  period: cleanString(120),
+});
+
 const matchSchema = z.object({
   jobDescription: z
     .string()
@@ -87,6 +109,16 @@ const matchSchema = z.object({
     .max(15000, "A descricao da vaga deve ter no maximo 15.000 caracteres"),
   resumeFileId: optionalUuid("Curriculo PDF invalido"),
   profileId: optionalUuid("Perfil invalido"),
+  jobTitle: cleanString(160),
+  company: cleanString(160),
+});
+
+const jobAnalysisUpdateSchema = z.object({
+  status: z.enum(["draft", "reviewed", "applied", "archived", "rejected"]).optional(),
+  notes: z.string().trim().max(3000).optional(),
+  jobTitle: z.string().trim().min(2).max(160).optional(),
+  company: z.string().trim().max(160).optional(),
+  jobDescription: z.string().trim().min(30).max(15000).optional(),
 });
 
 module.exports = {
@@ -96,9 +128,12 @@ module.exports = {
   idParamSchema,
   skillsSchema,
   projectSchema,
+  projectBulletSchema,
   experienceSchema,
   courseSchema,
   certificationSchema,
   languageSchema,
+  educationSchema,
   matchSchema,
+  jobAnalysisUpdateSchema,
 };

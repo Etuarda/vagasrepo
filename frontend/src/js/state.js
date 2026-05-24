@@ -7,6 +7,8 @@ export const state = {
   activeProfileId: localStorage.getItem("vagas_active_profile_id") || "",
   matchHistory: [],
   optimizedPdfCache: {},
+  pendingApplicationAnalysis: null,
+  lastMatchResult: null,
   resumeFiles: [],
   filters: {
     q: "",

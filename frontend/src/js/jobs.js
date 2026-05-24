@@ -227,6 +227,11 @@ export const jobs = {
     doc.save("vagas-io.pdf");
   },
 
+  async open(id) {
+    const job = await api(`/jobs/${id}`, {}, state.token);
+    ui.openJobModal(job);
+  },
+
   async save(payload) {
     const hasId = Boolean(payload.id);
     const endpoint = hasId ? `/jobs/${payload.id}` : "/jobs";
@@ -245,6 +250,7 @@ export const jobs = {
       prazoAcao: payload.acaoNecessaria && payload.prazoAcao ? payload.prazoAcao : undefined,
       feedbackBool: payload.feedbackBool,
       feedbackTxt: payload.feedbackBool ? (payload.feedbackTxt || "") : undefined,
+      notes: payload.notes || "",
     };
 
     await api(endpoint, { method, body: JSON.stringify(body) }, state.token);

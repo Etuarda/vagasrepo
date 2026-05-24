@@ -5,6 +5,7 @@ const jobsController = require("../controllers/jobs.controller");
 router.use(authMiddleware);
 
 router.get("/", jobsController.list);
+router.get("/:id", jobsController.get);
 router.post("/", jobsController.create);
 router.put("/:id", jobsController.update);
 router.delete("/:id", jobsController.remove);

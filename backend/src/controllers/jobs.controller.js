@@ -35,6 +35,16 @@ async function create(req, res, next) {
   }
 }
 
+async function get(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const job = await jobsService.getJob(req.userId, id);
+    return res.json(job);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function update(req, res, next) {
   try {
     const { id } = idParamSchema.parse(req.params);
@@ -56,4 +66,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, create, update, remove };
+module.exports = { list, get, create, update, remove };

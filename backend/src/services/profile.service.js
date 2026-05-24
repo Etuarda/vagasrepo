@@ -1,18 +1,51 @@
 const { prisma } = require("../lib/prisma");
+const { normalizeTerm } = require("../modules/matching/keyword-normalizer");
 
 const profileInclude = {
   skills: { orderBy: { name: "asc" } },
   projects: {
     orderBy: { createdAt: "desc" },
-    include: { technologies: { orderBy: { name: "asc" } } },
+    include: {
+      technologies: { orderBy: { name: "asc" } },
+      bullets: { where: { isActive: true }, orderBy: [{ weight: "desc" }, { createdAt: "asc" }] },
+    },
   },
   experiences: { orderBy: { createdAt: "desc" } },
   courses: { orderBy: { createdAt: "desc" } },
   certifications: { orderBy: { createdAt: "desc" } },
   languages: { orderBy: { createdAt: "desc" } },
+  educations: { orderBy: { createdAt: "desc" } },
+  subprofileSkills: { where: { isVisible: true }, include: { skill: true }, orderBy: { relevanceWeight: "desc" } },
+  subprofileProjects: {
+    where: { isVisible: true },
+    include: {
+      project: {
+        include: {
+          technologies: { orderBy: { name: "asc" } },
+          bullets: { where: { isActive: true }, orderBy: { weight: "desc" } },
+        },
+      },
+    },
+    orderBy: { relevanceWeight: "desc" },
+  },
+  subprofileExperiences: { where: { isVisible: true }, include: { experience: true }, orderBy: { relevanceWeight: "desc" } },
+  subprofileCourses: { where: { isVisible: true }, include: { course: true }, orderBy: { relevanceWeight: "desc" } },
+  subprofileCertifications: { where: { isVisible: true }, include: { certification: true }, orderBy: { relevanceWeight: "desc" } },
 };
 
 function serializeProfile(profile) {
+  const linkedSkills = (profile.subprofileSkills || []).map((item) => ({ ...item.skill, relevanceWeight: item.relevanceWeight }));
+  const skills = dedupeById([...(profile.skills || []), ...linkedSkills]);
+  const linkedProjects = (profile.subprofileProjects || []).map((item) => ({
+    ...item.project,
+    customTitle: item.customTitle,
+    customSummary: item.customSummary,
+    relevanceWeight: item.relevanceWeight,
+  }));
+  const projects = dedupeById([...(profile.projects || []), ...linkedProjects]);
+  const experiences = dedupeById([...(profile.experiences || []), ...(profile.subprofileExperiences || []).map((item) => ({ ...item.experience, relevanceWeight: item.relevanceWeight }))]);
+  const courses = dedupeById([...(profile.courses || []), ...(profile.subprofileCourses || []).map((item) => ({ ...item.course, relevanceWeight: item.relevanceWeight }))]);
+  const certifications = dedupeById([...(profile.certifications || []), ...(profile.subprofileCertifications || []).map((item) => ({ ...item.certification, relevanceWeight: item.relevanceWeight }))]);
   return {
     id: profile.id,
     profileName: profile.profileName,
@@ -27,30 +60,47 @@ function serializeProfile(profile) {
     github: profile.github || "",
     lattes: profile.lattes || "",
     summary: profile.summary || "",
-    skills: (profile.skills || []).map((skill) => skill.name),
-    projects: (profile.projects || []).map((project) => ({
+    objective: profile.objective || "",
+    category: profile.category || "unknown",
+    skillItems: skills.map((skill) => ({ id: skill.id, name: skill.name, normalizedName: skill.normalizedName || normalizeTerm(skill.name), category: skill.category || "other", relevanceWeight: skill.relevanceWeight || 50 })),
+    skills: skills.map((skill) => skill.name),
+    projects: projects.map((project) => ({
       id: project.id,
-      title: project.title,
-      description: project.description,
+      title: project.customTitle || project.title,
+      description: project.customSummary || project.shortDescription || project.description,
+      category: project.category || "other",
+      shortDescription: project.shortDescription || project.description,
+      businessProblem: project.businessProblem || "",
+      technicalSolution: project.technicalSolution || "",
+      architecture: project.architecture || "",
+      relevanceWeight: project.relevanceWeight || 50,
       repositoryUrl: project.repositoryUrl || "",
       deployUrl: project.deployUrl || "",
       technologies: (project.technologies || []).map((tech) => tech.name),
+      bullets: (project.bullets || []).map((bullet) => ({
+        id: bullet.id,
+        category: bullet.category,
+        content: bullet.content,
+        keywords: bullet.keywords || [],
+        weight: bullet.weight,
+        isActive: bullet.isActive,
+      })),
     })),
-    experiences: (profile.experiences || []).map((experience) => ({
+    experiences: experiences.map((experience) => ({
       id: experience.id,
       company: experience.company,
       role: experience.role,
       period: experience.period,
       description: experience.description,
     })),
-    courses: (profile.courses || []).map((course) => ({
+    courses: courses.map((course) => ({
       id: course.id,
       title: course.title,
       institution: course.institution || "",
       period: course.period || "",
       description: course.description || "",
     })),
-    certifications: (profile.certifications || []).map((certification) => ({
+    certifications: certifications.map((certification) => ({
       id: certification.id,
       title: certification.title,
       issuer: certification.issuer || "",
@@ -62,7 +112,19 @@ function serializeProfile(profile) {
       name: language.name,
       level: language.level || "",
     })),
+    educations: (profile.educations || []).map((education) => ({
+      id: education.id,
+      title: education.title,
+      institution: education.institution,
+      period: education.period || "",
+    })),
   };
+}
+
+function dedupeById(items) {
+  const map = new Map();
+  items.filter(Boolean).forEach((item) => map.set(item.id, item));
+  return [...map.values()];
 }
 
 async function ensureDefaultProfile(userId) {
@@ -129,7 +191,6 @@ async function listProfiles(userId) {
 
 async function createProfile(userId, { profileName }) {
   const base = await ensureDefaultProfile(userId);
-  const fullBase = await getProfile(userId, base.id);
   const profile = await prisma.careerProfile.create({
     data: {
       userId,
@@ -143,78 +204,27 @@ async function createProfile(userId, { profileName }) {
       github: base.github,
       lattes: base.lattes,
       summary: base.summary,
+      category: normalizeTerm(profileName),
     },
     include: profileInclude,
   });
 
-  await cloneProfileCollections(userId, fullBase, profile.id);
+  await inheritGlobalCollections(profile.id, base.id);
   return getProfile(userId, profile.id);
 }
 
-async function cloneProfileCollections(userId, source, targetProfileId) {
-  if (source.skills?.length) {
-    await prisma.skill.createMany({
-      data: source.skills.map((name) => ({ name, userId, profileId: targetProfileId })),
-      skipDuplicates: true,
-    });
-  }
-
-  for (const project of source.projects || []) {
-    await prisma.project.create({
-      data: {
-        title: project.title,
-        description: project.description,
-        repositoryUrl: project.repositoryUrl || "",
-        deployUrl: project.deployUrl || "",
-        userId,
-        profileId: targetProfileId,
-        technologies: { create: (project.technologies || []).map((name) => ({ name })) },
-      },
-    });
-  }
-
-  if (source.experiences?.length) {
-    await prisma.experience.createMany({
-      data: source.experiences.map((item) => ({ ...item, userId, profileId: targetProfileId })),
-    });
-  }
-
-  if (source.courses?.length) {
-    await prisma.course.createMany({
-      data: source.courses.map((item) => ({
-        title: item.title,
-        institution: item.institution || "",
-        period: item.period || "",
-        description: item.description || "",
-        userId,
-        profileId: targetProfileId,
-      })),
-    });
-  }
-
-  if (source.certifications?.length) {
-    await prisma.certification.createMany({
-      data: source.certifications.map((item) => ({
-        title: item.title,
-        issuer: item.issuer || "",
-        period: item.period || "",
-        credentialUrl: item.credentialUrl || "",
-        userId,
-        profileId: targetProfileId,
-      })),
-    });
-  }
-
-  if (source.languages?.length) {
-    await prisma.language.createMany({
-      data: source.languages.map((item) => ({
-        name: item.name,
-        level: item.level || "",
-        userId,
-        profileId: targetProfileId,
-      })),
-    });
-  }
+async function inheritGlobalCollections(subprofileId, globalProfileId) {
+  const global = await prisma.careerProfile.findUnique({
+    where: { id: globalProfileId },
+    include: { skills: true, projects: true, experiences: true, courses: true, certifications: true },
+  });
+  await prisma.$transaction([
+    prisma.subprofileSkill.createMany({ data: global.skills.map((item) => ({ subprofileId, skillId: item.id })), skipDuplicates: true }),
+    prisma.subprofileProject.createMany({ data: global.projects.map((item) => ({ subprofileId, projectId: item.id })), skipDuplicates: true }),
+    prisma.subprofileExperience.createMany({ data: global.experiences.map((item) => ({ subprofileId, experienceId: item.id })), skipDuplicates: true }),
+    prisma.subprofileCourse.createMany({ data: global.courses.map((item) => ({ subprofileId, courseId: item.id })), skipDuplicates: true }),
+    prisma.subprofileCertification.createMany({ data: global.certifications.map((item) => ({ subprofileId, certificationId: item.id })), skipDuplicates: true }),
+  ]);
 }
 
 async function getProfile(userId, profileId = null) {
@@ -223,6 +233,15 @@ async function getProfile(userId, profileId = null) {
     where: { id: profile.id, userId },
     include: profileInclude,
   });
+  if (!full.isGlobal) {
+    const global = await ensureDefaultProfile(userId);
+    const globalShared = await prisma.careerProfile.findFirst({
+      where: { id: global.id, userId },
+      include: { languages: true, educations: true },
+    });
+    full.languages = dedupeById([...(full.languages || []), ...(globalShared.languages || [])]);
+    full.educations = dedupeById([...(full.educations || []), ...(globalShared.educations || [])]);
+  }
   return serializeProfile(full);
 }
 
@@ -360,10 +379,32 @@ async function updateSkills(userId, profileId, skills) {
   const profile = await resolveProfile(userId, profileId);
   const uniqueSkills = [...new Set(skills.map((skill) => skill.trim()).filter(Boolean))];
 
+  if (!profile.isGlobal) {
+    const global = await ensureDefaultProfile(userId);
+    const existing = await prisma.skill.findMany({ where: { profileId: global.id } });
+    const byName = new Map(existing.map((skill) => [normalizeTerm(skill.name), skill]));
+    for (const name of uniqueSkills) {
+      if (!byName.has(normalizeTerm(name))) {
+        const created = await prisma.skill.create({
+          data: { name, normalizedName: normalizeTerm(name), userId, profileId: global.id },
+        });
+        byName.set(normalizeTerm(name), created);
+      }
+    }
+    await prisma.$transaction([
+      prisma.subprofileSkill.deleteMany({ where: { subprofileId: profile.id } }),
+      prisma.subprofileSkill.createMany({
+        data: uniqueSkills.map((name) => ({ subprofileId: profile.id, skillId: byName.get(normalizeTerm(name)).id })),
+        skipDuplicates: true,
+      }),
+    ]);
+    return getProfile(userId, profile.id);
+  }
+
   await prisma.$transaction([
     prisma.skill.deleteMany({ where: { profileId: profile.id } }),
     prisma.skill.createMany({
-      data: uniqueSkills.map((name) => ({ name, userId, profileId: profile.id })),
+      data: uniqueSkills.map((name) => ({ name, normalizedName: normalizeTerm(name), userId, profileId: profile.id })),
       skipDuplicates: true,
     }),
   ]);
@@ -375,31 +416,70 @@ async function addProject(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   const technologies = [...new Set(data.technologies.map((tech) => tech.trim()).filter(Boolean))];
 
-  await prisma.project.create({
+  const ownerProfile = profile.isGlobal ? profile : await ensureDefaultProfile(userId);
+  const project = await prisma.project.create({
     data: {
       title: data.title,
       description: data.description,
+      shortDescription: data.shortDescription || data.description,
+      category: data.category || "other",
+      businessProblem: data.businessProblem || "",
+      technicalSolution: data.technicalSolution || "",
+      architecture: data.architecture || "",
       repositoryUrl: data.repositoryUrl || "",
       deployUrl: data.deployUrl || "",
       userId,
-      profileId: profile.id,
+      profileId: ownerProfile.id,
       technologies: {
-        create: technologies.map((name) => ({ name })),
+        create: technologies.map((name) => ({ name, normalizedName: normalizeTerm(name) })),
       },
     },
   });
+  if (!profile.isGlobal) {
+    await prisma.subprofileProject.create({ data: { subprofileId: profile.id, projectId: project.id } });
+  }
 
   return getProfile(userId, profile.id);
 }
 
 async function deleteProject(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
+  if (!profile.isGlobal) {
+    const hidden = await prisma.subprofileProject.updateMany({ where: { projectId: id, subprofileId: profile.id }, data: { isVisible: false } });
+    if (hidden.count) return getProfile(userId, profile.id);
+  }
   const result = await prisma.project.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
     const err = new Error("Projeto não encontrado");
     err.statusCode = 404;
     throw err;
   }
+  return getProfile(userId, profile.id);
+}
+
+async function addProjectBullet(userId, profileId, projectId, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      userId,
+      OR: [{ profileId: profile.id }, { subprofiles: { some: { subprofileId: profile.id, isVisible: true } } }],
+    },
+  });
+  if (!project) {
+    const err = new Error("Projeto nao encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  await prisma.projectBullet.create({
+    data: {
+      projectId,
+      category: data.category,
+      content: data.content,
+      keywords: data.keywords.map(normalizeTerm),
+      weight: data.weight,
+    },
+  });
   return getProfile(userId, profile.id);
 }
 
@@ -411,6 +491,10 @@ async function addExperience(userId, profileId, data) {
 
 async function deleteExperience(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
+  if (!profile.isGlobal) {
+    const hidden = await prisma.subprofileExperience.updateMany({ where: { experienceId: id, subprofileId: profile.id }, data: { isVisible: false } });
+    if (hidden.count) return getProfile(userId, profile.id);
+  }
   const result = await prisma.experience.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
     const err = new Error("Experiência não encontrada");
@@ -428,6 +512,10 @@ async function addCourse(userId, profileId, data) {
 
 async function deleteCourse(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
+  if (!profile.isGlobal) {
+    const hidden = await prisma.subprofileCourse.updateMany({ where: { courseId: id, subprofileId: profile.id }, data: { isVisible: false } });
+    if (hidden.count) return getProfile(userId, profile.id);
+  }
   const result = await prisma.course.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
     const err = new Error("Curso não encontrado");
@@ -445,6 +533,10 @@ async function addCertification(userId, profileId, data) {
 
 async function deleteCertification(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
+  if (!profile.isGlobal) {
+    const hidden = await prisma.subprofileCertification.updateMany({ where: { certificationId: id, subprofileId: profile.id }, data: { isVisible: false } });
+    if (hidden.count) return getProfile(userId, profile.id);
+  }
   const result = await prisma.certification.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
     const err = new Error("Certificação não encontrada");
@@ -457,6 +549,29 @@ async function deleteCertification(userId, profileId, id) {
 async function addLanguage(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   await prisma.language.create({ data: { ...data, userId, profileId: profile.id } });
+  return getProfile(userId, profile.id);
+}
+
+async function addEducation(userId, profileId, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const owner = profile.isGlobal ? profile : await ensureDefaultProfile(userId);
+  await prisma.education.create({ data: { ...data, userId, profileId: owner.id } });
+  return getProfile(userId, profile.id);
+}
+
+async function deleteEducation(userId, profileId, id) {
+  const profile = await resolveProfile(userId, profileId);
+  if (!profile.isGlobal) {
+    const err = new Error("Remova formacao somente no Perfil Global");
+    err.statusCode = 400;
+    throw err;
+  }
+  const result = await prisma.education.deleteMany({ where: { id, userId, profileId: profile.id } });
+  if (!result.count) {
+    const err = new Error("Formacao nao encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
   return getProfile(userId, profile.id);
 }
 
@@ -479,6 +594,7 @@ module.exports = {
   updateProfileFromPdf,
   updateSkills,
   addProject,
+  addProjectBullet,
   deleteProject,
   addExperience,
   deleteExperience,
@@ -488,6 +604,8 @@ module.exports = {
   deleteCertification,
   addLanguage,
   deleteLanguage,
+  addEducation,
+  deleteEducation,
   resolveProfile,
   serializeProfile,
   profileInclude,

@@ -170,6 +170,7 @@ function wireEvents() {
             prazoAcao: document.getElementById("job-prazo-acao")?.value || null,
             feedbackBool: !!document.getElementById("job-feedback-bool")?.checked,
             feedbackTxt: document.getElementById("job-feedback-txt")?.value || "",
+            notes: document.getElementById("job-notes")?.value || "",
           };
 
           await jobs.save(payload);
@@ -190,6 +191,40 @@ function wireEvents() {
   document.querySelectorAll("[data-close-job]").forEach((el) =>
     el.addEventListener("click", () => ui.closeJobModal())
   );
+  document.querySelectorAll("[data-close-application]").forEach((el) =>
+    el.addEventListener("click", () => ui.closeApplicationModal())
+  );
+  document.querySelectorAll("[data-start-application]").forEach((el) =>
+    el.addEventListener("click", () => ui.startApplicationForm())
+  );
+
+  const applicationActionBool = document.getElementById("application-action-bool");
+  if (applicationActionBool) applicationActionBool.addEventListener("change", ui.syncApplicationConditionalFields);
+  const applicationFeedbackBool = document.getElementById("application-feedback-bool");
+  if (applicationFeedbackBool) applicationFeedbackBool.addEventListener("change", ui.syncApplicationConditionalFields);
+  const formApplication = document.getElementById("form-application");
+  if (formApplication) {
+    formApplication.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const analysisId = document.getElementById("application-analysis-id")?.value || "";
+      const payload = {
+        linkVaga: document.getElementById("application-link-vaga")?.value || "",
+        linkCV: document.getElementById("application-link-cv")?.value || "",
+        fase: document.getElementById("application-fase")?.value || "Currículo gerado",
+        acaoNecessaria: !!document.getElementById("application-action-bool")?.checked,
+        qualAcao: document.getElementById("application-qual-acao")?.value || "",
+        prazoAcao: document.getElementById("application-prazo-acao")?.value || null,
+        feedbackBool: !!document.getElementById("application-feedback-bool")?.checked,
+        feedbackTxt: document.getElementById("application-feedback-txt")?.value || "",
+        notes: document.getElementById("application-notes")?.value || "",
+      };
+      await runWithFeedback(
+        getSubmitButton(e, formApplication),
+        { busyText: "Salvando...", notice: "Registrando candidatura..." },
+        () => career.createApplication(analysisId, payload)
+      );
+    });
+  }
 
   const debouncedLoad = debounce(() => jobs.load(), 300);
 
@@ -353,6 +388,35 @@ function wireEvents() {
     });
   }
 
+  const formEducation = document.getElementById("form-education");
+  if (formEducation) {
+    formEducation.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById("education-title-field")?.value || "",
+        institution: document.getElementById("education-institution")?.value || "",
+        period: document.getElementById("education-period")?.value || "",
+      };
+      await runWithFeedback(
+        getSubmitButton(e, formEducation),
+        { busyText: "Salvando...", notice: "Salvando formação..." },
+        async () => {
+          await career.addEducation(payload);
+          formEducation.reset();
+        }
+      );
+    });
+  }
+
+  const educationsList = document.getElementById("educations-list");
+  if (educationsList) {
+    educationsList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-remove-education]");
+      if (!btn) return;
+      await runWithFeedback(btn, { busyText: "Removendo...", notice: "Removendo formação..." }, () => career.removeEducation(btn.dataset.removeEducation));
+    });
+  }
+
   const formProject = document.getElementById("form-project");
   if (formProject) {
     formProject.addEventListener("submit", async (e) => {
@@ -361,6 +425,10 @@ function wireEvents() {
       const description = document.getElementById("project-description")?.value || "";
       const repositoryUrl = document.getElementById("project-repository-url")?.value || "";
       const deployUrl = document.getElementById("project-deploy-url")?.value || "";
+      const category = document.getElementById("project-category")?.value || "backend";
+      const shortDescription = document.getElementById("project-short-description")?.value || "";
+      const technicalSolution = document.getElementById("project-technical-solution")?.value || "";
+      const architecture = document.getElementById("project-architecture")?.value || "";
       const technologies = (document.getElementById("project-techs")?.value || "")
         .split(",")
         .map((item) => item.trim())
@@ -370,7 +438,7 @@ function wireEvents() {
         getSubmitButton(e, formProject),
         { busyText: "Salvando...", notice: "Salvando projeto..." },
         async () => {
-          await career.addProject({ title, description, repositoryUrl, deployUrl, technologies });
+          await career.addProject({ title, description, category, shortDescription, technicalSolution, architecture, repositoryUrl, deployUrl, technologies });
           formProject.reset();
         }
       );
@@ -386,6 +454,24 @@ function wireEvents() {
         btn,
         { busyText: "Removendo...", notice: "Removendo projeto..." },
         () => career.removeProject(btn.dataset.removeProject)
+      );
+    });
+    projectsList.addEventListener("submit", async (e) => {
+      const form = e.target.closest("[data-project-bullet-form]");
+      if (!form) return;
+      e.preventDefault();
+      const payload = {
+        category: form.elements.category.value,
+        content: form.elements.content.value,
+        keywords: form.elements.keywords.value.split(",").map((value) => value.trim()).filter(Boolean),
+        weight: Number(form.elements.weight.value || 50),
+      };
+      await runWithFeedback(
+        form.querySelector("button[type='submit']"),
+        { busyText: "Salvando...", notice: "Salvando bullet estruturado..." },
+        async () => {
+          await career.addProjectBullet(form.dataset.projectBulletForm, payload);
+        }
       );
     });
   }
@@ -510,7 +596,34 @@ function wireEvents() {
 
   const matchResult = document.getElementById("match-result");
   if (matchResult) {
+    matchResult.addEventListener("submit", async (e) => {
+      const form = e.target.closest("[data-analysis-edit-form]");
+      if (!form) return;
+      e.preventDefault();
+      const payload = {
+        jobTitle: form.elements.jobTitle.value,
+        company: form.elements.company.value,
+        jobDescription: form.elements.jobDescription.value,
+        notes: form.elements.notes.value,
+        status: form.elements.status.value,
+      };
+      await runWithFeedback(
+        form.querySelector("button[type='submit']"),
+        { busyText: "Salvando...", notice: "Criando versão da análise..." },
+        () => career.saveAnalysisVersion(form.dataset.analysisEditForm, payload)
+      );
+    });
     matchResult.addEventListener("click", async (e) => {
+      const registrationBtn = e.target.closest("[data-register-application]");
+      if (registrationBtn) {
+        ui.openApplicationPrompt(state.lastMatchResult || {
+          analysisId: registrationBtn.dataset.registerApplication,
+          targetTitle: "Vaga analisada",
+          selectedSubprofileName: state.profile?.profileName || "",
+          score: 0,
+        });
+        return;
+      }
       const btn = e.target.closest("[data-download-current-optimized]");
       if (!btn) return;
       await runWithFeedback(
@@ -573,6 +686,22 @@ function wireEvents() {
   const matchHistory = document.getElementById("match-history");
   if (matchHistory) {
     matchHistory.addEventListener("click", async (e) => {
+      const openBtn = e.target.closest("[data-open-analysis]");
+      if (openBtn) {
+        return career.openAnalysis(openBtn.dataset.openAnalysis);
+      }
+      const linkedJobBtn = e.target.closest("[data-open-linked-job]");
+      if (linkedJobBtn) {
+        return jobs.open(linkedJobBtn.dataset.openLinkedJob);
+      }
+      const appliedBtn = e.target.closest("[data-mark-applied]");
+      if (appliedBtn) {
+        return runWithFeedback(
+          appliedBtn,
+          { busyText: "Salvando...", notice: "Registrando aplicacao..." },
+          () => career.markAnalysisApplied(appliedBtn.dataset.markApplied)
+        );
+      }
       const optimizedLink = e.target.closest("[data-download-optimized]");
       if (optimizedLink) {
         e.preventDefault();
@@ -624,6 +753,13 @@ function wireEvents() {
       if (action === "edit") {
         const job = (state.jobs || []).find((j) => j.id === id);
         return ui.openJobModal(job);
+      }
+      if (action === "open-analysis") {
+        career.setTab("matching");
+        return career.openAnalysis(btn.dataset.analysisId);
+      }
+      if (action === "download-optimized") {
+        return career.downloadOptimizedResume(btn.dataset.resumeId);
       }
     });
   }

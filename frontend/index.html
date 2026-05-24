@@ -234,14 +234,31 @@
             <div id="languages-list" class="flex flex-wrap gap-2"></div>
           </section>
 
+          <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-3" aria-labelledby="education-title">
+            <h3 id="education-title" class="font-serif text-3xl">Formação.</h3>
+            <form id="form-education" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <input type="text" id="education-title-field" required placeholder="Curso / graduação" class="editorial-input text-sm" />
+              <input type="text" id="education-institution" required placeholder="Instituição" class="editorial-input text-sm" />
+              <input type="text" id="education-period" placeholder="Período" class="editorial-input text-sm" />
+              <button type="submit" class="bg-ink text-paper rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
+            </form>
+            <div id="educations-list" class="space-y-3"></div>
+          </section>
+
           <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6 lg:col-span-2" aria-labelledby="projects-title">
             <h3 id="projects-title" class="font-serif text-3xl">Projetos.</h3>
             <form id="form-project" class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm" />
               <input type="text" id="project-techs" required placeholder="Tecnologias separadas por vírgula" class="editorial-input text-sm" />
+              <select id="project-category" class="editorial-input text-sm bg-white">
+                <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="fullstack">Fullstack</option><option value="data">Dados</option><option value="devops">DevOps</option><option value="ai">IA</option>
+              </select>
+              <input type="text" id="project-short-description" placeholder="Resumo curto para currículo" class="editorial-input text-sm" />
               <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
               <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
               <textarea id="project-description" required rows="3" placeholder="Descrição do projeto" class="editorial-input text-sm md:col-span-2"></textarea>
+              <textarea id="project-technical-solution" rows="2" placeholder="Solução técnica estruturada" class="editorial-input text-sm"></textarea>
+              <textarea id="project-architecture" rows="2" placeholder="Arquitetura aplicada" class="editorial-input text-sm"></textarea>
               <div class="md:col-span-2 flex justify-end">
                 <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
                   Cadastrar projeto
@@ -302,6 +319,10 @@
             <h2 id="matching-title" class="font-serif text-5xl tracking-tight mt-3">Matching ATS.</h2>
           </div>
           <form id="form-match" class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input type="text" id="match-job-title" placeholder="Cargo da vaga" class="editorial-input text-sm" />
+              <input type="text" id="match-company" placeholder="Empresa" class="editorial-input text-sm" />
+            </div>
             <div>
               <label for="match-resume-file" class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone mb-2">
                 Currículo-base em PDF
@@ -381,7 +402,14 @@
             </select>
           </div>
 
-          <input type="text" id="job-fase-field" placeholder="Fase Atual (Ex: Entrevista)" required class="editorial-input" />
+          <select id="job-fase-field" required class="editorial-input bg-white">
+            <option value="Currículo gerado">Currículo gerado</option>
+            <option value="Aplicada">Aplicada</option>
+            <option value="Entrevista">Entrevista</option>
+            <option value="Teste técnico">Teste técnico</option>
+            <option value="Feedback">Feedback</option>
+            <option value="Encerrada">Encerrada</option>
+          </select>
 
           <div class="p-6 border border-borderLight rounded-2xl flex items-center justify-between">
             <label for="job-action-bool" class="text-[10px] font-bold uppercase tracking-[0.2em]">Exige Ação?</label>
@@ -401,11 +429,68 @@
           <div id="job-feedback-fields" class="hidden space-y-6">
             <textarea id="job-feedback-txt" rows="3" placeholder="Resumo do feedback (obrigatório se recebeu feedback)" class="editorial-input"></textarea>
           </div>
+          <textarea id="job-notes" rows="3" placeholder="Observações" class="editorial-input"></textarea>
         </div>
 
         <div class="lg:col-span-2 flex justify-end gap-8 pt-10 border-t border-borderLight mt-6">
           <button type="button" data-close-job class="text-[10px] font-bold uppercase tracking-[0.3em] opacity-30">Cancelar</button>
           <button type="submit" class="bg-ink text-paper px-16 py-5 rounded-full font-bold uppercase tracking-widest text-xs">Arquivar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Application from analysis modal -->
+  <div id="application-modal" class="hidden fixed inset-0 z-[160] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Registrar candidatura">
+    <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" data-close-application></div>
+    <div class="editorial-card w-full max-w-3xl max-h-[90vh] overflow-y-auto relative z-10 p-10 lg:p-12 rounded-3xl editorial-shadow modal-enter">
+      <section id="application-prompt" class="space-y-6">
+        <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Currículo otimizado pronto</p>
+        <h2 class="font-serif text-5xl tracking-tight">Registrar candidatura?</h2>
+        <p class="text-sm text-taupe leading-relaxed">
+          O currículo foi gerado com base nesta vaga. Deseja salvar essa oportunidade no seu histórico de candidaturas?
+        </p>
+        <p id="application-prompt-context" class="text-sm font-bold"></p>
+        <div class="flex justify-end gap-6 pt-4">
+          <button type="button" data-close-application class="text-[10px] font-bold uppercase tracking-widest">Agora não</button>
+          <button type="button" data-start-application class="bg-ink text-paper px-8 py-4 rounded-full text-[10px] font-bold uppercase tracking-widest">Registrar candidatura</button>
+        </div>
+      </section>
+      <form id="form-application" class="hidden space-y-5">
+        <input type="hidden" id="application-analysis-id" />
+        <h2 class="font-serif text-4xl tracking-tight">Confirmar candidatura.</h2>
+        <p id="application-form-context" class="text-sm text-taupe"></p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input type="url" id="application-link-vaga" required placeholder="Link da vaga *" class="editorial-input text-sm" />
+          <input type="url" id="application-link-cv" placeholder="Link do currículo" class="editorial-input text-sm" />
+          <select id="application-fase" class="editorial-input bg-white text-sm">
+            <option value="Currículo gerado">Currículo gerado</option>
+            <option value="Aplicada">Aplicada</option>
+            <option value="Entrevista">Entrevista</option>
+            <option value="Teste técnico">Teste técnico</option>
+            <option value="Feedback">Feedback</option>
+            <option value="Encerrada">Encerrada</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="p-4 border border-borderLight rounded-2xl flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+            Exige ação? <input type="checkbox" id="application-action-bool" class="w-6 h-6 accent-ink" />
+          </label>
+          <label class="p-4 border border-borderLight rounded-2xl flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+            Recebeu feedback? <input type="checkbox" id="application-feedback-bool" class="w-6 h-6 accent-ink" />
+          </label>
+        </div>
+        <div id="application-action-fields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input type="text" id="application-qual-acao" placeholder="Qual ação? *" class="editorial-input text-sm" />
+          <input type="date" id="application-prazo-acao" class="editorial-input text-sm" />
+        </div>
+        <div id="application-feedback-fields" class="hidden">
+          <textarea id="application-feedback-txt" rows="3" placeholder="Qual feedback? *" class="editorial-input text-sm"></textarea>
+        </div>
+        <textarea id="application-notes" rows="3" placeholder="Observações" class="editorial-input text-sm"></textarea>
+        <div class="flex justify-end gap-6 pt-4 border-t border-borderLight">
+          <button type="button" data-close-application class="text-[10px] font-bold uppercase tracking-widest">Agora não</button>
+          <button type="submit" class="bg-ink text-paper px-8 py-4 rounded-full text-[10px] font-bold uppercase tracking-widest">Salvar candidatura</button>
         </div>
       </form>
     </div>

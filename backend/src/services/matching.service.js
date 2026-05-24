@@ -1,279 +1,266 @@
 const { prisma } = require("../lib/prisma");
 const profileService = require("./profile.service");
 const { generateOptimizedResumePdf } = require("./pdf-output.service");
+const { classifyJob, normalizeTerm, normalizeText } = require("../modules/matching/keyword-normalizer");
+const { rankProjects } = require("../modules/matching/project-ranking.service");
+const { compileResume } = require("../modules/resume/resume-compiler.service");
 
-const TECH_KEYWORDS = [
-  "javascript",
-  "typescript",
-  "react",
-  "node",
-  "express",
-  "postgresql",
-  "postgres",
-  "prisma",
-  "sql",
-  "html",
-  "css",
-  "tailwind",
-  "git",
-  "docker",
-  "aws",
-  "api",
-  "rest",
-  "graphql",
-  "python",
-  "java",
-];
-
-const SKILL_KEYWORDS = [
-  "comunicação",
-  "liderança",
-  "scrum",
-  "agile",
-  "kanban",
-  "testes",
-  "frontend",
-  "backend",
-  "fullstack",
-  "clean code",
-  "solid",
-  "acessibilidade",
-  "ui",
-  "ux",
-  "produto",
-];
-
-function normalize(value) {
-  return String(value || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
+function unique(values) {
+  return [...new Set((values || []).filter(Boolean))];
 }
 
-function includesLoose(source, term) {
-  const s = normalize(source);
-  const t = normalize(term);
-  return Boolean(t) && (s.includes(t) || t.includes(s));
-}
-
-function extractFromText(text, dictionary) {
-  return dictionary.filter((item) => includesLoose(text, item));
+function includesKeyword(value, keyword) {
+  return ` ${normalizeText(value)} `.includes(` ${normalizeTerm(keyword)} `);
 }
 
 function inferTitle(text) {
   const firstLine = String(text).split(/\r?\n/).find((line) => line.trim().length > 4);
-  if (!firstLine) return "Vaga analisada";
-  return firstLine.trim().slice(0, 120);
+  return firstLine ? firstLine.trim().slice(0, 120) : "Vaga analisada";
 }
 
-function compareRequired(required, owned) {
-  const matched = [];
-  const missing = [];
-
-  required.forEach((item) => {
-    const hasMatch = owned.some((ownedItem) => includesLoose(ownedItem, item));
-    if (hasMatch) matched.push(item);
-    else missing.push(item);
-  });
-
-  return { matched, missing };
+function scoreRatio(matched, total) {
+  return total ? Math.round((matched / total) * 100) : 0;
 }
 
-function scorePercent(matched, total) {
-  if (!total) return 100;
-  return Math.round((matched / total) * 100);
+function rankItems(items, keywords, sourceFor, limit) {
+  return (items || []).map((item) => {
+    const matchedKeywords = keywords.filter((keyword) => includesKeyword(sourceFor(item), keyword));
+    return { ...item, score: scoreRatio(matchedKeywords.length, keywords.length), matchedKeywords };
+  }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
-async function executeMatch(userId, jobDescription, resumeFileId = null, profileId = null) {
-  const profile = await profileService.getProfile(userId, profileId);
+function analyzeProfile(profile, jobDescription) {
+  const job = classifyJob(jobDescription);
+  const required = job.keywords;
+  const skillMap = new Map((profile.skillItems || []).map((skill) => [normalizeTerm(skill.name), skill]));
+  const matchedSkills = required.filter((keyword) => skillMap.has(normalizeTerm(keyword)))
+    .map((keyword) => skillMap.get(normalizeTerm(keyword)).name);
+  const missingSkills = required.filter((keyword) => !skillMap.has(normalizeTerm(keyword)));
+  const selectedProjects = rankProjects(profile.projects, required, 2);
+  const selectedCourses = rankItems(profile.courses, required, (item) => `${item.title} ${item.institution} ${item.description}`, 3);
+  const selectedCertifications = rankItems(profile.certifications, required, (item) => `${item.title} ${item.issuer}`, 2);
+  const selectedExperiences = rankItems(profile.experiences, required, (item) => `${item.role} ${item.company} ${item.description}`, 3)
+    .map((item) => ({ ...item, selectedBullets: [item.description].filter(Boolean).slice(0, 2) }));
+
+  const skillsScore = scoreRatio(matchedSkills.length, required.length);
+  const projectsScore = selectedProjects.length ? Math.round(selectedProjects.reduce((sum, item) => sum + item.score, 0) / selectedProjects.length) : 0;
+  const training = [...selectedCourses, ...selectedCertifications];
+  const trainingScore = training.length ? Math.round(training.reduce((sum, item) => sum + item.score, 0) / training.length) : 0;
+  const experiencesScore = selectedExperiences.length ? Math.round(selectedExperiences.reduce((sum, item) => sum + item.score, 0) / selectedExperiences.length) : 0;
+  const totalScore = Math.round(skillsScore * 0.45 + projectsScore * 0.30 + trainingScore * 0.15 + experiencesScore * 0.10);
+  const warnings = [];
+  if (!required.length) warnings.push("Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.");
+  if (missingSkills.length) warnings.push("Skills ausentes sao requisitos identificados na vaga e nao serao exibidas como habilidades do candidato.");
+
+  return {
+    jobCategory: job.category,
+    jobKeywords: required,
+    score: totalScore,
+    scoreDetails: {
+      skillsMatchScore: skillsScore,
+      projectsMatchScore: projectsScore,
+      coursesAndCertificationsMatchScore: trainingScore,
+      experiencesMatchScore: experiencesScore,
+      totalScore,
+    },
+    matchedSkills: unique(matchedSkills),
+    missingSkills,
+    matchedTechnologies: unique(matchedSkills),
+    missingTechnologies: missingSkills,
+    selectedProjects,
+    projectScores: selectedProjects.map((project) => ({ project, score: project.score, reason: project.reason })),
+    selectedCourses,
+    selectedCertifications,
+    selectedExperiences,
+    warnings,
+  };
+}
+
+async function selectProfile(userId, jobDescription, requestedProfileId) {
+  if (requestedProfileId) return profileService.getProfile(userId, requestedProfileId);
+  const listed = await profileService.listProfiles(userId);
+  const candidates = await Promise.all(listed.map((item) => profileService.getProfile(userId, item.id)));
+  return candidates.map((profile) => ({ profile, score: analyzeProfile(profile, jobDescription).score }))
+    .sort((a, b) => b.score - a.score)[0]?.profile || profileService.getProfile(userId);
+}
+
+async function executeMatch(userId, jobDescription, resumeFileId = null, profileId = null, metadata = {}) {
   const text = jobDescription.trim();
-  let resumeFile = null;
-
+  const profile = await selectProfile(userId, text, profileId);
   if (resumeFileId) {
-    resumeFile = await prisma.resumeFile.findFirst({
-      where: { id: resumeFileId, userId, profileId: profile.id },
-      select: { id: true, fileName: true, extractedText: true },
-    });
-
+    const resumeFile = await prisma.resumeFile.findFirst({ where: { id: resumeFileId, userId } });
     if (!resumeFile) {
-      const err = new Error("Currículo PDF não encontrado");
+      const err = new Error("Curriculo PDF nao encontrado");
       err.statusCode = 404;
       throw err;
     }
   }
 
-  const requiredTechnologies = extractFromText(text, TECH_KEYWORDS);
-  const requiredSkills = extractFromText(text, SKILL_KEYWORDS);
-
-  const fallbackSkills = requiredSkills.length ? requiredSkills : ["comunicação", "resolução de problemas"];
-  const fallbackTechs = requiredTechnologies.length ? requiredTechnologies : ["javascript", "html", "css"];
-
-  const projectTechs = profile.projects.flatMap((project) => project.technologies);
-  const resumeText = resumeFile?.extractedText || "";
-  const resumeSkills = [...extractFromText(resumeText, SKILL_KEYWORDS), ...extractFromText(resumeText, TECH_KEYWORDS)];
-  const ownedSkills = [...new Set([...profile.skills, ...resumeSkills])];
-  const ownedTechnologies = [...new Set([...profile.skills, ...projectTechs, ...resumeSkills])];
-
-  const skillMatch = compareRequired(fallbackSkills, ownedSkills);
-  const techMatch = compareRequired(fallbackTechs, ownedTechnologies);
-
-  const skillsScore = scorePercent(skillMatch.matched.length, fallbackSkills.length);
-  const technologiesScore = scorePercent(techMatch.matched.length, fallbackTechs.length);
-
-  const projectScores = profile.projects
-    .map((project) => {
-      const techMatches = fallbackTechs.filter((tech) =>
-        project.technologies.some((projectTech) => includesLoose(projectTech, tech))
-      );
-      const skillMatches = fallbackSkills.filter((skill) =>
-        includesLoose(`${project.title} ${project.description}`, skill)
-      );
-      const score = Math.min(100, Math.round((techMatches.length / fallbackTechs.length) * 80) + skillMatches.length * 10);
-
-      return {
-        project,
-        score,
-        reason: techMatches.length
-          ? `Conecta com ${techMatches.join(", ")}.`
-          : "Projeto relevante como evidência complementar do perfil.",
-      };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  const selectedProjects = projectScores.slice(0, 2).map((item) => item.project);
-  const hasProfileBase = profile.summary || profile.title || profile.experiences.length;
-  const semanticScore = hasProfileBase ? 80 : 45;
-  const totalScore = Math.round(skillsScore * 0.5 + technologiesScore * 0.35 + semanticScore * 0.15);
-
-  const suggestedSummary =
-    profile.summary ||
-    `${profile.name} possui perfil em construção. Cadastre resumo, habilidades e projetos para gerar uma versão mais precisa.`;
-
+  const analysis = analyzeProfile(profile, text);
+  const targetTitle = metadata.jobTitle || inferTitle(text);
   const result = {
-    scoreDetails: {
-      skillsMatchScore: skillsScore,
-      technologiesMatchScore: technologiesScore,
-      semanticMatchScore: semanticScore,
-      totalScore,
-    },
-    score: totalScore,
-    targetTitle: inferTitle(text),
-    resumeFile: resumeFile ? { id: resumeFile.id, fileName: resumeFile.fileName } : null,
-    matchedSkills: skillMatch.matched,
-    missingSkills: skillMatch.missing,
-    matchedTechnologies: techMatch.matched,
-    missingTechnologies: techMatch.missing,
-    selectedProjects,
-    projectScores,
-    suggestedSummary,
-    semanticFeedback: `A análise comparou ${fallbackSkills.length} competências e ${fallbackTechs.length} tecnologias com o perfil cadastrado.`,
+    ...analysis,
+    targetTitle,
+    selectedSubprofileId: profile.id,
+    selectedSubprofileName: profile.profileName,
+    suggestedSummary: profile.summary,
+    semanticFeedback: `Matching deterministico: skills 45%, projetos 30%, cursos/certificacoes 15% e experiencias 10%. Categoria: ${analysis.jobCategory}.`,
   };
-
-  const pdfStartedAt = Date.now();
-  const generatedPdf = resumeFile
-    ? await generateOptimizedResumePdf({
-        profile,
-        matchResult: result,
-      })
-    : null;
-  if (generatedPdf) {
-    console.warn(JSON.stringify({
-      event: "optimized_resume_pdf_generated",
-      userId,
-      profileId: profile.id,
-      durationMs: Date.now() - pdfStartedAt,
-      sizeBytes: generatedPdf.length,
-    }));
-  }
-
+  const compiledResume = compileResume({ profile, matchResult: result });
+  const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: result, compiledResume });
   const saved = await prisma.optimizedResume.create({
     data: {
       userId,
-      targetTitle: result.targetTitle,
+      targetTitle,
       jobDescription: text,
-      score: totalScore,
-      suggestedSummary,
-      selectedProjects,
+      score: result.score,
+      suggestedSummary: profile.summary || "",
+      selectedProjects: result.selectedProjects,
       matchedSkills: result.matchedSkills,
       missingSkills: result.missingSkills,
       matchedTechnologies: result.matchedTechnologies,
       missingTechnologies: result.missingTechnologies,
-      resumeFileId: resumeFile?.id || null,
+      resumeFileId: resumeFileId || null,
       profileId: profile.id,
-      generatedPdf: null,
-      generatedFileName: null,
+      generatedPdf,
+      generatedFileName: `curriculo-otimizado-${Date.now()}.pdf`,
     },
   });
-
-  const localPdf = generatedPdf
-    ? {
-        fileName: `curriculo-otimizado-${saved.id}.pdf`,
-        contentBase64: generatedPdf.toString("base64"),
-      }
-    : null;
+  const jobAnalysis = await prisma.jobAnalysis.create({
+    data: {
+      userId,
+      jobTitle: targetTitle,
+      company: metadata.company || "",
+      jobDescription: text,
+      selectedSubprofileId: profile.id,
+      matchScore: result.score,
+      jobCategory: result.jobCategory,
+      matchedSkills: result.matchedSkills,
+      missingSkills: result.missingSkills,
+      selectedProjectIds: result.selectedProjects.map((project) => project.id),
+      generatedResumeId: saved.id,
+      status: "draft",
+    },
+  });
 
   return {
     ...result,
     id: saved.id,
-    savedAt: saved.createdAt,
-    generatedPdfAvailable: Boolean(localPdf),
-    generatedFileName: localPdf?.fileName || null,
-    generatedPdf: localPdf,
+    analysisId: jobAnalysis.id,
+    status: jobAnalysis.status,
+    resume: compiledResume,
+    generatedPdfAvailable: true,
+    generatedFileName: saved.generatedFileName,
+    message: `Curriculo gerado com ${result.score}% de aderencia. Status: ainda nao aplicado. Revise antes de enviar.`,
   };
 }
 
 async function listHistory(userId, profileId = null) {
   const profile = await profileService.resolveProfile(userId, profileId);
-  return prisma.optimizedResume.findMany({
-    where: { userId, profileId: profile.id },
+  const rows = await prisma.jobAnalysis.findMany({
+    where: { userId, selectedSubprofileId: profile.id },
     orderBy: { createdAt: "desc" },
-    take: 20,
-    select: {
-      id: true,
-      targetTitle: true,
-      score: true,
-      resumeFileId: true,
-      generatedFileName: true,
-      createdAt: true,
-      resumeFile: {
-        select: {
-          fileName: true,
-        },
+    take: 50,
+    include: {
+      generatedResume: { select: { id: true, generatedFileName: true, resumeFileId: true } },
+      applications: {
+        where: { userId },
+        orderBy: { data: "desc" },
+        take: 1,
+        select: { id: true, status: true, fase: true, data: true, linkCV: true },
       },
     },
   });
+  return rows.map((row) => ({
+    id: row.generatedResume?.id || row.id,
+    analysisId: row.id,
+    targetTitle: row.jobTitle,
+    company: row.company,
+    score: row.matchScore,
+    status: row.status,
+    jobCategory: row.jobCategory,
+    generatedFileName: row.generatedResume?.generatedFileName,
+    resumeFileId: row.generatedResume?.resumeFileId,
+    application: row.applications[0] || null,
+    appliedAt: row.appliedAt,
+    createdAt: row.createdAt,
+  }));
 }
 
-async function getGeneratedPdf(userId, id) {
-  const row = await prisma.optimizedResume.findFirst({
-    where: { id, userId },
-    select: {
-      generatedPdf: true,
-      generatedFileName: true,
-    },
-  });
-
-  if (!row || !row.generatedPdf) {
-    const err = new Error("PDF otimizado não encontrado para esta análise");
+async function updateAnalysis(userId, id, data) {
+  const existing = await prisma.jobAnalysis.findFirst({ where: { id, userId } });
+  if (!existing) {
+    const err = new Error("Analise nao encontrada");
     err.statusCode = 404;
     throw err;
   }
+  const appliedAt = data.status === "applied" ? (existing.appliedAt || new Date()) : existing.appliedAt;
+  const createsVersion = ["notes", "jobTitle", "company", "jobDescription"].some((key) => data[key] !== undefined);
+  if (createsVersion) {
+    return prisma.jobAnalysis.create({
+      data: {
+        userId,
+        jobTitle: data.jobTitle ?? existing.jobTitle,
+        company: data.company ?? existing.company,
+        jobDescription: data.jobDescription ?? existing.jobDescription,
+        selectedSubprofileId: existing.selectedSubprofileId,
+        matchScore: existing.matchScore,
+        jobCategory: existing.jobCategory,
+        matchedSkills: existing.matchedSkills,
+        missingSkills: existing.missingSkills,
+        selectedProjectIds: existing.selectedProjectIds,
+        generatedResumeId: existing.generatedResumeId,
+        status: data.status ?? "draft",
+        notes: data.notes ?? existing.notes,
+        appliedAt,
+        parentAnalysisId: existing.id,
+        version: existing.version + 1,
+      },
+    });
+  }
+  return prisma.jobAnalysis.update({ where: { id }, data: { ...data, appliedAt } });
+}
 
-  return {
-    fileName: row.generatedFileName || "curriculo-otimizado.pdf",
-    content: Buffer.from(row.generatedPdf),
-  };
+async function getAnalysis(userId, id) {
+  const row = await prisma.jobAnalysis.findFirst({
+    where: { id, userId },
+    include: {
+      selectedSubprofile: { select: { id: true, profileName: true } },
+      generatedResume: { select: { id: true, generatedFileName: true } },
+      applications: {
+        where: { userId },
+        orderBy: { data: "desc" },
+        select: { id: true, status: true, fase: true, linkVaga: true, linkCV: true, data: true },
+      },
+    },
+  });
+  if (!row) {
+    const err = new Error("Analise nao encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
+  return row;
+}
+
+async function getGeneratedPdf(userId, id) {
+  const row = await prisma.optimizedResume.findFirst({ where: { id, userId }, select: { generatedPdf: true, generatedFileName: true } });
+  if (!row || !row.generatedPdf) {
+    const err = new Error("PDF otimizado nao encontrado para esta analise");
+    err.statusCode = 404;
+    throw err;
+  }
+  return { fileName: row.generatedFileName || "curriculo-otimizado.pdf", content: Buffer.from(row.generatedPdf) };
 }
 
 async function deleteHistory(userId, id) {
+  await prisma.jobAnalysis.deleteMany({ where: { generatedResumeId: id, userId } });
   const result = await prisma.optimizedResume.deleteMany({ where: { id, userId } });
-  if (result.count === 0) {
-    const err = new Error("Versão otimizada não encontrada");
+  if (!result.count) {
+    const err = new Error("Versao otimizada nao encontrada");
     err.statusCode = 404;
     throw err;
   }
   return { message: "Removido" };
 }
 
-module.exports = { executeMatch, listHistory, deleteHistory, getGeneratedPdf };
+module.exports = { executeMatch, listHistory, deleteHistory, getGeneratedPdf, getAnalysis, updateAnalysis, analyzeProfile };

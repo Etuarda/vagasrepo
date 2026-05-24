@@ -1,6 +1,7 @@
 import { api } from "./http.js";
 import { state } from "./state.js";
 import { ui } from "./ui.js";
+import { jobs } from "./jobs.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -94,10 +95,33 @@ function renderProjects() {
           <div class="flex flex-wrap gap-2 mt-4">
             ${(project.technologies || []).map((tech) => `<span class="tag-pill">${escapeHtml(tech)}</span>`).join("")}
           </div>
+          <div class="mt-4 space-y-2">
+            ${(project.bullets || []).map((bullet) => `<p class="text-sm text-taupe">- ${escapeHtml(bullet.content)}</p>`).join("")}
+          </div>
+          <form data-project-bullet-form="${project.id}" class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4 border-t border-borderLight pt-4">
+            <select name="category" class="editorial-input text-xs bg-white">
+              <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="data">Dados</option><option value="architecture">Arquitetura</option><option value="devops">DevOps</option><option value="business">Negócio</option>
+            </select>
+            <input name="content" required minlength="10" maxlength="240" placeholder="Bullet factual reutilizável" class="editorial-input text-xs md:col-span-2" />
+            <button type="submit" class="bg-ink text-paper rounded-full text-[10px] font-bold uppercase">Adicionar bullet</button>
+            <input name="keywords" placeholder="Keywords: node, sql, docker" class="editorial-input text-xs md:col-span-3" />
+            <input name="weight" type="number" min="0" max="100" value="50" class="editorial-input text-xs" />
+          </form>
         </article>
       `
     )
     .join("");
+}
+
+function renderEducations() {
+  const root = document.getElementById("educations-list");
+  if (!root) return;
+  const items = state.profile?.educations || [];
+  root.innerHTML = items.length ? items.map((item) => `
+    <article class="border border-borderLight rounded-2xl p-4 bg-white flex justify-between gap-3">
+      <p class="text-sm"><strong>${escapeHtml(item.title)}</strong> | ${escapeHtml(item.institution)}${item.period ? ` | ${escapeHtml(item.period)}` : ""}</p>
+      ${state.profile?.isGlobal ? `<button type="button" data-remove-education="${item.id}" class="text-[10px] font-bold uppercase text-red-700">Remover</button>` : ""}
+    </article>`).join("") : `<p class="text-sm text-taupe">Nenhuma formação cadastrada.</p>`;
 }
 
 function renderExperiences() {
@@ -195,6 +219,7 @@ function renderProfileForm() {
   renderSkills();
   renderLanguages();
   renderProjects();
+  renderEducations();
   renderExperiences();
   renderCoursesAndCertifications();
 }
@@ -226,14 +251,17 @@ function renderHistory() {
         <article class="border border-borderLight rounded-2xl p-4 bg-white">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <h4 class="font-bold text-sm">${escapeHtml(item.targetTitle)}</h4>
-              <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${formatDateTime(item.createdAt)} · ${item.score}%</p>
+              <button type="button" data-open-analysis="${item.analysisId}" class="font-bold text-sm underline text-left">${escapeHtml(item.targetTitle)}</button>
+              <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${escapeHtml(item.company || "")} ${item.company ? "·" : ""} ${formatDateTime(item.createdAt)} · ${item.score}% · ${escapeHtml(item.status || "draft")}</p>
+              ${item.application ? `<p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-2">Candidatura: ${escapeHtml(item.application.status)} · ${escapeHtml(item.application.fase)}${item.appliedAt ? ` · aplicada em ${escapeHtml(formatDateTime(item.appliedAt))}` : ""}</p>` : ""}
               ${
                 item.generatedFileName || item.resumeFileId
                   ? `
                     <div class="mt-2 flex flex-wrap gap-3">
                       ${item.generatedFileName ? `<a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF otimizado</a>` : ""}
                       ${item.resumeFileId ? `<a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>` : ""}
+                      ${item.application ? `<button type="button" data-open-linked-job="${item.application.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Abrir candidatura</button>` : ""}
+                      ${item.status !== "applied" ? `<button type="button" data-mark-applied="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Marcar aplicado</button>` : ""}
                     </div>
                   `
                   : ""
@@ -311,17 +339,20 @@ function renderMatchResult(result) {
           <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Relatório de aderência</p>
           <h3 class="font-serif text-5xl mt-3">${result.scoreDetails.totalScore}%</h3>
         </div>
-        <div class="grid grid-cols-3 gap-3 text-center">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
           <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.skillsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Skills</span></div>
-          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.technologiesMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Tech</span></div>
-          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.semanticMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Perfil</span></div>
+          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.projectsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Projetos</span></div>
+          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.coursesAndCertificationsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Formação</span></div>
+          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.experiencesMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Experiência</span></div>
         </div>
       </div>
       <p class="text-sm text-taupe leading-relaxed mt-6">${escapeHtml(result.semanticFeedback)}</p>
+      <p class="text-sm font-bold mt-3">${escapeHtml(result.message || "")}</p>
       <div class="mt-6 flex flex-wrap gap-3">
         ${
           result.generatedPdfAvailable
-            ? `<button type="button" data-download-current-optimized="${result.id}" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Baixar curriculo atualizado</button>`
+            ? `<button type="button" data-download-current-optimized="${result.id}" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Baixar curriculo atualizado</button>
+               <button type="button" data-register-application="${result.analysisId}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Registrar candidatura</button>`
             : `<p class="text-sm text-taupe">Selecione um currículo-base em PDF antes do matching para gerar o currículo atualizado para aplicar na vaga.</p>`
         }
       </div>
@@ -333,8 +364,8 @@ function renderMatchResult(result) {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       ${block("Skills aderentes", result.matchedSkills || [], true)}
       ${block("Skills ausentes", result.missingSkills || [])}
-      ${block("Tecnologias aderentes", result.matchedTechnologies || [], true)}
-      ${block("Tecnologias ausentes", result.missingTechnologies || [])}
+      ${block("Keywords reconhecidas", result.jobKeywords || [], true)}
+      ${block("Avisos", result.warnings || [])}
     </div>
     <section class="editorial-card rounded-3xl p-8">
       <h4 class="font-serif text-3xl mb-4">Projetos mais fortes.</h4>
@@ -359,6 +390,27 @@ function renderMatchResult(result) {
           .join("") || `<p class="text-sm text-taupe">Cadastre projetos para melhorar a seleção automática.</p>`}
       </div>
     </section>
+  `;
+}
+
+function renderAnalysisEditor(analysis) {
+  const root = document.getElementById("match-result");
+  if (!root) return;
+  root.className = "lg:col-span-7 space-y-6";
+  root.innerHTML = `
+    <form data-analysis-edit-form="${analysis.id}" class="editorial-card rounded-3xl editorial-shadow p-8 space-y-5">
+      <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Análise versionada · v${analysis.version}</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <input name="jobTitle" value="${escapeHtml(analysis.jobTitle)}" required class="editorial-input text-sm" />
+        <input name="company" value="${escapeHtml(analysis.company || "")}" placeholder="Empresa" class="editorial-input text-sm" />
+      </div>
+      <textarea name="jobDescription" rows="10" required minlength="30" maxlength="15000" class="editorial-input text-sm">${escapeHtml(analysis.jobDescription)}</textarea>
+      <textarea name="notes" rows="3" placeholder="Notas da revisão" class="editorial-input text-sm">${escapeHtml(analysis.notes || "")}</textarea>
+      <select name="status" class="editorial-input text-sm bg-white">
+        ${["draft", "reviewed", "applied", "archived", "rejected"].map((status) => `<option value="${status}" ${analysis.status === status ? "selected" : ""}>${status}</option>`).join("")}
+      </select>
+      <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Salvar nova versão</button>
+    </form>
   `;
 }
 
@@ -448,6 +500,19 @@ export const career = {
     ui.notify("Idioma cadastrado.");
   },
 
+  async addEducation(payload) {
+    const out = await api("/profile/educations", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Formação cadastrada no Perfil Global.");
+  },
+
+  async removeEducation(id) {
+    const out = await api(`/profile/educations/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+  },
+
   async removeLanguage(id) {
     const out = await api(`/profile/languages/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
     state.profile = out.user;
@@ -459,6 +524,13 @@ export const career = {
     state.profile = out.user;
     renderProfileForm();
     ui.notify("Projeto cadastrado.");
+  },
+
+  async addProjectBullet(projectId, payload) {
+    const out = await api(`/profile/projects/${projectId}/bullets`, { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Bullet cadastrado para seleção determinística.");
   },
 
   async removeProject(id) {
@@ -509,17 +581,54 @@ export const career = {
   async match(jobDescription) {
     renderMatchLoading();
     const resumeFileId = document.getElementById("match-resume-file")?.value || undefined;
-    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, resumeFileId, profileId: state.activeProfileId }) }, state.token);
+    const jobTitle = document.getElementById("match-job-title")?.value || "";
+    const company = document.getElementById("match-company")?.value || "";
+    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, resumeFileId, profileId: state.activeProfileId }) }, state.token);
+    state.lastMatchResult = result;
     if (result.generatedPdf?.contentBase64) {
       state.optimizedPdfCache[result.id] = result.generatedPdf;
     }
     renderMatchResult(result);
     await career.loadHistory();
+    ui.openApplicationPrompt(result);
   },
 
   async removeMatch(id) {
     await api(`/optimized-resumes/${id}`, { method: "DELETE" }, state.token);
     await career.loadHistory();
+  },
+
+  async markAnalysisApplied(id) {
+    const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify({ status: "applied" }) }, state.token);
+    ui.notify(out.message);
+    await career.loadHistory();
+  },
+
+  async openAnalysis(id) {
+    const analysis = await api(`/job-analyses/${id}`, {}, state.token);
+    renderAnalysisEditor(analysis);
+  },
+
+  async saveAnalysisVersion(id, payload) {
+    const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, state.token);
+    ui.notify(out.message);
+    renderAnalysisEditor(out.analysis);
+    await career.loadHistory();
+  },
+
+  async createApplication(analysisId, payload) {
+    let out;
+    try {
+      out = await api(`/job-analyses/${analysisId}/create-application`, { method: "POST", body: JSON.stringify(payload) }, state.token);
+    } catch (err) {
+      if (err.status !== 409 || !window.confirm("Esta análise já possui candidatura. Deseja registrar outra candidatura mesmo assim?")) throw err;
+      out = await api(`/job-analyses/${analysisId}/create-application`, { method: "POST", body: JSON.stringify({ ...payload, confirmDuplicate: true }) }, state.token);
+    }
+    ui.closeApplicationModal();
+    await jobs.load();
+    await career.loadHistory();
+    ui.notify("Candidatura registrada com sucesso. Você poderá acompanhar essa vaga no painel de candidaturas.");
+    return out;
   },
 
   async loadResumeFiles() {

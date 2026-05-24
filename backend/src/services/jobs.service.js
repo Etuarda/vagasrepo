@@ -1,4 +1,5 @@
 const { prisma } = require("../lib/prisma");
+const { linkedJobInclude } = require("../modules/application-tracking/application-tracking.service");
 
 function startOfDay(d) {
   const out = new Date(d);
@@ -56,6 +57,7 @@ async function listJobs(userId, { q, status, period, dateFrom, dateTo, page = 1,
     orderBy: { data: "desc" },
     take: limit,
     skip: (page - 1) * limit,
+    include: linkedJobInclude,
   });
 }
 
@@ -63,6 +65,16 @@ async function createJob(userId, data) {
   return prisma.job.create({
     data: { ...data, userId },
   });
+}
+
+async function getJob(userId, id) {
+  const job = await prisma.job.findFirst({ where: { id, userId }, include: linkedJobInclude });
+  if (!job) {
+    const err = new Error("Vaga não encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
+  return job;
 }
 
 async function updateJob(userId, id, data) {
@@ -77,7 +89,14 @@ async function updateJob(userId, id, data) {
     throw err;
   }
 
-  return { message: "Atualizado" };
+  const job = await prisma.job.findFirst({ where: { id, userId }, include: linkedJobInclude });
+  if (job.jobAnalysisId && data.fase === "Aplicada") {
+    await prisma.jobAnalysis.updateMany({
+      where: { id: job.jobAnalysisId, userId, status: { not: "applied" } },
+      data: { status: "applied", appliedAt: new Date() },
+    });
+  }
+  return { message: "Atualizado", job };
 }
 
 async function deleteJob(userId, id) {
@@ -94,4 +113,4 @@ async function deleteJob(userId, id) {
   return { message: "Removido" };
 }
 
-module.exports = { listJobs, createJob, updateJob, deleteJob };
+module.exports = { listJobs, getJob, createJob, updateJob, deleteJob };

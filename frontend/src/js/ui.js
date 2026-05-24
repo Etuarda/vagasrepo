@@ -166,6 +166,8 @@ export const ui = {
 
       const feedbackTxt = document.getElementById("job-feedback-txt");
       if (feedbackTxt) feedbackTxt.value = job.feedbackTxt || "";
+      const notes = document.getElementById("job-notes");
+      if (notes) notes.value = job.notes || "";
     }
 
     ui.syncConditionalFields();
@@ -181,6 +183,46 @@ export const ui = {
 
     modal.classList.add("hidden");
     document.body.style.overflow = "auto";
+  },
+
+  openApplicationPrompt(result) {
+    const modal = document.getElementById("application-modal");
+    const prompt = document.getElementById("application-prompt");
+    const form = document.getElementById("form-application");
+    if (!modal || !prompt || !form) return;
+    state.pendingApplicationAnalysis = result;
+    form.reset();
+    document.getElementById("application-analysis-id").value = result.analysisId;
+    const context = `${result.targetTitle}${result.selectedSubprofileName ? ` | ${result.selectedSubprofileName}` : ""} | ${result.score}%`;
+    document.getElementById("application-prompt-context").textContent = context;
+    document.getElementById("application-form-context").textContent = context;
+    prompt.classList.remove("hidden");
+    form.classList.add("hidden");
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    ui.syncApplicationConditionalFields();
+  },
+
+  startApplicationForm() {
+    document.getElementById("application-prompt")?.classList.add("hidden");
+    document.getElementById("form-application")?.classList.remove("hidden");
+  },
+
+  closeApplicationModal() {
+    document.getElementById("application-modal")?.classList.add("hidden");
+    state.pendingApplicationAnalysis = null;
+    document.body.style.overflow = "auto";
+  },
+
+  syncApplicationConditionalFields() {
+    const needsAction = !!document.getElementById("application-action-bool")?.checked;
+    const hasFeedback = !!document.getElementById("application-feedback-bool")?.checked;
+    document.getElementById("application-action-fields")?.classList.toggle("hidden", !needsAction);
+    document.getElementById("application-feedback-fields")?.classList.toggle("hidden", !hasFeedback);
+    const actionInput = document.getElementById("application-qual-acao");
+    const feedbackInput = document.getElementById("application-feedback-txt");
+    if (actionInput) actionInput.required = needsAction;
+    if (feedbackInput) feedbackInput.required = hasFeedback;
   },
 
   syncConditionalFields() {
@@ -224,6 +266,16 @@ export const ui = {
         <td class="py-10 px-6">
           <div class="font-bold text-xl">${escapeHtml(job.titulo)}</div>
           <div class="text-[9px] uppercase tracking-[0.4em] text-stone mt-2 font-bold">${escapeHtml(job.empresa)}</div>
+          ${job.jobAnalysis ? `<div class="text-xs text-taupe mt-3">Aderência: ${job.jobAnalysis.matchScore}% | Perfil: ${escapeHtml(job.jobAnalysis.selectedSubprofile?.profileName || "—")}</div>` : ""}
+          ${job.jobAnalysis?.matchedSkills?.length ? `<div class="text-xs text-taupe mt-1">Skills: ${escapeHtml(job.jobAnalysis.matchedSkills.join(", "))}</div>` : ""}
+          ${job.jobAnalysis?.missingSkills?.length ? `<div class="text-xs text-taupe mt-1">Ausentes: ${escapeHtml(job.jobAnalysis.missingSkills.join(", "))}</div>` : ""}
+          ${Array.isArray(job.optimizedResume?.selectedProjects) && job.optimizedResume.selectedProjects.length ? `<div class="text-xs text-taupe mt-1">Projetos: ${escapeHtml(job.optimizedResume.selectedProjects.map((project) => project.title).filter(Boolean).join(", "))}</div>` : ""}
+          <div class="flex flex-wrap gap-3 mt-3 text-[9px] font-bold uppercase tracking-widest">
+            ${job.linkVaga ? `<a href="${escapeHtml(job.linkVaga)}" target="_blank" rel="noopener noreferrer" class="underline">Vaga</a>` : ""}
+            ${job.linkCV ? `<a href="${escapeHtml(job.linkCV)}" target="_blank" rel="noopener noreferrer" class="underline">Link CV</a>` : ""}
+          </div>
+          ${job.acaoNecessaria ? `<div class="text-xs text-red-700 mt-1">Ação: ${escapeHtml(job.qualAcao || "pendente")}</div>` : ""}
+          ${job.feedbackBool ? `<div class="text-xs text-taupe mt-1">Feedback: ${escapeHtml(job.feedbackTxt || "recebido")}</div>` : ""}
         </td>
         <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest">${escapeHtml(job.fase)}</td>
         <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest opacity-40">${escapeHtml(job.status)}</td>
@@ -231,6 +283,8 @@ export const ui = {
           <button data-action="edit" data-id="${job.id}" class="text-[9px] font-bold uppercase tracking-widest hover:underline">
             Editar
           </button>
+          ${job.jobAnalysis ? `<button data-action="open-analysis" data-analysis-id="${job.jobAnalysis.id}" class="text-[9px] font-bold uppercase tracking-widest ml-6 hover:underline">Análise</button>` : ""}
+          ${job.optimizedResume ? `<button data-action="download-optimized" data-resume-id="${job.optimizedResume.id}" class="text-[9px] font-bold uppercase tracking-widest ml-6 hover:underline">Currículo</button>` : ""}
           <button data-action="delete" data-id="${job.id}" class="text-[9px] font-bold uppercase tracking-widest text-red-700 ml-6 hover:underline">
             Remover
           </button>
