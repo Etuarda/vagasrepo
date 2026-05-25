@@ -3,12 +3,6 @@
   "framework": null,
   "outputDirectory": ".",
   "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://gerenciadorpessoaldevagas.onrender.com/:path*"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",

@@ -131,7 +131,7 @@ npm run prisma:migrate
 npm run dev
 ```
 
-Sirva a pasta `frontend` por um servidor estatico. Em ambiente local, ela chama a API em `http://localhost:3000`; na Vercel, o rewrite `/api/*` definido em `frontend/vercel.json` encaminha as chamadas para o backend publicado.
+Sirva a pasta `frontend` por um servidor estatico. Em ambiente local e na Vercel, ela chama diretamente a API publicada em `https://gerenciadorpessoaldevagas.onrender.com`. Ao publicar o frontend, inclua sua URL da Vercel em `CORS_ORIGIN` no backend.
 
 ## Variaveis de ambiente
 

@@ -14,18 +14,13 @@ Acesse: `http://localhost:5500`
 
 ## Configuracao da API
 
-Em desenvolvimento, o frontend chama `http://localhost:3000` diretamente.
+O frontend chama diretamente a API publicada no Render, tanto localmente quanto na Vercel:
 
-Na Vercel, as requisicoes feitas para `/api/*` sao encaminhadas pelo `vercel.json` para a API publicada no Render:
-
-```json
-{
-  "source": "/api/:path*",
-  "destination": "https://gerenciadorpessoaldevagas.onrender.com/:path*"
-}
+```text
+https://gerenciadorpessoaldevagas.onrender.com
 ```
 
-Se o endereco do backend mudar, atualize somente o destino desse rewrite.
+Se o endereco do backend mudar, atualize `src/js/config.js`.
 
 ## Deploy na Vercel
 
@@ -35,9 +30,10 @@ Se o endereco do backend mudar, atualize somente o destino desse rewrite.
 4. Deixe o build command vazio; o projeto e estatico.
 5. O `vercel.json` ja define o output directory como `.`.
 6. Confirme o healthcheck do backend em `https://gerenciadorpessoaldevagas.onrender.com/health`.
+7. Adicione a URL final do frontend da Vercel em `CORS_ORIGIN` no backend do Render.
 
-O acesso publicado passa pelo rewrite `/api`, mantendo as chamadas do navegador no mesmo dominio do frontend. Para uso local direto do backend, mantenha a origem local permitida:
+Como o navegador chama o Render diretamente, o backend deve aceitar as origens local e publicada:
 
 ```env
-CORS_ORIGIN="http://localhost:5500"
+CORS_ORIGIN="http://localhost:5500,https://seu-projeto.vercel.app"
 ```
