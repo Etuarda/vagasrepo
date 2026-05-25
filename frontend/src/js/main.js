@@ -52,11 +52,8 @@ function getSubmitButton(event, form) {
 let __vlibrasStarted = false;
 
 async function loadDashboardData() {
-  await jobs.load();
-  await career.loadProfiles();
-  await career.loadProfile();
-  await career.loadResumeFiles();
-  await career.loadHistory();
+  await Promise.all([jobs.load(), career.loadProfiles()]);
+  await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
 }
 
 function forceVlibrasZIndex() {

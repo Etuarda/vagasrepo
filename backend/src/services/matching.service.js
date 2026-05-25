@@ -6,6 +6,8 @@ const { rankProjects } = require("../modules/matching/project-ranking.service");
 const { compileResume } = require("../modules/resume/resume-compiler.service");
 
 const MATCH_HISTORY_RETENTION_DAYS = 30;
+const MATCH_HISTORY_PURGE_INTERVAL_MS = 60 * 60 * 1000;
+const nextHistoryPurgeByUser = new Map();
 
 function unique(values) {
   return [...new Set((values || []).filter(Boolean))];
@@ -26,6 +28,15 @@ async function purgeExpiredHistory(userId, now = new Date()) {
     },
   });
   return cutoff;
+}
+
+function scheduleExpiredHistoryPurge(userId, now = new Date()) {
+  if ((nextHistoryPurgeByUser.get(userId) || 0) > now.getTime()) return;
+  nextHistoryPurgeByUser.set(userId, now.getTime() + MATCH_HISTORY_PURGE_INTERVAL_MS);
+  purgeExpiredHistory(userId, now).catch((err) => {
+    nextHistoryPurgeByUser.delete(userId);
+    console.warn(JSON.stringify({ event: "matching_history_purge_failed", error: err.message }));
+  });
 }
 
 function inferTitle(text) {
@@ -181,8 +192,9 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
 }
 
 async function listHistory(userId, profileId = null) {
+  const cutoff = historyRetentionCutoff();
+  scheduleExpiredHistoryPurge(userId);
   const profile = await profileService.resolveProfile(userId, profileId);
-  const cutoff = await purgeExpiredHistory(userId);
   const rows = await prisma.jobAnalysis.findMany({
     where: { userId, selectedSubprofileId: profile.id, createdAt: { gte: cutoff } },
     orderBy: { createdAt: "desc" },
@@ -313,4 +325,5 @@ module.exports = {
   MATCH_HISTORY_RETENTION_DAYS,
   historyRetentionCutoff,
   purgeExpiredHistory,
+  scheduleExpiredHistoryPurge,
 };

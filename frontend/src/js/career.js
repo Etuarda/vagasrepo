@@ -707,12 +707,13 @@ export const career = {
     const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId }) }, state.token);
     state.lastMatchResult = result;
     renderMatchResult(result);
+    const reloads = [career.loadHistory()];
     if (result.selectedSubprofileId && result.selectedSubprofileId !== state.activeProfileId) {
       state.activeProfileId = result.selectedSubprofileId;
       renderProfileCards();
-      await career.loadProfile();
+      reloads.push(career.loadProfile());
     }
-    await career.loadHistory();
+    await Promise.all(reloads);
   },
 
   async removeMatch(id) {
@@ -741,8 +742,7 @@ export const career = {
   async saveAnalysisVersion(id, payload) {
     const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, state.token);
     ui.notify(out.message);
-    await career.loadHistory();
-    await career.openAnalysis(out.analysis.id);
+    await Promise.all([career.loadHistory(), career.openAnalysis(out.analysis.id)]);
   },
 
   async createApplication(analysisId, payload) {
@@ -754,8 +754,7 @@ export const career = {
       out = await api(`/job-analyses/${analysisId}/create-application`, { method: "POST", body: JSON.stringify({ ...payload, confirmDuplicate: true }) }, state.token);
     }
     ui.closeApplicationModal();
-    await jobs.load();
-    await career.loadHistory();
+    await Promise.all([jobs.load(), career.loadHistory()]);
     ui.notify("Candidatura registrada com sucesso. Você poderá acompanhar essa vaga no painel de candidaturas.");
     return out;
   },
@@ -906,9 +905,7 @@ export const career = {
     const profile = await api("/profiles", { method: "POST", body: JSON.stringify({ profileName }) }, state.token);
     state.activeProfileId = profile.id;
     await career.loadProfiles();
-    await career.loadProfile();
-    await career.loadResumeFiles();
-    await career.loadHistory();
+    await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
     ui.notify("Perfil criado.");
   },
 
@@ -921,17 +918,14 @@ export const career = {
     if (!state.profiles.some((profile) => profile.id === state.activeProfileId)) {
       state.activeProfileId = state.profiles.find((profile) => profile.isGlobal)?.id || state.profiles[0]?.id || "";
     }
-    await career.loadProfile();
-    await Promise.all([career.loadResumeFiles(), career.loadHistory()]);
+    await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
     ui.notify("Subperfil removido.");
   },
 
   async switchProfile(profileId) {
     state.activeProfileId = profileId;
     renderProfileCards();
-    await career.loadProfile();
-    await career.loadResumeFiles();
-    await career.loadHistory();
+    await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
   },
 
   setTab(tab) {

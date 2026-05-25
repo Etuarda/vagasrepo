@@ -74,4 +74,4 @@ API: `http://localhost:3000`
 - `GET /resume-files/:id/download` com Bearer token
 - `DELETE /resume-files/:id` com Bearer token
 
-O historico de matching (`JobAnalysis` e PDFs otimizados associados) fica disponivel por 30 dias. A leitura do historico elimina registros expirados; candidaturas ja registradas permanecem salvas.
+O historico de matching (`JobAnalysis` e PDFs otimizados associados) fica disponivel por 30 dias. Registros expirados nao sao retornados; a limpeza fisica e iniciada em segundo plano para nao atrasar a tela. Candidaturas ja registradas permanecem salvas.

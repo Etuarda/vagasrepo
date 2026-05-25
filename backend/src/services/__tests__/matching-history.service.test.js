@@ -66,4 +66,11 @@ describe("matching history retention", () => {
       },
     }));
   });
+
+  it("nao bloqueia a listagem enquanto a limpeza fisica esta pendente", async () => {
+    prisma.jobAnalysis.deleteMany.mockReturnValue(new Promise(() => {}));
+
+    await expect(listHistory("fast-user", "profile")).resolves.toEqual([]);
+    expect(prisma.jobAnalysis.findMany).toHaveBeenCalled();
+  });
 });
