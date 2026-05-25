@@ -5,7 +5,7 @@ jest.mock("../pdf-output.service", () => ({ generateOptimizedResumePdf: jest.fn(
 const { analyzeProfile, getMissingResumeFields, assertProfileReadyForResume } = require("../matching.service");
 
 describe("deterministic matching", () => {
-  it("nao transforma skill ausente em skill do usuario e usa pesos explicaveis", () => {
+  it("nao transforma skill ausente em skill do usuario e pontua apenas skills e projetos", () => {
     const result = analyzeProfile({
       skillItems: [{ name: "Node.js", category: "backend" }],
       projects: [],
@@ -20,9 +20,11 @@ describe("deterministic matching", () => {
     expect(result.scoreDetails).toEqual(expect.objectContaining({
       skillsMatchScore: expect.any(Number),
       projectsMatchScore: 0,
-      coursesAndCertificationsMatchScore: 0,
-      experiencesMatchScore: 0,
     }));
+    expect(result.scoreDetails).not.toHaveProperty("coursesAndCertificationsMatchScore");
+    expect(result.scoreDetails).not.toHaveProperty("experiencesMatchScore");
+    expect(result).not.toHaveProperty("selectedCourses");
+    expect(result).not.toHaveProperty("selectedExperiences");
   });
 
   it("ignora projetos sem titulo estrutural valido", () => {

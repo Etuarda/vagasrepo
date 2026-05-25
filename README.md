@@ -13,8 +13,8 @@ O produto nao utiliza IA generativa, LLM ou servicos externos de geracao textual
 - Projetos estruturados com stack, links, solucao tecnica, arquitetura e bullets reutilizaveis.
 - Upload de PDF somente como anexo de referencia, com visualizacao, download e remocao.
 - Analise deterministica de descricao de vaga com keywords normalizadas e categoria profissional.
-- Ranking explicavel de skills, projetos, bullets, cursos, certificacoes e experiencias.
-- Curriculo PDF compacto, ATS-friendly, com no maximo dois projetos e tres bullets por projeto.
+- Ranking explicavel de skills, projetos e bullets.
+- Curriculo PDF ATS-friendly, legivel, com no maximo dois projetos e tres bullets selecionados por projeto.
 - Historico de analises editavel e versionado, com estados `draft`, `reviewed`, `applied`, `archived` e `rejected`.
 - Registro opcional de candidatura a partir do curriculo gerado, vinculado a analise e ao curriculo otimizado.
 - Registro da data de aplicacao ao marcar um curriculo como aplicado.
@@ -74,6 +74,14 @@ backend/src/
 
 Dados legados de subperfis clonados continuam legiveis. Novos subperfis usam vinculacao ao Perfil Global.
 
+## Persistencia e seguranca
+
+Dados de negocio sao persistidos no PostgreSQL via Prisma. Perfil, subperfis, itens estruturados, PDFs de referencia, analises, curriculos otimizados e candidaturas sao lidos e alterados por endpoints autenticados; o estado do frontend existe apenas para renderizar a resposta atual da API.
+
+O navegador mantem somente o token Bearer do MVP e a preferencia visual de contraste em `localStorage`. Selecoes de perfil, historico de matching e arquivos PDF nao sao armazenados localmente. O token possui expiracao, a sessao e registrada em `AuthSession` e o logout revoga a sessao no backend.
+
+As rotas de perfil, matching, curriculos, anexos e candidaturas exigem JWT ativo. Os servicos aplicam `userId` nas consultas de leitura e alteracao, evitando acesso entre usuarios.
+
 ## Curriculo PDF de referencia
 
 O PDF anexado e armazenado somente como arquivo de referencia para visualizacao ou download. O MVP nao extrai texto, nao cria rascunhos e nao altera Perfil Global ou Subperfis a partir do documento.
@@ -84,16 +92,14 @@ O curriculo otimizado consome exclusivamente informacoes preenchidas manualmente
 
 A descricao da vaga e normalizada por dicionario tecnico, por exemplo: `Node.js` vira `nodejs`, `Postgres` vira `postgresql` e `APIs REST` vira `api-rest`. O motor classifica a vaga em `backend`, `frontend`, `fullstack`, `data`, `ai`, `devops`, `qa`, `product` ou `unknown`.
 
-A formula do score final e:
+A formula do score final no modo otimizado por vaga e:
 
 ```text
-45% skills compativeis
-30% projetos compativeis
-15% cursos/certificacoes compativeis
-10% experiencias compativeis
+60% skills compativeis
+40% projetos compativeis
 ```
 
-O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo a dois projetos, seleciona ate tres bullets cadastrados por projeto e informa a justificativa do ranking.
+O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme cadastrados no perfil selecionado, sem ranking, reescrita ou truncamento. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos, seleciona ate tres bullets cadastrados por projeto e informa a justificativa do ranking.
 
 ## Registro de candidatura
 
@@ -103,17 +109,9 @@ A candidatura nasce com status `Ativa` e fase `Curriculo gerado`, salvo se o usu
 
 ## Layout do curriculo
 
-O compilador prioriza uma pagina:
+O PDF incorpora Arial quando a fonte esta disponivel ou configurada, com nome em 23 pt, secoes em 13 pt azul escuro e corpo em 11 pt. Links de e-mail, GitHub, LinkedIn, Lattes, repositorios, deploys e credenciais sao independentes, azuis e clicaveis.
 
-- cabecalho em uma linha compacta abaixo do nome;
-- resumo com ate 420 caracteres;
-- habilidades em fluxo continuo e ate duas linhas;
-- ate dois projetos com ate tres bullets factuais;
-- ate dois bullets por experiencia;
-- cursos e certificacoes em linha continua, com ate cinco itens;
-- idiomas em linha unica.
-
-Se o conteudo exceder os limites, a compilacao reduz itens de menor prioridade e textos longos antes de permitir crescimento vertical.
+A ordem gerada e: cabecalho, resumo, formacao academica, experiencia profissional, projetos, habilidades e competencias, certificacoes/cursos e idiomas. O compilador permite duas paginas para preservar legibilidade; nao reduz fontes abaixo de 10 pt nem corta dados fixos preenchidos pelo usuario.
 
 ## Como rodar localmente
 
@@ -140,9 +138,11 @@ CORS_ORIGIN="http://localhost:5500"
 PORT=3000
 NODE_ENV=development
 # REDIS_URL="redis://localhost:6379"
+# RESUME_FONT_PATH="/caminho/para/arial.ttf"
+# RESUME_BOLD_FONT_PATH="/caminho/para/arialbd.ttf"
 ```
 
-`REDIS_URL` e opcional; sem Redis o rate limiter utiliza armazenamento em memoria.
+`REDIS_URL` e opcional; sem Redis o rate limiter utiliza armazenamento em memoria. No Windows, o gerador detecta Arial automaticamente em `C:\Windows\Fonts`. Em outros ambientes, configure `RESUME_FONT_PATH` e `RESUME_BOLD_FONT_PATH` com arquivos Arial licenciados para incorporar a tipografia exigida no PDF; sem eles, o renderer usa a fonte sans-serif PDF padrao como fallback.
 
 ## Testes
 

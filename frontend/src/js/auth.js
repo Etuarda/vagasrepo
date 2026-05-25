@@ -57,6 +57,14 @@ export const auth = {
     localStorage.removeItem("vagas_token");
     state.token = null;
     state.user = null;
+    state.jobs = [];
+    state.profile = null;
+    state.profiles = [];
+    state.activeProfileId = "";
+    state.matchHistory = [];
+    state.pendingApplicationAnalysis = null;
+    state.lastMatchResult = null;
+    state.resumeFiles = [];
     ui.renderNav();
     ui.navigate("landing");
   },

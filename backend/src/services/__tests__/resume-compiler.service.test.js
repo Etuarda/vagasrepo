@@ -6,16 +6,24 @@ describe("resume compiler", () => {
     title: "Backend Developer",
     location: "Fortaleza/CE",
     emailContact: "pessoa@example.com",
-    summary: "Profissional backend com entrega de APIs e persistencia relacional.",
+    phone: "85999999999",
+    linkedin: "https://linkedin.com/in/pessoa",
+    github: "https://github.com/pessoa",
+    lattes: "https://lattes.cnpq.br/pessoa",
+    summary: "Profissional backend com entrega de APIs e persistencia relacional sem texto reescrito.",
     skillItems: [
       { name: "Node.js", category: "backend" },
       { name: "PostgreSQL", category: "database" },
       { name: "Docker", category: "devops" },
     ],
-    courses: [{ id: "c1", title: "Node Avancado", institution: "Escola", period: "2025" }],
-    certifications: [],
-    educations: [],
-    languages: [{ name: "Ingles", level: "B1" }],
+    courses: [
+      { id: "c1", title: "Node Avancado", institution: "Escola", period: "2025", description: "Conteudo cadastrado." },
+      { id: "c2", title: "Docker", institution: "Academia", period: "2024", description: "" },
+    ],
+    certifications: [{ id: "cert1", title: "AWS", issuer: "Amazon", period: "2025", credentialUrl: "https://example.com/cert" }],
+    educations: [{ title: "ADS", institution: "Universidade", period: "2024 - 2027" }],
+    experiences: [{ role: "Desenvolvedora", company: "Empresa", period: "2023 - atual", description: "Atividade integral cadastrada pelo usuario." }],
+    languages: [{ name: "Ingles", level: "Intermediario - B1" }],
   };
   const match = {
     targetTitle: "Backend",
@@ -23,29 +31,36 @@ describe("resume compiler", () => {
     selectedProjects: [{
       id: "p1",
       title: "API",
+      category: "backend",
+      shortDescription: "Resumo curto exatamente cadastrado pelo usuario.",
+      repositoryUrl: "https://github.com/pessoa/api",
+      deployUrl: "https://api.example.com",
       technologies: ["Node.js"],
       selectedBullets: [{ content: "Implementei API em Node.js." }, { content: "Integrei PostgreSQL." }, { content: "Configurei testes." }, { content: "Excesso." }],
     }],
-    selectedExperiences: [],
-    selectedCourses: profile.courses,
-    selectedCertifications: [],
   };
 
-  it("gera secoes compactas apenas com dados cadastrados", () => {
+  it("preserva secoes fixas e adapta apenas skills e projetos", () => {
     const resume = compileResume({ profile, matchResult: match });
+    expect(resume.header.title).toBe(profile.title);
+    expect(resume.summary).toBe(profile.summary);
+    expect(resume.education).toEqual(profile.educations);
+    expect(resume.experiences[0].description).toBe(profile.experiences[0].description);
+    expect(resume.courses).toEqual(profile.courses);
+    expect(resume.certifications).toEqual(profile.certifications);
+    expect(resume.languagesInline).toBe("Ingles - Intermediario - B1");
     expect(resume.skillsInline).toContain("Backend: Node.js");
-    expect(resume.skillsInline).not.toContain("React");
+    expect(resume.skillsInline).not.toContain("Docker");
+    expect(resume.projects[0].summary).toBe("Resumo curto exatamente cadastrado pelo usuario.");
     expect(resume.projects[0].bullets).toHaveLength(3);
-    expect(resume.coursesAndCertificationsInline).toBe("Node Avancado | Escola | 2025");
-    expect(resume.layout.skillLines).toBeLessThanOrEqual(2);
-    expect(resume.layout.coursesAndCertificationsLines).toBeLessThanOrEqual(2);
   });
 
-  it("usa descricao cadastrada como fallback para projeto legado sem bullets", () => {
+  it("usa a descricao cadastrada como resumo para projeto legado sem resumo curto", () => {
     const resume = compileResume({
       profile,
       matchResult: { ...match, selectedProjects: [{ id: "legacy", title: "Legado", description: "API cadastrada anteriormente.", technologies: ["Node.js"] }] },
     });
-    expect(resume.projects[0].bullets).toEqual(["API cadastrada anteriormente."]);
+    expect(resume.projects[0].summary).toBe("API cadastrada anteriormente.");
+    expect(resume.projects[0].bullets).toEqual([]);
   });
 });

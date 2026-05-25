@@ -349,11 +349,9 @@ function renderMatchResult(result) {
           <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Relatório de aderência</p>
           <h3 class="font-serif text-5xl mt-3">${result.scoreDetails.totalScore}%</h3>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+        <div class="grid grid-cols-2 gap-3 text-center">
           <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.skillsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Skills</span></div>
           <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.projectsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Projetos</span></div>
-          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.coursesAndCertificationsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Formação</span></div>
-          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.experiencesMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Experiência</span></div>
         </div>
       </div>
       <p class="text-sm text-taupe leading-relaxed mt-6">${escapeHtml(result.semanticFeedback)}</p>
@@ -368,7 +366,7 @@ function renderMatchResult(result) {
       </div>
     </section>
     <section class="editorial-card rounded-3xl p-8">
-      <h4 class="font-serif text-3xl mb-4">Resumo sugerido.</h4>
+      <h4 class="font-serif text-3xl mb-4">Resumo cadastrado.</h4>
       <p class="text-sm text-taupe leading-relaxed">${escapeHtml(result.suggestedSummary)}</p>
     </section>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -452,7 +450,6 @@ export const career = {
     state.profiles = Array.isArray(profiles) ? profiles : [];
     if (!state.activeProfileId && state.profiles[0]) {
       state.activeProfileId = state.profiles[0].id;
-      localStorage.setItem("vagas_active_profile_id", state.activeProfileId);
     }
     renderProfileCards();
   },
@@ -462,7 +459,6 @@ export const career = {
     const profile = await api(`/profile${query}`, {}, state.token);
     state.profile = profile;
     state.activeProfileId = profile.id;
-    localStorage.setItem("vagas_active_profile_id", profile.id);
     renderProfileForm();
   },
 
@@ -600,9 +596,6 @@ export const career = {
     const company = document.getElementById("match-company")?.value || "";
     const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, profileId: state.activeProfileId }) }, state.token);
     state.lastMatchResult = result;
-    if (result.generatedPdf?.contentBase64) {
-      state.optimizedPdfCache[result.id] = result.generatedPdf;
-    }
     renderMatchResult(result);
     await career.loadHistory();
   },
@@ -721,23 +714,6 @@ export const career = {
   },
 
   async downloadOptimizedResume(id) {
-    const localPdf = state.optimizedPdfCache?.[id];
-    if (localPdf?.contentBase64) {
-      const binary = atob(localPdf.contentBase64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = localPdf.fileName || "curriculo-otimizado.pdf";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-      return;
-    }
-
     const { API_URL } = await import("./config.js");
     const response = await fetch(`${API_URL}/optimized-resumes/${id}/download`, {
       headers: { Authorization: `Bearer ${state.token}` },
@@ -762,7 +738,6 @@ export const career = {
   async createProfile(profileName) {
     const profile = await api("/profiles", { method: "POST", body: JSON.stringify({ profileName }) }, state.token);
     state.activeProfileId = profile.id;
-    localStorage.setItem("vagas_active_profile_id", profile.id);
     await career.loadProfiles();
     await career.loadProfile();
     await career.loadResumeFiles();
@@ -774,12 +749,10 @@ export const career = {
     await api(`/profiles/${profileId}`, { method: "DELETE" }, state.token);
     if (state.activeProfileId === profileId) {
       state.activeProfileId = "";
-      localStorage.removeItem("vagas_active_profile_id");
     }
     await career.loadProfiles();
     if (!state.profiles.some((profile) => profile.id === state.activeProfileId)) {
       state.activeProfileId = state.profiles.find((profile) => profile.isGlobal)?.id || state.profiles[0]?.id || "";
-      if (state.activeProfileId) localStorage.setItem("vagas_active_profile_id", state.activeProfileId);
     }
     await career.loadProfile();
     await Promise.all([career.loadResumeFiles(), career.loadHistory()]);
@@ -788,7 +761,6 @@ export const career = {
 
   async switchProfile(profileId) {
     state.activeProfileId = profileId;
-    localStorage.setItem("vagas_active_profile_id", profileId);
     renderProfileCards();
     await career.loadProfile();
     await career.loadResumeFiles();
