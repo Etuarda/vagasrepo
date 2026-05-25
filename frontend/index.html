@@ -9,37 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            // Base com contraste maior (modo normal)
-            paper: "#F7F5F2",
-            ink: "#12100E",
-            graphite: "#ffffff",
-
-            // Textos secundários
-            taupe: "#3F3A36",
-            stone: "#514A44",
-
-            // Bordas
-            borderLight: "#756D66",
-
-            // Tokens modo acessibilidade (usados no CSS)
-            accessible: { yellow: "#FFFF00", blue: "#00FFFF", red: "#FF0000" }
-          },
-          fontFamily: {
-            serif: ['"Instrument Serif"', "serif"],
-            sans: ['"Plus Jakarta Sans"', "sans-serif"]
-          },
-          borderRadius: { xl: "1rem", "2xl": "1.5rem", "3xl": "2rem" }
-        }
-      }
-    };
-  </script>
-
+  <link rel="stylesheet" href="./src/styles/tailwind.css" />
   <link rel="stylesheet" href="./src/styles/app.css" />
 
   <!-- jsPDF (para exportação PDF) -->

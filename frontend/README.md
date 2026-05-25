@@ -4,6 +4,13 @@
 
 Voce pode servir essa pasta com qualquer servidor estatico.
 
+Ao alterar classes utilitarias no HTML ou JavaScript, gere o CSS de producao:
+
+```bash
+npm install
+npm run build:css
+```
+
 Exemplo:
 
 ```bash
@@ -27,7 +34,7 @@ Se o endereco do backend mudar, atualize `src/js/config.js`.
 1. Importe este repositorio na Vercel.
 2. Configure o root directory do projeto como `frontend`.
 3. Use framework preset `Other`.
-4. Deixe o build command vazio; o projeto e estatico.
+4. Deixe o build command vazio; o projeto e estatico e `src/styles/tailwind.css` ja e versionado.
 5. O `vercel.json` ja define o output directory como `.`.
 6. Confirme o healthcheck do backend em `https://gerenciadorpessoaldevagas.onrender.com/health`.
 7. O backend ja permite o dominio `gestaodevagas.vercel.app` e previews deste projeto na equipe Vercel configurada.
