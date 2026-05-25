@@ -10,6 +10,10 @@ const TECH_ALIASES = {
   "looker-studio": ["looker", "looker studio"],
   "ci-cd": ["ci/cd", "ci cd", "continuous integration", "continuous delivery"],
   "clean-architecture": ["clean architecture", "arquitetura limpa"],
+  "clean-code": ["clean code"],
+  agile: ["agile", "agil", "agile methodology"],
+  "metodologias-ageis": ["metodologias ageis", "metodologia agil", "metodos ageis"],
+  "versionamento-de-codigo": ["versionamento de codigo", "controle de versao", "version control"],
   accessibility: ["accessibility", "acessibilidade", "wcag"],
 };
 
@@ -38,4 +42,16 @@ const SKILL_GROUPS = {
   other: "Outras",
 };
 
-module.exports = { TECH_ALIASES, CATEGORY_KEYWORDS, SKILL_GROUPS };
+const TRANSVERSAL_SKILLS = [
+  "git",
+  "github",
+  "scrum",
+  "kanban",
+  "agile",
+  "metodologias-ageis",
+  "versionamento-de-codigo",
+  "clean-code",
+  "solid",
+];
+
+module.exports = { TECH_ALIASES, CATEGORY_KEYWORDS, SKILL_GROUPS, TRANSVERSAL_SKILLS };

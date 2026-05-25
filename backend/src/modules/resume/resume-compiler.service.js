@@ -1,4 +1,4 @@
-const { SKILL_GROUPS, CATEGORY_KEYWORDS } = require("../../shared/constants/tech-dictionary");
+const { SKILL_GROUPS, CATEGORY_KEYWORDS, TRANSVERSAL_SKILLS } = require("../../shared/constants/tech-dictionary");
 const { normalizeTerm } = require("../matching/keyword-normalizer");
 const { compressResume, RESUME_LAYOUT_RULES } = require("./resume-layout.service");
 
@@ -16,9 +16,16 @@ function compileSkills(profile, matchResult, rules) {
   const catalog = new Map((profile.skillItems || (profile.skills || []).map((name) => ({ name, category: "other" })))
     .map((skill) => [normalizeTerm(skill.name), skill]));
   const matched = (matchResult.matchedSkills || []).map((name) => catalog.get(normalizeTerm(name))).filter(Boolean);
-  const ordered = uniqueByNormalized(matched.length || (matchResult.jobKeywords || []).length ? matched : [...catalog.values()].slice(0, 12));
+  const transversal = [...catalog.values()].filter((skill) => TRANSVERSAL_SKILLS.includes(normalizeTerm(skill.name)));
+  const targeted = matched.length || (matchResult.jobKeywords || []).length ? matched : [...catalog.values()].slice(0, 12);
+  const ordered = uniqueByNormalized([...targeted, ...transversal]);
   const groups = new Map();
   ordered.forEach((skill) => {
+    if (TRANSVERSAL_SKILLS.includes(normalizeTerm(skill.name))) {
+      if (!groups.has("Praticas/Versionamento")) groups.set("Praticas/Versionamento", []);
+      groups.get("Praticas/Versionamento").push(skill.name);
+      return;
+    }
     const inferredCategory = Object.entries(CATEGORY_KEYWORDS).find(([, terms]) =>
       terms.map(normalizeTerm).includes(normalizeTerm(skill.name))
     )?.[0];
@@ -26,7 +33,14 @@ function compileSkills(profile, matchResult, rules) {
     if (!groups.has(group)) groups.set(group, []);
     groups.get(group).push(skill.name);
   });
-  return [...groups.entries()].slice(0, rules.maxSkillGroups)
+  const transversalGroup = groups.has("Praticas/Versionamento")
+    ? [["Praticas/Versionamento", groups.get("Praticas/Versionamento")]]
+    : [];
+  const selectedGroups = [...groups.entries()]
+    .filter(([label]) => label !== "Praticas/Versionamento")
+    .slice(0, rules.maxSkillGroups - transversalGroup.length)
+    .concat(transversalGroup);
+  return selectedGroups
     .map(([label, items]) => `${label}: ${items.join(", ")}`).join(" | ");
 }
 

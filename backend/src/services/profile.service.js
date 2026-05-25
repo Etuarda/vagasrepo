@@ -287,7 +287,13 @@ async function updateProfile(userId, profileId, data) {
 
 async function updateSkills(userId, profileId, skills) {
   const profile = await resolveProfile(userId, profileId);
-  const uniqueSkills = [...new Set(skills.map((skill) => skill.trim()).filter(Boolean))];
+  const uniqueSkills = [...new Map(
+    skills
+      .flatMap((skill) => String(skill).split(","))
+      .map((skill) => skill.trim())
+      .filter(Boolean)
+      .map((skill) => [normalizeTerm(skill), skill])
+  ).values()];
 
   if (!profile.isGlobal) {
     const global = await ensureDefaultProfile(userId);

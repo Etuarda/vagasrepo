@@ -518,9 +518,10 @@ export const career = {
     ui.notify("Perfil profissional atualizado.");
   },
 
-  async addSkill(name) {
+  async addSkill(value) {
     const current = state.profile?.skills || [];
-    const skills = [...current, name].filter(Boolean);
+    const submitted = String(value || "").split(",").map((skill) => skill.trim()).filter(Boolean);
+    const skills = [...new Map([...current, ...submitted].map((skill) => [skill.toLocaleLowerCase("pt-BR"), skill])).values()];
     const out = await api("/profile/skills", { method: "PUT", body: JSON.stringify({ profileId: state.activeProfileId, skills }) }, state.token);
     state.profile = out.user;
     renderProfileForm();

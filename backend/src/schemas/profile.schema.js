@@ -35,8 +35,9 @@ const idParamSchema = z.object({
 const skillsSchema = z.object({
   profileId: optionalUuid("Perfil invalido"),
   skills: z
-    .array(z.string().trim().min(1).max(80))
-    .max(80, "Informe no maximo 80 habilidades")
+    .array(z.string().trim().min(1).max(2000))
+    .transform((items) => items.flatMap((item) => item.split(",").map((skill) => skill.trim()).filter(Boolean)))
+    .pipe(z.array(z.string().min(1).max(80)).max(80, "Informe no maximo 80 habilidades"))
     .default([]),
 });
 

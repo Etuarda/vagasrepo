@@ -240,7 +240,7 @@
           <section class="editorial-card rounded-3xl editorial-shadow p-8 space-y-6" aria-labelledby="skills-title">
             <h3 id="skills-title" class="font-serif text-3xl">Habilidades técnicas.</h3>
             <form id="form-skill" class="flex flex-col sm:flex-row gap-3 max-w-2xl">
-              <input type="text" id="skill-name" placeholder="Ex: Node.js, PostgreSQL, Docker" class="editorial-input text-sm" />
+              <input type="text" id="skill-name" placeholder="Ex: Node.js, PostgreSQL, Docker (separe por vírgulas)" class="editorial-input text-sm" />
               <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
             </form>
             <div class="space-y-3">
@@ -253,6 +253,9 @@
                 <button type="button" data-add-skill-preset="PostgreSQL" class="tag-pill">Dados: PostgreSQL</button>
                 <button type="button" data-add-skill-preset="Docker" class="tag-pill">DevOps: Docker</button>
                 <button type="button" data-add-skill-preset="Jest" class="tag-pill">Qualidade: Jest</button>
+                <button type="button" data-add-skill-preset="Git" class="tag-pill">Transversal: Git</button>
+                <button type="button" data-add-skill-preset="GitHub" class="tag-pill">GitHub</button>
+                <button type="button" data-add-skill-preset="Scrum" class="tag-pill">Scrum</button>
               </div>
             </div>
             <div id="skills-list" class="flex flex-wrap gap-2"></div>

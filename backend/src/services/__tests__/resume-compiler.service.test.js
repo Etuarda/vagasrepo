@@ -16,6 +16,9 @@ describe("resume compiler", () => {
       { name: "Node.js", category: "backend" },
       { name: "PostgreSQL", category: "database" },
       { name: "Docker", category: "devops" },
+      { name: "Git", category: "other" },
+      { name: "Scrum", category: "other" },
+      { name: "React", category: "frontend" },
     ],
     courses: [
       { id: "c1", title: "Node Avancado", institution: "Escola", period: "2025", description: "Conteudo cadastrado." },
@@ -50,7 +53,9 @@ describe("resume compiler", () => {
     expect(resume.certifications).toEqual(profile.certifications);
     expect(resume.languagesInline).toBe("Ingles - Intermediario - B1");
     expect(resume.skillsInline).toContain("Backend: Node.js");
+    expect(resume.skillsInline).toContain("Praticas/Versionamento: Git, Scrum");
     expect(resume.skillsInline).not.toContain("Docker");
+    expect(resume.skillsInline).not.toContain("React");
     expect(resume.projects[0].summary).toBe("Resumo curto exatamente cadastrado pelo usuario.");
     expect(resume.projects[0]).not.toHaveProperty("stack");
     expect(resume.projects[0]).not.toHaveProperty("bullets");
