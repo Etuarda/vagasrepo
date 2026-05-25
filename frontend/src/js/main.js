@@ -52,7 +52,7 @@ function getSubmitButton(event, form) {
 let __vlibrasStarted = false;
 
 async function loadDashboardData() {
-  await Promise.all([jobs.load(), career.loadProfiles()]);
+  await Promise.all([jobs.load(), career.loadProfiles(), career.loadSharedMatchedJobs()]);
   await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
 }
 
@@ -271,6 +271,14 @@ function wireEvents() {
         { busyText: "Gerando...", notice: "Gerando PDF das candidaturas..." },
         () => jobs.exportPdf()
       );
+    });
+  }
+
+  const sharedJobsPeriod = document.getElementById("shared-jobs-period");
+  if (sharedJobsPeriod) {
+    sharedJobsPeriod.addEventListener("change", (e) => {
+      state.sharedMatchedJobsPeriod = e.target.value || "month";
+      career.loadSharedMatchedJobs();
     });
   }
 

@@ -352,6 +352,30 @@ function renderHistory() {
     .join("");
 }
 
+function renderSharedMatchedJobs() {
+  const root = document.getElementById("shared-jobs-list");
+  if (!root) return;
+
+  const rows = state.sharedMatchedJobs || [];
+  if (!rows.length) {
+    root.innerHTML = `<p class="text-sm text-taupe">Nenhuma vaga pesquisada neste periodo.</p>`;
+    return;
+  }
+
+  root.innerHTML = rows
+    .map(
+      (item) => `
+        <article class="editorial-card rounded-2xl p-5">
+          <h3 class="font-bold text-lg">${escapeHtml(item.jobTitle)}</h3>
+          <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-2">${escapeHtml(item.company)}</p>
+          <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))}</p>
+          <a href="${escapeHtml(item.jobUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 text-[10px] font-bold uppercase tracking-widest underline">Abrir vaga</a>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderResumeFiles() {
   const list = document.getElementById("resume-files-list");
   const files = state.resumeFiles || [];
@@ -533,6 +557,13 @@ export const career = {
     renderHistory();
   },
 
+  async loadSharedMatchedJobs() {
+    const period = state.sharedMatchedJobsPeriod || "month";
+    const rows = await api(`/shared-matched-jobs?period=${encodeURIComponent(period)}`, {}, state.token);
+    state.sharedMatchedJobs = Array.isArray(rows) ? rows : [];
+    renderSharedMatchedJobs();
+  },
+
   async saveProfile() {
     const payload = {
       profileId: state.activeProfileId,
@@ -707,7 +738,7 @@ export const career = {
     const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId }) }, state.token);
     state.lastMatchResult = result;
     renderMatchResult(result);
-    const reloads = [career.loadHistory()];
+    const reloads = [career.loadHistory(), career.loadSharedMatchedJobs()];
     if (result.selectedSubprofileId && result.selectedSubprofileId !== state.activeProfileId) {
       state.activeProfileId = result.selectedSubprofileId;
       renderProfileCards();

@@ -457,6 +457,18 @@ model JobAnalysis {
   @@index([status])
 }
 
+model SharedMatchedJob {
+  id        String   @id @default(uuid())
+  jobTitle  String
+  company   String
+  jobUrl    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([jobTitle])
+  @@index([company])
+}
+
 model GoogleDocsExport {
   id                String   @id @default(uuid())
   optimizedResumeId String

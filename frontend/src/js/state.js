@@ -6,6 +6,8 @@ export const state = {
   profiles: [],
   activeProfileId: "",
   matchHistory: [],
+  sharedMatchedJobs: [],
+  sharedMatchedJobsPeriod: "month",
   pendingApplicationAnalysis: null,
   lastMatchResult: null,
   resumeFiles: [],

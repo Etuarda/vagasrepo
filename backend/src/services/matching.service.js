@@ -4,6 +4,7 @@ const { generateOptimizedResumePdf } = require("./pdf-output.service");
 const { classifyJob, normalizeTerm } = require("../modules/matching/keyword-normalizer");
 const { rankProjects } = require("../modules/matching/project-ranking.service");
 const { compileResume } = require("../modules/resume/resume-compiler.service");
+const { createSharedMatchedJob } = require("../modules/matching/shared-matched-jobs.service");
 
 const MATCH_HISTORY_RETENTION_DAYS = 30;
 const MATCH_HISTORY_PURGE_INTERVAL_MS = 60 * 60 * 1000;
@@ -144,39 +145,43 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
   };
   const compiledResume = compileResume({ profile, matchResult: result });
   const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: result, compiledResume });
-  const saved = await prisma.optimizedResume.create({
-    data: {
-      userId,
-      targetTitle,
-      jobDescription: text,
-      score: result.score,
-      suggestedSummary: profile.summary || "",
-      selectedProjects: result.selectedProjects,
-      matchedSkills: result.matchedSkills,
-      missingSkills: result.missingSkills,
-      matchedTechnologies: result.matchedTechnologies,
-      missingTechnologies: result.missingTechnologies,
-      profileId: profile.id,
-      generatedPdf,
-      generatedFileName: `curriculo-otimizado-${Date.now()}.pdf`,
-    },
-  });
-  const jobAnalysis = await prisma.jobAnalysis.create({
-    data: {
-      userId,
-      jobTitle: targetTitle,
-      company: metadata.company || "",
-      jobUrl: metadata.linkVaga || "",
-      jobDescription: text,
-      selectedSubprofileId: profile.id,
-      matchScore: result.score,
-      jobCategory: result.jobCategory,
-      matchedSkills: result.matchedSkills,
-      missingSkills: result.missingSkills,
-      selectedProjectIds: result.selectedProjects.map((project) => project.id),
-      generatedResumeId: saved.id,
-      status: "draft",
-    },
+  const { saved, jobAnalysis } = await prisma.$transaction(async (tx) => {
+    const savedResume = await tx.optimizedResume.create({
+      data: {
+        userId,
+        targetTitle,
+        jobDescription: text,
+        score: result.score,
+        suggestedSummary: profile.summary || "",
+        selectedProjects: result.selectedProjects,
+        matchedSkills: result.matchedSkills,
+        missingSkills: result.missingSkills,
+        matchedTechnologies: result.matchedTechnologies,
+        missingTechnologies: result.missingTechnologies,
+        profileId: profile.id,
+        generatedPdf,
+        generatedFileName: `curriculo-otimizado-${Date.now()}.pdf`,
+      },
+    });
+    const analysisRow = await tx.jobAnalysis.create({
+      data: {
+        userId,
+        jobTitle: targetTitle,
+        company: metadata.company,
+        jobUrl: metadata.linkVaga,
+        jobDescription: text,
+        selectedSubprofileId: profile.id,
+        matchScore: result.score,
+        jobCategory: result.jobCategory,
+        matchedSkills: result.matchedSkills,
+        missingSkills: result.missingSkills,
+        selectedProjectIds: result.selectedProjects.map((project) => project.id),
+        generatedResumeId: savedResume.id,
+        status: "draft",
+      },
+    });
+    await createSharedMatchedJob(tx, { jobTitle: targetTitle, company: metadata.company, linkVaga: metadata.linkVaga });
+    return { saved: savedResume, jobAnalysis: analysisRow };
   });
 
   return {

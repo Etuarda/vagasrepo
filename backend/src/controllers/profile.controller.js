@@ -10,6 +10,7 @@ const {
   educationSchema,
   subprofileAllocationSchema,
   matchSchema,
+  sharedMatchedJobsQuerySchema,
   jobAnalysisUpdateSchema,
   profileIdSchema,
   idParamSchema,
@@ -17,6 +18,7 @@ const {
 const { createApplicationFromAnalysisSchema } = require("../schemas/job.schema");
 const profileService = require("../services/profile.service");
 const matchingService = require("../services/matching.service");
+const sharedMatchedJobsService = require("../modules/matching/shared-matched-jobs.service");
 const applicationTrackingService = require("../modules/application-tracking/application-tracking.service");
 
 async function listProfiles(req, res, next) {
@@ -290,6 +292,16 @@ async function match(req, res, next) {
   }
 }
 
+async function listSharedMatchedJobs(req, res, next) {
+  try {
+    const { period } = sharedMatchedJobsQuerySchema.parse(req.query);
+    const jobs = await sharedMatchedJobsService.listSharedMatchedJobs(period);
+    return res.json(jobs);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function updateAnalysis(req, res, next) {
   try {
     const { id } = idParamSchema.parse(req.params);
@@ -385,6 +397,7 @@ module.exports = {
   updateEducation,
   deleteEducation,
   match,
+  listSharedMatchedJobs,
   listOptimized,
   deleteOptimized,
   downloadOptimized,

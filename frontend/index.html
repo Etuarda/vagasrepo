@@ -95,6 +95,9 @@
         <button type="button" data-dashboard-tab="matching" class="dashboard-tab px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
           Matching ATS
         </button>
+        <button type="button" data-dashboard-tab="shared-jobs" class="dashboard-tab px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
+          Vagas pesquisadas
+        </button>
       </div>
 
       <div id="panel-jobs" data-dashboard-panel="jobs" class="space-y-16">
@@ -369,12 +372,15 @@
               <option value="">Escolher perfil automaticamente pelo matching</option>
             </select>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input type="text" id="match-job-title" placeholder="Cargo da vaga" class="editorial-input text-sm" />
-              <input type="text" id="match-company" placeholder="Empresa" class="editorial-input text-sm" />
+              <input type="text" id="match-job-title" required minlength="2" placeholder="Cargo da vaga *" class="editorial-input text-sm" />
+              <input type="text" id="match-company" required minlength="2" placeholder="Empresa *" class="editorial-input text-sm" />
             </div>
-            <input type="url" id="match-job-link" placeholder="Link da vaga" class="editorial-input text-sm" />
+            <input type="url" id="match-job-link" required placeholder="Link da vaga *" class="editorial-input text-sm" />
             <p class="text-sm text-taupe leading-relaxed">
               A geração usa exclusivamente Perfil Global e Subperfil preenchidos manualmente; PDFs anexados não alimentam o matching.
+            </p>
+            <p class="text-xs text-taupe leading-relaxed">
+              Cargo, empresa e link da vaga serao compartilhados com usuarios autenticados na area Vagas pesquisadas.
             </p>
             <textarea id="match-job-description" rows="14" required minlength="30" maxlength="15000" placeholder="Cole a descrição completa da vaga" class="editorial-input text-sm leading-relaxed"></textarea>
             <button type="submit" class="w-full bg-ink text-paper py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
@@ -390,6 +396,24 @@
         <div id="match-result" class="lg:col-span-7 min-h-[420px] rounded-3xl border border-dashed border-borderLight p-10 flex items-center justify-center text-center text-taupe">
           Cole uma vaga para ver score, lacunas e projetos mais aderentes.
         </div>
+      </section>
+      <section id="panel-shared-jobs" data-dashboard-panel="shared-jobs" class="hidden space-y-8" aria-labelledby="shared-jobs-title">
+        <header class="editorial-card rounded-3xl editorial-shadow p-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Pesquisa coletiva</p>
+            <h2 id="shared-jobs-title" class="font-serif text-5xl tracking-tight mt-3">Vagas pesquisadas.</h2>
+            <p class="text-sm text-taupe leading-relaxed mt-4">Cargo, empresa e link informados em matchings realizados por usuarios autenticados.</p>
+          </div>
+          <label class="space-y-2 min-w-56">
+            <span class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone">Periodo</span>
+            <select id="shared-jobs-period" class="editorial-input text-sm bg-white">
+              <option value="day">Ultimo dia</option>
+              <option value="week">Ultima semana</option>
+              <option value="month" selected>Ultimo mes</option>
+            </select>
+          </label>
+        </header>
+        <div id="shared-jobs-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
       </section>
     </section>
   </main>

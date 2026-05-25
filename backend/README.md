@@ -67,6 +67,7 @@ API: `http://localhost:3000`
 - `POST /profile/certifications` com Bearer token
 - `DELETE /profile/certifications/:id` com Bearer token
 - `POST /match` com Bearer token
+- `GET /shared-matched-jobs?period=day|week|month` com Bearer token
 - `GET /optimized-resumes` com Bearer token
 - `DELETE /optimized-resumes/:id` com Bearer token
 - `GET /resume-files` com Bearer token

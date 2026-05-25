@@ -110,9 +110,13 @@ const matchSchema = z.object({
     .min(30, "Cole uma descricao de vaga com pelo menos 30 caracteres")
     .max(15000, "A descricao da vaga deve ter no maximo 15.000 caracteres"),
   profileId: optionalUuid("Perfil invalido"),
-  jobTitle: cleanString(160),
-  company: cleanString(160),
-  linkVaga: z.string().trim().url("Link da vaga invalido").or(z.literal("")).default(""),
+  jobTitle: z.string().trim().min(2, "Cargo da vaga e obrigatorio").max(160),
+  company: z.string().trim().min(2, "Empresa e obrigatoria").max(160),
+  linkVaga: z.string().trim().url("Link da vaga invalido"),
+});
+
+const sharedMatchedJobsQuerySchema = z.object({
+  period: z.preprocess(emptyToUndefined, z.enum(["day", "week", "month"]).default("month")),
 });
 
 const jobAnalysisUpdateSchema = z.object({
@@ -138,5 +142,6 @@ module.exports = {
   educationSchema,
   subprofileAllocationSchema,
   matchSchema,
+  sharedMatchedJobsQuerySchema,
   jobAnalysisUpdateSchema,
 };

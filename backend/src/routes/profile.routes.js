@@ -30,6 +30,7 @@ router.post("/profile/educations", profileController.addEducation);
 router.put("/profile/educations/:id", profileController.updateEducation);
 router.delete("/profile/educations/:id", profileController.deleteEducation);
 router.post("/match", profileController.match);
+router.get("/shared-matched-jobs", profileController.listSharedMatchedJobs);
 router.get("/optimized-resumes", profileController.listOptimized);
 router.get("/optimized-resumes/:id/download", profileController.downloadOptimized);
 router.delete("/optimized-resumes/:id", profileController.deleteOptimized);
