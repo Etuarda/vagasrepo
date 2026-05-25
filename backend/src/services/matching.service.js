@@ -5,8 +5,27 @@ const { classifyJob, normalizeTerm } = require("../modules/matching/keyword-norm
 const { rankProjects } = require("../modules/matching/project-ranking.service");
 const { compileResume } = require("../modules/resume/resume-compiler.service");
 
+const MATCH_HISTORY_RETENTION_DAYS = 30;
+
 function unique(values) {
   return [...new Set((values || []).filter(Boolean))];
+}
+
+function historyRetentionCutoff(now = new Date()) {
+  return new Date(now.getTime() - MATCH_HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+}
+
+async function purgeExpiredHistory(userId, now = new Date()) {
+  const cutoff = historyRetentionCutoff(now);
+  await prisma.jobAnalysis.deleteMany({ where: { userId, createdAt: { lt: cutoff } } });
+  await prisma.optimizedResume.deleteMany({
+    where: {
+      userId,
+      createdAt: { lt: cutoff },
+      generatedForAnalyses: { none: {} },
+    },
+  });
+  return cutoff;
 }
 
 function inferTitle(text) {
@@ -163,8 +182,9 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
 
 async function listHistory(userId, profileId = null) {
   const profile = await profileService.resolveProfile(userId, profileId);
+  const cutoff = await purgeExpiredHistory(userId);
   const rows = await prisma.jobAnalysis.findMany({
-    where: { userId, selectedSubprofileId: profile.id },
+    where: { userId, selectedSubprofileId: profile.id, createdAt: { gte: cutoff } },
     orderBy: { createdAt: "desc" },
     take: 50,
     include: {
@@ -195,7 +215,9 @@ async function listHistory(userId, profileId = null) {
 }
 
 async function updateAnalysis(userId, id, data) {
-  const existing = await prisma.jobAnalysis.findFirst({ where: { id, userId } });
+  const existing = await prisma.jobAnalysis.findFirst({
+    where: { id, userId, createdAt: { gte: historyRetentionCutoff() } },
+  });
   if (!existing) {
     const err = new Error("Analise nao encontrada");
     err.statusCode = 404;
@@ -235,7 +257,7 @@ async function updateAnalysis(userId, id, data) {
 
 async function getAnalysis(userId, id) {
   const row = await prisma.jobAnalysis.findFirst({
-    where: { id, userId },
+    where: { id, userId, createdAt: { gte: historyRetentionCutoff() } },
     include: {
       selectedSubprofile: { select: { id: true, profileName: true } },
       generatedResume: { select: { id: true, generatedFileName: true } },
@@ -255,7 +277,10 @@ async function getAnalysis(userId, id) {
 }
 
 async function getGeneratedPdf(userId, id) {
-  const row = await prisma.optimizedResume.findFirst({ where: { id, userId }, select: { generatedPdf: true, generatedFileName: true } });
+  const row = await prisma.optimizedResume.findFirst({
+    where: { id, userId, createdAt: { gte: historyRetentionCutoff() } },
+    select: { generatedPdf: true, generatedFileName: true },
+  });
   if (!row || !row.generatedPdf) {
     const err = new Error("PDF otimizado nao encontrado para esta analise");
     err.statusCode = 404;
@@ -285,4 +310,7 @@ module.exports = {
   analyzeProfile,
   getMissingResumeFields,
   assertProfileReadyForResume,
+  MATCH_HISTORY_RETENTION_DAYS,
+  historyRetentionCutoff,
+  purgeExpiredHistory,
 };

@@ -20,7 +20,9 @@ describe("job analysis status", () => {
 
     await updateAnalysis("user", "analysis", { status: "applied" });
 
-    expect(prisma.jobAnalysis.findFirst).toHaveBeenCalledWith({ where: { id: "analysis", userId: "user" } });
+    expect(prisma.jobAnalysis.findFirst).toHaveBeenCalledWith({
+      where: { id: "analysis", userId: "user", createdAt: { gte: expect.any(Date) } },
+    });
     expect(prisma.jobAnalysis.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "analysis" },
       data: expect.objectContaining({ status: "applied", appliedAt: expect.any(Date) }),
