@@ -52,6 +52,7 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
     repositoryUrl: project.repositoryUrl,
     deployUrl: project.deployUrl,
     summary: project.shortDescription || "",
+    stack: project.stack || "",
   }));
 
   return compressResume({

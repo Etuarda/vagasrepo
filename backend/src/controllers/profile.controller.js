@@ -8,6 +8,7 @@ const {
   certificationSchema,
   languageSchema,
   educationSchema,
+  subprofileAllocationSchema,
   matchSchema,
   jobAnalysisUpdateSchema,
   profileIdSchema,
@@ -73,6 +74,16 @@ async function updateSkills(req, res, next) {
     const payload = skillsSchema.parse(req.body);
     const profile = await profileService.updateSkills(req.userId, payload.profileId, payload.skills);
     return res.json({ skills: profile.skills, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function updateSubprofileAllocation(req, res, next) {
+  try {
+    const payload = subprofileAllocationSchema.parse(req.body);
+    const profile = await profileService.updateSubprofileAllocation(req.userId, payload);
+    return res.json({ user: profile });
   } catch (err) {
     return next(err);
   }
@@ -354,6 +365,7 @@ module.exports = {
   deleteProfile,
   updateProfile,
   updateSkills,
+  updateSubprofileAllocation,
   addProject,
   updateProject,
   deleteProject,

@@ -70,6 +70,8 @@ model CareerProfile {
   subprofileExperiences SubprofileExperience[]
   subprofileCourses SubprofileCourse[]
   subprofileCertifications SubprofileCertification[]
+  subprofileEducations SubprofileEducation[]
+  subprofileLanguages SubprofileLanguage[]
   selectedJobAnalyses JobAnalysis[]
   optimizedResumes OptimizedResume[]
   resumeFiles      ResumeFile[]
@@ -153,6 +155,7 @@ model Project {
   businessProblem String @default("")
   technicalSolution String @default("")
   architecture  String   @default("")
+  stack         String   @default("")
   repositoryUrl String   @default("")
   deployUrl     String   @default("")
   userId        String
@@ -266,6 +269,7 @@ model Language {
 
   user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  subprofiles SubprofileLanguage[]
 
   @@index([userId])
   @@index([profileId])
@@ -282,6 +286,7 @@ model Education {
 
   user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  subprofiles SubprofileEducation[]
 
   @@index([userId])
   @@index([profileId])
@@ -359,6 +364,32 @@ model SubprofileCertification {
 
   @@unique([subprofileId, certificationId])
   @@index([certificationId])
+}
+
+model SubprofileEducation {
+  id           String @id @default(uuid())
+  subprofileId String
+  educationId  String
+  isVisible    Boolean @default(true)
+
+  subprofile CareerProfile @relation(fields: [subprofileId], references: [id], onDelete: Cascade)
+  education  Education     @relation(fields: [educationId], references: [id], onDelete: Cascade)
+
+  @@unique([subprofileId, educationId])
+  @@index([educationId])
+}
+
+model SubprofileLanguage {
+  id           String @id @default(uuid())
+  subprofileId String
+  languageId   String
+  isVisible    Boolean @default(true)
+
+  subprofile CareerProfile @relation(fields: [subprofileId], references: [id], onDelete: Cascade)
+  language   Language      @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@unique([subprofileId, languageId])
+  @@index([languageId])
 }
 
 model OptimizedResume {

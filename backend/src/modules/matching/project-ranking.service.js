@@ -16,6 +16,7 @@ function rankProjects(projects, jobKeywords, limit = 2) {
         project.title,
         project.category,
         project.shortDescription,
+        project.stack,
       ].join(" ");
       const matches = unique(jobKeywords.filter((keyword) => termMatches(source, keyword)));
       const weight = Number(project.relevanceWeight || 50);

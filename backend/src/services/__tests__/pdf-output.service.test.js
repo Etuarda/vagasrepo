@@ -24,6 +24,7 @@ describe("optimized resume PDF", () => {
           category: "Backend",
           repositoryUrl: "https://github.com/pessoa/api",
           deployUrl: "https://api.example.com",
+          stack: "Node.js, PostgreSQL",
           summary: "Projeto cadastrado.",
         }],
         skillsInline: "Backend: Node.js",

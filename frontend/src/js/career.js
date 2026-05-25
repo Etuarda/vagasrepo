@@ -106,6 +106,7 @@ function renderProjects() {
               <h4 class="font-serif text-2xl">${escapeHtml(project.title)}</h4>
               <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(project.category || "other")}</p>
               <p class="text-sm text-taupe mt-2 leading-relaxed">${escapeHtml(project.shortDescription)}</p>
+              ${project.stack ? `<p class="text-xs text-stone mt-2">Stack: ${escapeHtml(project.stack)}</p>` : ""}
               <div class="flex flex-wrap gap-4 mt-3">
                 ${project.repositoryUrl ? `<a href="${escapeHtml(project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(project.repositoryUrl)}</a>` : ""}
                 ${project.deployUrl ? `<a href="${escapeHtml(project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(project.deployUrl)}</a>` : ""}
@@ -120,6 +121,41 @@ function renderProjects() {
       `
     )
     .join("");
+}
+
+function renderSubprofileAllocation() {
+  const section = document.getElementById("subprofile-allocation");
+  const root = document.getElementById("subprofile-allocation-lists");
+  const profile = state.profile;
+  if (!section || !root || !profile || profile.isGlobal || !profile.globalCatalog) {
+    section?.classList.add("hidden");
+    return;
+  }
+  const groups = [
+    ["skillIds", "Habilidades", "skills", (item) => item.name],
+    ["projectIds", "Projetos", "projects", (item) => item.title],
+    ["experienceIds", "Experiências", "experiences", (item) => `${item.role} | ${item.company}`],
+    ["educationIds", "Formação", "educations", (item) => `${item.title} | ${item.institution}`],
+    ["courseIds", "Cursos", "courses", (item) => item.title],
+    ["certificationIds", "Certificações", "certifications", (item) => item.title],
+    ["languageIds", "Idiomas", "languages", (item) => `${item.name}${item.level ? ` - ${item.level}` : ""}`],
+  ];
+  root.innerHTML = groups.map(([field, title, key, label]) => {
+    const items = profile.globalCatalog[key] || [];
+    return `
+      <fieldset class="border border-borderLight rounded-xl p-4 space-y-2">
+        <legend class="px-2 text-[10px] font-bold uppercase tracking-widest text-stone">${escapeHtml(title)}</legend>
+        ${items.length ? items.map((item) => `
+          <label class="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="allocation-${field}" value="${escapeHtml(item.id)}" ${item.selected ? "checked" : ""} />
+            <span>${escapeHtml(label(item))}</span>
+          </label>
+        `).join("") : `<p class="text-xs text-taupe">Nenhum item global cadastrado.</p>`}
+      </fieldset>
+    `;
+  }).join("");
+  document.getElementById("allocation-copy-base").checked = false;
+  section.classList.remove("hidden");
 }
 
 function renderEducations() {
@@ -232,6 +268,7 @@ function renderProfileForm() {
   renderSkills();
   renderLanguages();
   renderProjects();
+  renderSubprofileAllocation();
   renderEducations();
   renderExperiences();
   renderCoursesAndCertifications();
@@ -581,6 +618,13 @@ export const career = {
     ui.notify("Projeto cadastrado.");
   },
 
+  async saveAllocation(payload) {
+    const out = await api("/profile/subprofile-allocation", { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Itens do Perfil Global alocados ao subperfil.");
+  },
+
   async updateProject(id, payload) {
     const out = await api(`/profile/projects/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
     state.profile = out.user;
@@ -741,6 +785,7 @@ export const career = {
       setValue("project-title", item.title);
       setValue("project-category", item.category);
       setValue("project-short-description", item.shortDescription);
+      setValue("project-stack", item.stack);
       setValue("project-repository-url", item.repositoryUrl);
       setValue("project-deploy-url", item.deployUrl);
     } else if (type === "course") {

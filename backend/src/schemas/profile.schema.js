@@ -46,6 +46,7 @@ const projectSchema = z.object({
   title: z.string().trim().min(2, "Titulo do projeto e obrigatorio").max(160),
   category: cleanString(40),
   shortDescription: z.string().trim().min(10, "Resumo curto deve ter pelo menos 10 caracteres").max(500),
+  stack: cleanString(500),
   repositoryUrl: z.string().trim().url("Link do repositorio invalido").or(z.literal("")).default(""),
   deployUrl: z.string().trim().url("Link do deploy invalido").or(z.literal("")).default(""),
 });
@@ -90,6 +91,18 @@ const educationSchema = z.object({
   period: cleanString(120),
 });
 
+const subprofileAllocationSchema = z.object({
+  profileId: z.string().uuid("Subperfil invalido"),
+  skillIds: z.array(z.string().uuid()).max(80).default([]),
+  projectIds: z.array(z.string().uuid()).max(100).default([]),
+  experienceIds: z.array(z.string().uuid()).max(100).default([]),
+  courseIds: z.array(z.string().uuid()).max(100).default([]),
+  certificationIds: z.array(z.string().uuid()).max(100).default([]),
+  educationIds: z.array(z.string().uuid()).max(100).default([]),
+  languageIds: z.array(z.string().uuid()).max(100).default([]),
+  copyBaseProfile: z.boolean().default(false),
+});
+
 const matchSchema = z.object({
   jobDescription: z
     .string()
@@ -123,6 +136,7 @@ module.exports = {
   certificationSchema,
   languageSchema,
   educationSchema,
+  subprofileAllocationSchema,
   matchSchema,
   jobAnalysisUpdateSchema,
 };

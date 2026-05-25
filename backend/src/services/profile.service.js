@@ -20,6 +20,8 @@ const profileInclude = {
   subprofileExperiences: { where: { isVisible: true }, include: { experience: true }, orderBy: { relevanceWeight: "desc" } },
   subprofileCourses: { where: { isVisible: true }, include: { course: true }, orderBy: { relevanceWeight: "desc" } },
   subprofileCertifications: { where: { isVisible: true }, include: { certification: true }, orderBy: { relevanceWeight: "desc" } },
+  subprofileEducations: { where: { isVisible: true }, include: { education: true } },
+  subprofileLanguages: { where: { isVisible: true }, include: { language: true } },
 };
 
 function serializeProfile(profile) {
@@ -35,6 +37,8 @@ function serializeProfile(profile) {
   const experiences = dedupeById([...(profile.experiences || []), ...(profile.subprofileExperiences || []).map((item) => ({ ...item.experience, relevanceWeight: item.relevanceWeight }))]);
   const courses = dedupeById([...(profile.courses || []), ...(profile.subprofileCourses || []).map((item) => ({ ...item.course, relevanceWeight: item.relevanceWeight }))]);
   const certifications = dedupeById([...(profile.certifications || []), ...(profile.subprofileCertifications || []).map((item) => ({ ...item.certification, relevanceWeight: item.relevanceWeight }))]);
+  const educations = dedupeById([...(profile.educations || []), ...(profile.subprofileEducations || []).map((item) => item.education)]);
+  const languages = dedupeById([...(profile.languages || []), ...(profile.subprofileLanguages || []).map((item) => item.language)]);
   return {
     id: profile.id,
     profileName: profile.profileName,
@@ -59,6 +63,7 @@ function serializeProfile(profile) {
       title: project.customTitle || project.title,
       category: project.category || "other",
       shortDescription: project.customSummary || project.shortDescription || "",
+      stack: project.stack || "",
       relevanceWeight: project.relevanceWeight || 50,
       repositoryUrl: project.repositoryUrl || "",
       deployUrl: project.deployUrl || "",
@@ -87,17 +92,51 @@ function serializeProfile(profile) {
       workload: certification.workload || "",
       credentialUrl: certification.credentialUrl || "",
     })),
-    languages: (profile.languages || []).map((language) => ({
+    languages: languages.map((language) => ({
       id: language.id,
       name: language.name,
       level: language.level || "",
     })),
-    educations: (profile.educations || []).map((education) => ({
+    educations: educations.map((education) => ({
       id: education.id,
       title: education.title,
       institution: education.institution,
       period: education.period || "",
     })),
+  };
+}
+
+function buildGlobalCatalog(global, subprofile) {
+  const selected = {
+    skills: new Set((subprofile.subprofileSkills || []).map((item) => item.skillId)),
+    projects: new Set((subprofile.subprofileProjects || []).map((item) => item.projectId)),
+    experiences: new Set((subprofile.subprofileExperiences || []).map((item) => item.experienceId)),
+    courses: new Set((subprofile.subprofileCourses || []).map((item) => item.courseId)),
+    certifications: new Set((subprofile.subprofileCertifications || []).map((item) => item.certificationId)),
+    educations: new Set((subprofile.subprofileEducations || []).map((item) => item.educationId)),
+    languages: new Set((subprofile.subprofileLanguages || []).map((item) => item.languageId)),
+  };
+  const withSelection = (items, type) => (items || []).map((item) => ({ ...item, selected: selected[type].has(item.id) }));
+  return {
+    baseProfile: {
+      name: global.name,
+      title: global.title,
+      emailContact: global.emailContact,
+      phone: global.phone,
+      location: global.location,
+      cep: global.cep,
+      linkedin: global.linkedin,
+      github: global.github,
+      lattes: global.lattes,
+      summary: global.summary,
+    },
+    skills: withSelection(global.skills, "skills"),
+    projects: withSelection(global.projects, "projects"),
+    experiences: withSelection(global.experiences, "experiences"),
+    courses: withSelection(global.courses, "courses"),
+    certifications: withSelection(global.certifications, "certifications"),
+    educations: withSelection(global.educations, "educations"),
+    languages: withSelection(global.languages, "languages"),
   };
 }
 
@@ -231,7 +270,7 @@ async function deleteProfile(userId, profileId) {
 async function inheritGlobalCollections(subprofileId, globalProfileId) {
   const global = await prisma.careerProfile.findUnique({
     where: { id: globalProfileId },
-    include: { skills: true, projects: true, experiences: true, courses: true, certifications: true },
+    include: { skills: true, projects: true, experiences: true, courses: true, certifications: true, educations: true, languages: true },
   });
   await prisma.$transaction([
     prisma.subprofileSkill.createMany({ data: global.skills.map((item) => ({ subprofileId, skillId: item.id })), skipDuplicates: true }),
@@ -239,6 +278,8 @@ async function inheritGlobalCollections(subprofileId, globalProfileId) {
     prisma.subprofileExperience.createMany({ data: global.experiences.map((item) => ({ subprofileId, experienceId: item.id })), skipDuplicates: true }),
     prisma.subprofileCourse.createMany({ data: global.courses.map((item) => ({ subprofileId, courseId: item.id })), skipDuplicates: true }),
     prisma.subprofileCertification.createMany({ data: global.certifications.map((item) => ({ subprofileId, certificationId: item.id })), skipDuplicates: true }),
+    prisma.subprofileEducation.createMany({ data: global.educations.map((item) => ({ subprofileId, educationId: item.id })), skipDuplicates: true }),
+    prisma.subprofileLanguage.createMany({ data: global.languages.map((item) => ({ subprofileId, languageId: item.id })), skipDuplicates: true }),
   ]);
 }
 
@@ -250,14 +291,81 @@ async function getProfile(userId, profileId = null) {
   });
   if (!full.isGlobal) {
     const global = await ensureDefaultProfile(userId);
-    const globalShared = await prisma.careerProfile.findFirst({
+    const globalCatalog = await prisma.careerProfile.findFirst({
       where: { id: global.id, userId },
-      include: { languages: true, educations: true },
+      include: { skills: true, projects: true, experiences: true, courses: true, certifications: true, languages: true, educations: true },
     });
-    full.languages = dedupeById([...(full.languages || []), ...(globalShared.languages || [])]);
-    full.educations = dedupeById([...(full.educations || []), ...(globalShared.educations || [])]);
+    const serialized = serializeProfile(full);
+    serialized.globalCatalog = buildGlobalCatalog(globalCatalog, full);
+    return serialized;
   }
   return serializeProfile(full);
+}
+
+async function updateSubprofileAllocation(userId, data) {
+  const profile = await resolveProfile(userId, data.profileId);
+  if (profile.isGlobal) {
+    const err = new Error("Selecione um subperfil para configurar alocacoes");
+    err.statusCode = 400;
+    throw err;
+  }
+  const global = await ensureDefaultProfile(userId);
+  const catalog = await prisma.careerProfile.findFirst({
+    where: { id: global.id, userId },
+    include: { skills: true, projects: true, experiences: true, courses: true, certifications: true, educations: true, languages: true },
+  });
+  const requested = {
+    skillIds: ["skills", data.skillIds],
+    projectIds: ["projects", data.projectIds],
+    experienceIds: ["experiences", data.experienceIds],
+    courseIds: ["courses", data.courseIds],
+    certificationIds: ["certifications", data.certificationIds],
+    educationIds: ["educations", data.educationIds],
+    languageIds: ["languages", data.languageIds],
+  };
+  Object.entries(requested).forEach(([field, [collection, ids]]) => {
+    const validIds = new Set((catalog[collection] || []).map((item) => item.id));
+    if (ids.some((id) => !validIds.has(id))) {
+      const err = new Error(`Item global invalido em ${field}`);
+      err.statusCode = 400;
+      throw err;
+    }
+  });
+  const operations = [
+    prisma.subprofileSkill.deleteMany({ where: { subprofileId: profile.id } }),
+    prisma.subprofileProject.deleteMany({ where: { subprofileId: profile.id } }),
+    prisma.subprofileExperience.deleteMany({ where: { subprofileId: profile.id } }),
+    prisma.subprofileCourse.deleteMany({ where: { subprofileId: profile.id } }),
+    prisma.subprofileCertification.deleteMany({ where: { subprofileId: profile.id } }),
+    prisma.subprofileEducation.deleteMany({ where: { subprofileId: profile.id } }),
+    prisma.subprofileLanguage.deleteMany({ where: { subprofileId: profile.id } }),
+  ];
+  if (data.skillIds.length) operations.push(prisma.subprofileSkill.createMany({ data: data.skillIds.map((skillId) => ({ subprofileId: profile.id, skillId })) }));
+  if (data.projectIds.length) operations.push(prisma.subprofileProject.createMany({ data: data.projectIds.map((projectId) => ({ subprofileId: profile.id, projectId })) }));
+  if (data.experienceIds.length) operations.push(prisma.subprofileExperience.createMany({ data: data.experienceIds.map((experienceId) => ({ subprofileId: profile.id, experienceId })) }));
+  if (data.courseIds.length) operations.push(prisma.subprofileCourse.createMany({ data: data.courseIds.map((courseId) => ({ subprofileId: profile.id, courseId })) }));
+  if (data.certificationIds.length) operations.push(prisma.subprofileCertification.createMany({ data: data.certificationIds.map((certificationId) => ({ subprofileId: profile.id, certificationId })) }));
+  if (data.educationIds.length) operations.push(prisma.subprofileEducation.createMany({ data: data.educationIds.map((educationId) => ({ subprofileId: profile.id, educationId })) }));
+  if (data.languageIds.length) operations.push(prisma.subprofileLanguage.createMany({ data: data.languageIds.map((languageId) => ({ subprofileId: profile.id, languageId })) }));
+  if (data.copyBaseProfile) {
+    operations.push(prisma.careerProfile.update({
+      where: { id: profile.id },
+      data: {
+        name: catalog.name,
+        title: catalog.title,
+        emailContact: catalog.emailContact,
+        phone: catalog.phone,
+        location: catalog.location,
+        cep: catalog.cep,
+        linkedin: catalog.linkedin,
+        github: catalog.github,
+        lattes: catalog.lattes,
+        summary: catalog.summary,
+      },
+    }));
+  }
+  await prisma.$transaction(operations);
+  return getProfile(userId, profile.id);
 }
 
 async function updateProfile(userId, profileId, data) {
@@ -338,6 +446,7 @@ async function addProject(userId, profileId, data) {
       description: data.shortDescription,
       shortDescription: data.shortDescription,
       category: data.category || "other",
+      stack: data.stack || "",
       businessProblem: "",
       technicalSolution: "",
       architecture: "",
@@ -369,6 +478,7 @@ async function updateProject(userId, profileId, id, data) {
       description: data.shortDescription,
       shortDescription: data.shortDescription,
       category: data.category || "other",
+      stack: data.stack || "",
       businessProblem: "",
       technicalSolution: "",
       architecture: "",
@@ -501,7 +611,11 @@ async function deleteCertification(userId, profileId, id) {
 
 async function addLanguage(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
-  await prisma.language.create({ data: { ...data, userId, profileId: profile.id } });
+  const owner = profile.isGlobal ? profile : await ensureDefaultProfile(userId);
+  const language = await prisma.language.create({ data: { ...data, userId, profileId: owner.id } });
+  if (!profile.isGlobal) {
+    await prisma.subprofileLanguage.create({ data: { subprofileId: profile.id, languageId: language.id } });
+  }
   return getProfile(userId, profile.id);
 }
 
@@ -520,7 +634,10 @@ async function updateLanguage(userId, profileId, id, data) {
 async function addEducation(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   const owner = profile.isGlobal ? profile : await ensureDefaultProfile(userId);
-  await prisma.education.create({ data: { ...data, userId, profileId: owner.id } });
+  const education = await prisma.education.create({ data: { ...data, userId, profileId: owner.id } });
+  if (!profile.isGlobal) {
+    await prisma.subprofileEducation.create({ data: { subprofileId: profile.id, educationId: education.id } });
+  }
   return getProfile(userId, profile.id);
 }
 
@@ -539,9 +656,8 @@ async function updateEducation(userId, profileId, id, data) {
 async function deleteEducation(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
-    const err = new Error("Remova formacao somente no Perfil Global");
-    err.statusCode = 400;
-    throw err;
+    const hidden = await prisma.subprofileEducation.updateMany({ where: { educationId: id, subprofileId: profile.id }, data: { isVisible: false } });
+    if (hidden.count) return getProfile(userId, profile.id);
   }
   const result = await prisma.education.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (!result.count) {
@@ -554,6 +670,10 @@ async function deleteEducation(userId, profileId, id) {
 
 async function deleteLanguage(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
+  if (!profile.isGlobal) {
+    const hidden = await prisma.subprofileLanguage.updateMany({ where: { languageId: id, subprofileId: profile.id }, data: { isVisible: false } });
+    if (hidden.count) return getProfile(userId, profile.id);
+  }
   const result = await prisma.language.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
     const err = new Error("Idioma nÃ£o encontrado");
@@ -569,6 +689,7 @@ module.exports = {
   deleteProfile,
   getProfile,
   updateProfile,
+  updateSubprofileAllocation,
   updateSkills,
   addProject,
   updateProject,

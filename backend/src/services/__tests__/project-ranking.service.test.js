@@ -5,7 +5,8 @@ const projects = [
     id: "one",
     title: "API de assinaturas",
     category: "backend",
-    shortDescription: "API REST em Node.js com PostgreSQL para assinaturas.",
+    shortDescription: "API para assinaturas.",
+    stack: "Node.js, PostgreSQL, APIs REST",
     relevanceWeight: 70,
   },
   {
@@ -33,17 +34,18 @@ describe("project ranking", () => {
     expect(ranked[0].reason).toContain("nodejs");
   });
 
-  it("ignora conteudo legado que nao pertence aos cinco campos do projeto", () => {
+  it("considera apenas os campos atuais, incluindo a stack textual", () => {
     const ranked = rankProjects([{
       id: "legacy",
       title: "Portal",
       category: "frontend",
       shortDescription: "Tela institucional.",
+      stack: "Node.js, PostgreSQL, APIs REST",
       technologies: ["Node.js"],
       technicalSolution: "API REST com PostgreSQL.",
       bullets: [{ content: "Node.js e PostgreSQL.", keywords: ["nodejs"] }],
     }], ["nodejs", "postgresql", "api-rest"], 1);
 
-    expect(ranked[0].matchedKeywords).toEqual([]);
+    expect(ranked[0].matchedKeywords).toEqual(["nodejs", "postgresql", "api-rest"]);
   });
 });

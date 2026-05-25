@@ -10,7 +10,7 @@ O produto nao utiliza IA generativa, LLM ou servicos externos de geracao textual
 
 - Perfil Global com contato, resumo, formacao, experiencias editaveis, skills, projetos, cursos, certificacoes e idiomas.
 - Subperfis como Backend, Dados ou Fullstack, com heranca por vinculo dos itens globais.
-- Projetos estruturados com titulo, categoria/area, resumo curto e links de repositorio/deploy.
+- Projetos estruturados com titulo, categoria/area, resumo curto, stack textual e links de repositorio/deploy.
 - Carga horaria em experiencias, cursos e certificacoes, preservada no curriculo gerado.
 - Upload de PDF somente como anexo de referencia, com visualizacao, download e remocao.
 - Analise deterministica de descricao de vaga com keywords normalizadas e categoria profissional.
@@ -60,14 +60,14 @@ backend/src/
     pdf-output.service.js
 ```
 
-`profile.service.js` mantem compatibilidade com os endpoints atuais. Novos subperfis vinculam itens globais por tabelas `Subprofile*`, evitando copias desnecessarias. `matching.service.js` coordena persistencia e chama os modulos puros testaveis.
+`profile.service.js` mantem compatibilidade com os endpoints atuais. Subperfis vinculam seletivamente skills, projetos, experiencias, formacoes, cursos, certificacoes e idiomas globais por tabelas `Subprofile*`, evitando copias desnecessarias. Dados pessoais e resumo podem ser copiados do Perfil Global para o subperfil pelo editor. `matching.service.js` coordena persistencia e chama os modulos puros testaveis.
 
 ## Modelo de dados
 
 - `CareerProfile`: representa o Perfil Global (`isGlobal`) e os subperfis.
 - `Skill`, `Education`, `Experience`, `Course`, `Certification` e `Language`: base factual do candidato.
 - `Project`, `ProjectTechnology` e `ProjectBullet`: portifolio estruturado e evidencias selecionaveis.
-- `SubprofileSkill`, `SubprofileProject`, `SubprofileExperience`, `SubprofileCourse` e `SubprofileCertification`: selecao, visibilidade, peso e adaptacao por estrategia.
+- `SubprofileSkill`, `SubprofileProject`, `SubprofileExperience`, `SubprofileEducation`, `SubprofileCourse`, `SubprofileCertification` e `SubprofileLanguage`: selecao e visibilidade por estrategia.
 - `JobAnalysis`: descricao, categoria, score, selecoes, status e encadeamento de versoes.
 - `OptimizedResume`: snapshot da selecao e arquivo PDF gerado.
 - `Job`: candidatura acompanhada no painel; quando originada pelo matching, referencia `JobAnalysis` e `OptimizedResume`.
@@ -100,7 +100,7 @@ A formula do score final no modo otimizado por vaga e:
 40% projetos compativeis
 ```
 
-O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme cadastrados no perfil selecionado, sem ranking, reescrita ou truncamento. Habilidades tecnicas especificas sao selecionadas pela vaga; competencias transversais previamente cadastradas, como Git, GitHub, Scrum, Kanban, metodologias ageis e versionamento de codigo, permanecem no curriculo independentemente da area. Para projetos, a aderencia usa somente titulo, categoria/area e resumo curto cadastrados; tecnologias, textos detalhados ou bullets legados nao alimentam o calculo. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos e informa a justificativa do ranking.
+O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme alocados no perfil selecionado, sem ranking, reescrita ou truncamento. Habilidades tecnicas especificas sao selecionadas pela vaga; competencias transversais previamente cadastradas, como Git, GitHub, Scrum, Kanban, metodologias ageis e versionamento de codigo, permanecem no curriculo independentemente da area. Para projetos, a aderencia usa titulo, categoria/area, resumo curto e stack textual cadastrados; dados legados ocultos nao alimentam o calculo. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos e informa a justificativa do ranking.
 
 O formulario de analise salva cargo, empresa, link e descricao da vaga em `JobAnalysis`. A analise permanece acessivel no historico e pode originar uma candidatura persistida; quando disponivel, o link salvo e preenchido automaticamente no cadastro de acompanhamento.
 

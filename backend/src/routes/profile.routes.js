@@ -10,6 +10,7 @@ router.delete("/profiles/:id", profileController.deleteProfile);
 router.get("/profile", profileController.getProfile);
 router.put("/profile", profileController.updateProfile);
 router.put("/profile/skills", profileController.updateSkills);
+router.put("/profile/subprofile-allocation", profileController.updateSubprofileAllocation);
 router.post("/profile/projects", profileController.addProject);
 router.put("/profile/projects/:id", profileController.updateProject);
 router.delete("/profile/projects/:id", profileController.deleteProject);

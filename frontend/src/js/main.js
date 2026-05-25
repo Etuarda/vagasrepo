@@ -337,6 +337,29 @@ function wireEvents() {
     });
   }
 
+  const formAllocation = document.getElementById("form-subprofile-allocation");
+  if (formAllocation) {
+    formAllocation.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const selected = (field) => [...formAllocation.querySelectorAll(`[name="allocation-${field}"]:checked`)].map((item) => item.value);
+      const payload = {
+        skillIds: selected("skillIds"),
+        projectIds: selected("projectIds"),
+        experienceIds: selected("experienceIds"),
+        courseIds: selected("courseIds"),
+        certificationIds: selected("certificationIds"),
+        educationIds: selected("educationIds"),
+        languageIds: selected("languageIds"),
+        copyBaseProfile: document.getElementById("allocation-copy-base")?.checked === true,
+      };
+      await runWithFeedback(
+        getSubmitButton(e, formAllocation),
+        { busyText: "Salvando...", notice: "Salvando itens do subperfil..." },
+        () => career.saveAllocation(payload)
+      );
+    });
+  }
+
   const formSkill = document.getElementById("form-skill");
   if (formSkill) {
     formSkill.addEventListener("submit", async (e) => {
@@ -456,12 +479,13 @@ function wireEvents() {
       const deployUrl = document.getElementById("project-deploy-url")?.value || "";
       const category = document.getElementById("project-category")?.value || "backend";
       const shortDescription = document.getElementById("project-short-description")?.value || "";
+      const stack = document.getElementById("project-stack")?.value || "";
 
       await runWithFeedback(
         getSubmitButton(e, formProject),
         { busyText: "Salvando...", notice: "Salvando projeto..." },
         async () => {
-          const payload = { title, category, shortDescription, repositoryUrl, deployUrl };
+          const payload = { title, category, shortDescription, stack, repositoryUrl, deployUrl };
           if (formProject.dataset.editId) await career.updateProject(formProject.dataset.editId, payload);
           else await career.addProject(payload);
           career.cancelEdit("project");

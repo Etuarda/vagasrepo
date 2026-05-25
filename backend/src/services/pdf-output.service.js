@@ -236,6 +236,7 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
         { label: item.repositoryUrl, uri: toUrl(item.repositoryUrl) },
         { label: item.deployUrl, uri: toUrl(item.deployUrl) },
       ], { size: 10.5 });
+      if (item.stack) write(ctx, `Stack: ${item.stack}`, { size: 10, color: ctx.muted, lineHeight: 13 });
       write(ctx, item.summary);
       ctx.y -= 4;
     });
