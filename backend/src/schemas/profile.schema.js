@@ -11,6 +11,7 @@ const profileSchema = z.object({
   emailContact: z.string().trim().email("E-mail de contato invalido").or(z.literal("")).default(""),
   phone: cleanString(60),
   location: cleanString(120),
+  cep: z.string().trim().regex(/^$|^\d{5}-?\d{3}$/, "CEP invalido").default(""),
   linkedin: cleanString(300),
   github: cleanString(300),
   lattes: cleanString(300),
@@ -42,26 +43,10 @@ const skillsSchema = z.object({
 const projectSchema = z.object({
   profileId: optionalUuid("Perfil invalido"),
   title: z.string().trim().min(2, "Titulo do projeto e obrigatorio").max(160),
-  description: z.string().trim().min(10, "Descricao deve ter pelo menos 10 caracteres").max(3000),
   category: cleanString(40),
-  shortDescription: cleanString(500),
-  businessProblem: cleanString(1200),
-  technicalSolution: cleanString(1200),
-  architecture: cleanString(1200),
+  shortDescription: z.string().trim().min(10, "Resumo curto deve ter pelo menos 10 caracteres").max(500),
   repositoryUrl: z.string().trim().url("Link do repositorio invalido").or(z.literal("")).default(""),
   deployUrl: z.string().trim().url("Link do deploy invalido").or(z.literal("")).default(""),
-  technologies: z
-    .array(z.string().trim().min(1).max(80))
-    .min(1, "Informe pelo menos uma tecnologia")
-    .max(40, "Informe no maximo 40 tecnologias"),
-});
-
-const projectBulletSchema = z.object({
-  profileId: optionalUuid("Perfil invalido"),
-  category: z.enum(["backend", "frontend", "fullstack", "data", "ai", "architecture", "database", "testing", "devops", "business", "accessibility", "security"]),
-  content: z.string().trim().min(10, "Bullet deve ter pelo menos 10 caracteres").max(240),
-  keywords: z.array(z.string().trim().min(1).max(80)).max(15).default([]),
-  weight: z.number().int().min(0).max(100).default(50),
 });
 
 const experienceSchema = z.object({
@@ -132,7 +117,6 @@ module.exports = {
   idParamSchema,
   skillsSchema,
   projectSchema,
-  projectBulletSchema,
   experienceSchema,
   courseSchema,
   certificationSchema,

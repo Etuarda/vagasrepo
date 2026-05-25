@@ -452,24 +452,16 @@ function wireEvents() {
     formProject.addEventListener("submit", async (e) => {
       e.preventDefault();
       const title = document.getElementById("project-title")?.value || "";
-      const description = document.getElementById("project-description")?.value || "";
       const repositoryUrl = document.getElementById("project-repository-url")?.value || "";
       const deployUrl = document.getElementById("project-deploy-url")?.value || "";
       const category = document.getElementById("project-category")?.value || "backend";
       const shortDescription = document.getElementById("project-short-description")?.value || "";
-      const businessProblem = document.getElementById("project-business-problem")?.value || "";
-      const technicalSolution = document.getElementById("project-technical-solution")?.value || "";
-      const architecture = document.getElementById("project-architecture")?.value || "";
-      const technologies = (document.getElementById("project-techs")?.value || "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
 
       await runWithFeedback(
         getSubmitButton(e, formProject),
         { busyText: "Salvando...", notice: "Salvando projeto..." },
         async () => {
-          const payload = { title, description, category, shortDescription, businessProblem, technicalSolution, architecture, repositoryUrl, deployUrl, technologies };
+          const payload = { title, category, shortDescription, repositoryUrl, deployUrl };
           if (formProject.dataset.editId) await career.updateProject(formProject.dataset.editId, payload);
           else await career.addProject(payload);
           career.cancelEdit("project");
@@ -483,33 +475,12 @@ function wireEvents() {
     projectsList.addEventListener("click", async (e) => {
       const editProject = e.target.closest("[data-edit-project]");
       if (editProject) return career.beginEdit("project", editProject.dataset.editProject);
-      const editBullet = e.target.closest("[data-edit-project-bullet]");
-      if (editBullet) return career.beginEdit("bullet", editBullet.dataset.editProjectBullet, editBullet.dataset.projectId);
       const btn = e.target.closest("[data-remove-project]");
       if (!btn) return;
       await runWithFeedback(
         btn,
         { busyText: "Removendo...", notice: "Removendo projeto..." },
         () => career.removeProject(btn.dataset.removeProject)
-      );
-    });
-    projectsList.addEventListener("submit", async (e) => {
-      const form = e.target.closest("[data-project-bullet-form]");
-      if (!form) return;
-      e.preventDefault();
-      const payload = {
-        category: form.elements.category.value,
-        content: form.elements.content.value,
-        keywords: form.elements.keywords.value.split(",").map((value) => value.trim()).filter(Boolean),
-        weight: Number(form.elements.weight.value || 50),
-      };
-      await runWithFeedback(
-        form.querySelector("button[type='submit']"),
-        { busyText: "Salvando...", notice: "Salvando bullet estruturado..." },
-        async () => {
-          if (form.dataset.editId) await career.updateProjectBullet(form.dataset.projectBulletForm, form.dataset.editId, payload);
-          else await career.addProjectBullet(form.dataset.projectBulletForm, payload);
-        }
       );
     });
   }

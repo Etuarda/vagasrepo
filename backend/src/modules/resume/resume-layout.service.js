@@ -1,7 +1,6 @@
 const RESUME_LAYOUT_RULES = Object.freeze({
   maxPages: 2,
   maxProjects: 2,
-  maxProjectBullets: 3,
   maxSkillLines: 3,
   maxSkillGroups: 4,
   titleFontSize: 23,
@@ -20,10 +19,7 @@ function estimateLines(value, charsPerLine = 108) {
 function compressResume(resume, rules = RESUME_LAYOUT_RULES) {
   const compact = {
     ...resume,
-    projects: (resume.projects || []).slice(0, rules.maxProjects).map((project) => ({
-      ...project,
-      bullets: (project.bullets || []).slice(0, rules.maxProjectBullets),
-    })),
+    projects: (resume.projects || []).slice(0, rules.maxProjects),
   };
 
   compact.layout = {

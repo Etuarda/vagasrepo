@@ -63,6 +63,7 @@ async function getMe(userId) {
       emailContact: true,
       phone: true,
       location: true,
+      cep: true,
       linkedin: true,
       github: true,
       lattes: true,

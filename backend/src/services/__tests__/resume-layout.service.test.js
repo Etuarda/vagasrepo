@@ -1,7 +1,7 @@
 const { compressResume, RESUME_LAYOUT_RULES } = require("../../modules/resume/resume-layout.service");
 
 describe("resume layout", () => {
-  it("preserva conteudo fixo e limita somente selecao de projetos e bullets", () => {
+  it("preserva conteudo fixo e limita somente a selecao de projetos", () => {
     const summary = "x".repeat(700);
     const experienceDescription = "atividade ".repeat(120);
     const compact = compressResume({
@@ -10,7 +10,7 @@ describe("resume layout", () => {
       courses: [{ title: "Curso completo" }],
       certifications: [{ title: "Certificacao completa" }],
       experiences: [{ description: experienceDescription }],
-      projects: [{ bullets: ["1", "2", "3", "4"] }, { bullets: [] }, { bullets: [] }],
+      projects: [{ title: "A" }, { title: "B" }, { title: "C" }],
     });
     expect(RESUME_LAYOUT_RULES.maxPages).toBe(2);
     expect(RESUME_LAYOUT_RULES.bodyFontSize).toBe(11);
@@ -20,6 +20,5 @@ describe("resume layout", () => {
     expect(compact.courses).toHaveLength(1);
     expect(compact.certifications).toHaveLength(1);
     expect(compact.projects).toHaveLength(2);
-    expect(compact.projects[0].bullets).toHaveLength(3);
   });
 });

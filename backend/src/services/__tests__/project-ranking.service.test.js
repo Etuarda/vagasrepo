@@ -1,19 +1,27 @@
-const { rankProjects, selectBullets } = require("../../modules/matching/project-ranking.service");
+const { rankProjects } = require("../../modules/matching/project-ranking.service");
 
 const projects = [
   {
     id: "one",
-    title: "API",
-    technologies: ["Node.js", "PostgreSQL"],
+    title: "API de assinaturas",
+    category: "backend",
+    shortDescription: "API REST em Node.js com PostgreSQL para assinaturas.",
     relevanceWeight: 70,
-    bullets: [
-      { content: "Implementei API REST em Node.js com JWT.", keywords: ["nodejs", "api-rest", "jwt"], weight: 90, isActive: true },
-      { content: "Modelei tabelas PostgreSQL para persistencia.", keywords: ["postgresql"], weight: 80, isActive: true },
-      { content: "Documentei telas sem relacao com backend.", keywords: ["figma"], weight: 1, isActive: true },
-    ],
   },
-  { id: "two", title: "Dashboard", technologies: ["React"], bullets: [], relevanceWeight: 40 },
-  { id: "three", title: "Oculto", technologies: ["Node.js"], bullets: [], isVisible: false },
+  {
+    id: "two",
+    title: "Dashboard",
+    category: "frontend",
+    shortDescription: "Interface React para indicadores.",
+    relevanceWeight: 40,
+  },
+  {
+    id: "three",
+    title: "Oculto",
+    category: "backend",
+    shortDescription: "Servico Node.js.",
+    isVisible: false,
+  },
 ];
 
 describe("project ranking", () => {
@@ -25,9 +33,17 @@ describe("project ranking", () => {
     expect(ranked[0].reason).toContain("nodejs");
   });
 
-  it("seleciona no maximo tres bullets cadastrados e aderentes", () => {
-    const selected = selectBullets(projects[0], ["nodejs", "postgresql", "jwt"], 3);
-    expect(selected.length).toBeLessThanOrEqual(3);
-    expect(selected.map((item) => item.content).join(" ")).not.toContain("Documentei");
+  it("ignora conteudo legado que nao pertence aos cinco campos do projeto", () => {
+    const ranked = rankProjects([{
+      id: "legacy",
+      title: "Portal",
+      category: "frontend",
+      shortDescription: "Tela institucional.",
+      technologies: ["Node.js"],
+      technicalSolution: "API REST com PostgreSQL.",
+      bullets: [{ content: "Node.js e PostgreSQL.", keywords: ["nodejs"] }],
+    }], ["nodejs", "postgresql", "api-rest"], 1);
+
+    expect(ranked[0].matchedKeywords).toEqual([]);
   });
 });

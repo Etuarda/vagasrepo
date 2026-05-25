@@ -10,12 +10,12 @@ O produto nao utiliza IA generativa, LLM ou servicos externos de geracao textual
 
 - Perfil Global com contato, resumo, formacao, experiencias editaveis, skills, projetos, cursos, certificacoes e idiomas.
 - Subperfis como Backend, Dados ou Fullstack, com heranca por vinculo dos itens globais.
-- Projetos estruturados com stack, links, solucao tecnica, arquitetura e bullets reutilizaveis.
+- Projetos estruturados com titulo, categoria/area, resumo curto e links de repositorio/deploy.
 - Carga horaria em experiencias, cursos e certificacoes, preservada no curriculo gerado.
 - Upload de PDF somente como anexo de referencia, com visualizacao, download e remocao.
 - Analise deterministica de descricao de vaga com keywords normalizadas e categoria profissional.
-- Ranking explicavel de skills, projetos e bullets.
-- Curriculo PDF ATS-friendly, legivel, com no maximo dois projetos e tres bullets selecionados por projeto.
+- Ranking explicavel de skills e projetos.
+- Curriculo PDF ATS-friendly, legivel, com no maximo dois projetos selecionados por vaga.
 - Historico de analises editavel e versionado, com estados `draft`, `reviewed`, `applied`, `archived` e `rejected`.
 - Registro opcional de candidatura a partir do curriculo gerado, vinculado a analise e ao curriculo otimizado.
 - Registro da data de aplicacao ao marcar um curriculo como aplicado.
@@ -100,7 +100,7 @@ A formula do score final no modo otimizado por vaga e:
 40% projetos compativeis
 ```
 
-O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme cadastrados no perfil selecionado, sem ranking, reescrita ou truncamento. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos, seleciona ate tres bullets cadastrados por projeto e informa a justificativa do ranking.
+O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme cadastrados no perfil selecionado, sem ranking, reescrita ou truncamento. Para projetos, a aderencia usa somente titulo, categoria/area e resumo curto cadastrados; tecnologias, textos detalhados ou bullets legados nao alimentam o calculo. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos e informa a justificativa do ranking.
 
 O formulario de analise salva cargo, empresa, link e descricao da vaga em `JobAnalysis`. A analise permanece acessivel no historico e pode originar uma candidatura persistida; quando disponivel, o link salvo e preenchido automaticamente no cadastro de acompanhamento.
 
@@ -114,7 +114,8 @@ A candidatura nasce com status `Ativa` e fase `Curriculo gerado`, salvo se o usu
 
 ## Layout do curriculo
 
-O PDF incorpora Arial quando a fonte esta disponivel ou configurada, com nome em 23 pt, secoes em 13 pt azul escuro e corpo em 11 pt. Links de e-mail, GitHub, LinkedIn, Lattes, repositorios, deploys e credenciais sao independentes, azuis e clicaveis.
+O PDF incorpora Arial quando a fonte esta disponivel ou configurada, com nome em 23 pt, secoes em 13 pt azul escuro e corpo em 11 pt. O cabecalho inclui cidade/estado e CEP quando cadastrados. Links de e-mail, GitHub, LinkedIn, Lattes, repositorios, deploys e credenciais sao exibidos integralmente, independentes, azuis e clicaveis.
+Em cursos e certificacoes, apenas o nome do item recebe destaque em negrito; instituicao/emissor, periodo e duracao sao exibidos como metadados regulares para preservar hierarquia visual.
 
 A ordem gerada e: cabecalho, resumo, formacao academica, experiencia profissional, projetos, habilidades e competencias, certificacoes/cursos e idiomas. O compilador permite duas paginas para preservar legibilidade; nao reduz fontes abaixo de 10 pt nem corta dados fixos preenchidos pelo usuario.
 
@@ -156,11 +157,11 @@ cd backend
 npm test
 ```
 
-A suite cobre normalizacao, classificacao, matching sem invencao de skills, ranking/limites de projetos e bullets, compilacao compacta, layout, status/versionamento e sessao autenticada.
+A suite cobre normalizacao, classificacao, matching sem invencao de skills, ranking/limites de projetos, compilacao compacta, layout, status/versionamento e sessao autenticada.
 
 ## Roadmap
 
-- MVP 1: Perfil Global, subperfis vinculados, projetos/bullets, matching deterministico, PDF compacto e historico aplicado/versionado.
+- MVP 1: Perfil Global, subperfis vinculados, projetos com cinco campos essenciais, matching deterministico, PDF compacto e historico aplicado/versionado.
 - MVP 2: controles completos de peso/visibilidade por item no editor comparativo de subperfis e aprimoramento de visualizacao do historico.
 - Futuro: importacao automatica de PDF somente com extracao revisavel e confirmacao manual antes de persistir dados estruturados.
 - Futuro: exportacao para Google Docs usando a camada `GoogleDocsExport`, com OAuth implementado separadamente.

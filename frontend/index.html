@@ -202,10 +202,11 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input type="text" id="profile-name" required placeholder="Nome completo" class="editorial-input" />
                 <input type="text" id="profile-profile-name" required placeholder="Nome do perfil (ex: Frontend)" class="editorial-input" />
-                <input type="text" id="profile-title-field" placeholder="Título profissional" class="editorial-input" />
+                <input type="text" id="profile-title-field" placeholder="Título profissional" class="editorial-input md:col-span-2" />
                 <input type="email" id="profile-email-contact" placeholder="E-mail de contato" class="editorial-input" />
                 <input type="text" id="profile-phone" placeholder="Telefone" class="editorial-input" />
                 <input type="text" id="profile-location" placeholder="Cidade / Estado" class="editorial-input" />
+                <input type="text" id="profile-cep" inputmode="numeric" placeholder="CEP (ex: 60123-456)" class="editorial-input" />
                 <input type="url" id="profile-linkedin" placeholder="LinkedIn" class="editorial-input" />
                 <input type="url" id="profile-github" placeholder="GitHub ou portfolio" class="editorial-input" />
                 <input type="url" id="profile-lattes" placeholder="Currículo Lattes (opcional)" class="editorial-input md:col-span-2" />
@@ -282,14 +283,9 @@
               <select id="project-category" class="editorial-input text-sm bg-white">
                 <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="fullstack">Fullstack</option><option value="data">Dados</option><option value="devops">DevOps</option><option value="ai">IA</option>
               </select>
-              <input type="text" id="project-techs" required placeholder="Tecnologias separadas por vírgula" class="editorial-input text-sm" />
-              <input type="text" id="project-short-description" placeholder="Resumo curto para currículo" class="editorial-input text-sm" />
+              <textarea id="project-short-description" required minlength="10" maxlength="500" rows="3" placeholder="Resumo curto para currículo" class="editorial-input text-sm md:col-span-2"></textarea>
               <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
               <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
-              <textarea id="project-description" required rows="3" placeholder="Descrição do projeto" class="editorial-input text-sm md:col-span-2"></textarea>
-              <textarea id="project-business-problem" rows="2" placeholder="Problema de negócio resolvido" class="editorial-input text-sm md:col-span-2"></textarea>
-              <textarea id="project-technical-solution" rows="2" placeholder="Solução técnica estruturada" class="editorial-input text-sm"></textarea>
-              <textarea id="project-architecture" rows="2" placeholder="Arquitetura aplicada" class="editorial-input text-sm"></textarea>
               <div class="md:col-span-2 flex justify-end">
                 <button type="submit" data-submit-label="Cadastrar projeto" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
                   Cadastrar projeto
@@ -308,7 +304,7 @@
                 <input type="text" id="course-title" required placeholder="Nome do curso" class="editorial-input text-sm" />
                 <input type="text" id="course-institution" placeholder="Instituição" class="editorial-input text-sm" />
                 <input type="text" id="course-period" placeholder="Período" class="editorial-input text-sm" />
-                <input type="text" id="course-workload" placeholder="Carga horária (ex: 360h)" class="editorial-input text-sm" />
+                <input type="text" id="course-workload" placeholder="Duração (ex: 360h)" class="editorial-input text-sm" />
                 <textarea id="course-description" rows="2" placeholder="Descrição curta" class="editorial-input text-sm"></textarea>
                 <button type="submit" data-submit-label="Adicionar curso" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar curso</button>
                 <button type="button" data-cancel-edit="course" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
@@ -318,7 +314,7 @@
                 <input type="text" id="certification-title" required placeholder="Nome da certificação" class="editorial-input text-sm" />
                 <input type="text" id="certification-issuer" placeholder="Emissor" class="editorial-input text-sm" />
                 <input type="text" id="certification-period" placeholder="Data ou período" class="editorial-input text-sm" />
-                <input type="text" id="certification-workload" placeholder="Carga horária (ex: 80h)" class="editorial-input text-sm" />
+                <input type="text" id="certification-workload" placeholder="Duração (ex: 80h)" class="editorial-input text-sm" />
                 <input type="url" id="certification-url" placeholder="Link da credencial" class="editorial-input text-sm" />
                 <button type="submit" data-submit-label="Adicionar certificação" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar certificação</button>
                 <button type="button" data-cancel-edit="certification" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>

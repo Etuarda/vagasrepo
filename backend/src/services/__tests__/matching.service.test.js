@@ -30,7 +30,7 @@ describe("deterministic matching", () => {
   it("ignora projetos sem titulo estrutural valido", () => {
     const result = analyzeProfile({
       skillItems: [{ name: "Node.js", category: "backend" }],
-      projects: [{ id: "invalid", title: "Implementação de um API Gateway centralizado", description: "Node.js", technologies: ["Node.js"], bullets: [] }],
+      projects: [{ id: "invalid", title: "Implementação de um API Gateway centralizado", shortDescription: "Projeto Node.js para API REST." }],
       courses: [],
       certifications: [],
       experiences: [],

@@ -22,7 +22,7 @@ function validStructuredProject(project) {
   const title = String(project.title || "").trim();
   return title.length >= 2 &&
     !/^(modelagem|otimizacao|otimização|implementacao|implementação|construcao|construção|desenvolvimento|integracao|integração)\b/i.test(title) &&
-    Boolean(project.description || project.shortDescription || project.bullets?.length);
+    Boolean(String(project.shortDescription || "").trim());
 }
 
 function getMissingResumeFields(profile) {

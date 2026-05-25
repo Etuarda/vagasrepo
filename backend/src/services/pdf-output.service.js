@@ -70,6 +70,7 @@ function write(ctx, value, { size = 11, font = ctx.font, color = ctx.ink, indent
 
 function writeSegments(ctx, segments, { size = 10, font = ctx.font, lineHeight = 13 } = {}) {
   const separator = " | ";
+  const maxX = PAGE.width - MARGIN;
   let x = MARGIN;
   let hasItem = false;
   const beginLine = () => {
@@ -79,11 +80,36 @@ function writeSegments(ctx, segments, { size = 10, font = ctx.font, lineHeight =
   };
   beginLine();
 
+  const drawLabel = (label, uri) => {
+    let remaining = label;
+    while (remaining) {
+      let length = remaining.length;
+      while (length > 1 && font.widthOfTextAtSize(remaining.slice(0, length), size) > maxX - x) {
+        length -= 1;
+      }
+      if (length === 1 && font.widthOfTextAtSize(remaining.slice(0, length), size) > maxX - x && x > MARGIN) {
+        ctx.y -= lineHeight;
+        beginLine();
+        continue;
+      }
+      const part = remaining.slice(0, length);
+      const partWidth = font.widthOfTextAtSize(part, size);
+      ctx.page.drawText(part, { x, y: ctx.y, size, font, color: uri ? ctx.link : ctx.muted });
+      addLink(ctx, x, ctx.y, partWidth, size, uri);
+      x += partWidth;
+      remaining = remaining.slice(length);
+      if (remaining) {
+        ctx.y -= lineHeight;
+        beginLine();
+      }
+    }
+  };
+
   (segments || []).filter((item) => text(item.label)).forEach((item) => {
     const label = text(item.label);
     const separatorWidth = hasItem ? font.widthOfTextAtSize(separator, size) : 0;
     const labelWidth = font.widthOfTextAtSize(label, size);
-    if (hasItem && x + separatorWidth + labelWidth > PAGE.width - MARGIN) {
+    if (hasItem && x + separatorWidth + labelWidth > maxX) {
       ctx.y -= lineHeight;
       beginLine();
     }
@@ -91,10 +117,7 @@ function writeSegments(ctx, segments, { size = 10, font = ctx.font, lineHeight =
       ctx.page.drawText(separator, { x, y: ctx.y, size, font, color: ctx.muted });
       x += separatorWidth;
     }
-    const color = item.uri ? ctx.link : ctx.muted;
-    ctx.page.drawText(label, { x, y: ctx.y, size, font, color });
-    addLink(ctx, x, ctx.y, labelWidth, size, item.uri);
-    x += labelWidth;
+    drawLabel(label, item.uri);
     hasItem = true;
   });
   if (hasItem) ctx.y -= lineHeight;
@@ -174,13 +197,14 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
   if (resume.header.title) write(ctx, resume.header.title, { size: 11, font: bold, lineHeight: 16 });
   writeSegments(ctx, [
     { label: resume.header.location },
+    { label: resume.header.cep && `CEP ${resume.header.cep}` },
     { label: resume.header.phone },
     { label: resume.header.email, uri: resume.header.email ? `mailto:${resume.header.email}` : "" },
   ]);
   writeSegments(ctx, [
-    { label: resume.header.github && "GitHub", uri: toUrl(resume.header.github) },
-    { label: resume.header.linkedin && "LinkedIn", uri: toUrl(resume.header.linkedin) },
-    { label: resume.header.lattes && "Lattes", uri: toUrl(resume.header.lattes) },
+    { label: resume.header.github, uri: toUrl(resume.header.github) },
+    { label: resume.header.linkedin, uri: toUrl(resume.header.linkedin) },
+    { label: resume.header.lattes, uri: toUrl(resume.header.lattes) },
   ]);
 
   if (resume.summary) {
@@ -209,12 +233,10 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
     resume.projects.forEach((item) => {
       write(ctx, [item.title, item.category].filter(Boolean).join(" - "), { font: bold });
       writeSegments(ctx, [
-        { label: item.repositoryUrl && "GitHub", uri: toUrl(item.repositoryUrl) },
-        { label: item.deployUrl && "Deploy", uri: toUrl(item.deployUrl) },
+        { label: item.repositoryUrl, uri: toUrl(item.repositoryUrl) },
+        { label: item.deployUrl, uri: toUrl(item.deployUrl) },
       ], { size: 10.5 });
-      if (item.stack) write(ctx, `Tecnologias: ${item.stack}`, { size: 10, color: ctx.muted, lineHeight: 13 });
       write(ctx, item.summary);
-      item.bullets.forEach((value) => bullet(ctx, value));
       ctx.y -= 4;
     });
   }
@@ -225,14 +247,16 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
   if (resume.certifications.length || resume.courses.length) {
     section(ctx, "Certificacoes / Cursos");
     resume.certifications.forEach((item) => {
-      const title = item.workload ? `${item.title} (${item.workload})` : item.title;
-      write(ctx, [title, item.issuer, item.period].filter(Boolean).join(" | "), { font: bold });
-      if (item.credentialUrl) writeSegments(ctx, [{ label: "Credencial", uri: toUrl(item.credentialUrl) }], { size: 10.5 });
+      write(ctx, item.title, { font: bold });
+      write(ctx, [item.issuer, item.period, item.workload && `Duracao: ${item.workload}`].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
+      if (item.credentialUrl) writeSegments(ctx, [{ label: item.credentialUrl, uri: toUrl(item.credentialUrl) }], { size: 10.5 });
+      ctx.y -= 4;
     });
     resume.courses.forEach((item) => {
-      const title = item.workload ? `${item.title} (${item.workload})` : item.title;
-      write(ctx, [title, item.institution, item.period].filter(Boolean).join(" | "), { font: bold });
+      write(ctx, item.title, { font: bold });
+      write(ctx, [item.institution, item.period, item.workload && `Duracao: ${item.workload}`].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
       if (item.description) write(ctx, item.description);
+      ctx.y -= 4;
     });
   }
   if (resume.languagesInline) {

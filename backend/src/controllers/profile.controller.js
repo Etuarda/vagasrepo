@@ -3,7 +3,6 @@ const {
   createProfileSchema,
   skillsSchema,
   projectSchema,
-  projectBulletSchema,
   experienceSchema,
   courseSchema,
   certificationSchema,
@@ -105,29 +104,6 @@ async function deleteProject(req, res, next) {
     const { profileId } = profileIdSchema.parse(req.query);
     const { id } = idParamSchema.parse(req.params);
     const profile = await profileService.deleteProject(req.userId, profileId, id);
-    return res.json({ projects: profile.projects, user: profile });
-  } catch (err) {
-    return next(err);
-  }
-}
-
-async function addProjectBullet(req, res, next) {
-  try {
-    const { id } = idParamSchema.parse(req.params);
-    const payload = projectBulletSchema.parse(req.body);
-    const profile = await profileService.addProjectBullet(req.userId, payload.profileId, id, payload);
-    return res.status(201).json({ projects: profile.projects, user: profile });
-  } catch (err) {
-    return next(err);
-  }
-}
-
-async function updateProjectBullet(req, res, next) {
-  try {
-    const { id } = idParamSchema.parse({ id: req.params.id });
-    const { id: bulletId } = idParamSchema.parse({ id: req.params.bulletId });
-    const payload = projectBulletSchema.parse(req.body);
-    const profile = await profileService.updateProjectBullet(req.userId, payload.profileId, id, bulletId, payload);
     return res.json({ projects: profile.projects, user: profile });
   } catch (err) {
     return next(err);
@@ -381,8 +357,6 @@ module.exports = {
   addProject,
   updateProject,
   deleteProject,
-  addProjectBullet,
-  updateProjectBullet,
   addExperience,
   updateExperience,
   deleteExperience,

@@ -35,11 +35,9 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
     id: project.id,
     title: project.customTitle || project.title,
     category: project.category || "",
-    stack: (project.technologies || []).join(", "),
     repositoryUrl: project.repositoryUrl,
     deployUrl: project.deployUrl,
-    summary: project.shortDescription || project.description || "",
-    bullets: (project.selectedBullets || []).map((bullet) => bullet.content).filter(Boolean),
+    summary: project.shortDescription || "",
   }));
 
   return compressResume({
@@ -47,6 +45,7 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
       name: profile.name,
       title: profile.title || "",
       location: profile.location || "",
+      cep: profile.cep || "",
       email: profile.emailContact || "",
       phone: profile.phone || "",
       linkedin: profile.linkedin || "",

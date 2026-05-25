@@ -5,6 +5,7 @@ describe("resume compiler", () => {
     name: "Pessoa Teste",
     title: "Backend Developer",
     location: "Fortaleza/CE",
+    cep: "60123-456",
     emailContact: "pessoa@example.com",
     phone: "85999999999",
     linkedin: "https://linkedin.com/in/pessoa",
@@ -35,14 +36,13 @@ describe("resume compiler", () => {
       shortDescription: "Resumo curto exatamente cadastrado pelo usuario.",
       repositoryUrl: "https://github.com/pessoa/api",
       deployUrl: "https://api.example.com",
-      technologies: ["Node.js"],
-      selectedBullets: [{ content: "Implementei API em Node.js." }, { content: "Integrei PostgreSQL." }, { content: "Configurei testes." }, { content: "Excesso." }],
     }],
   };
 
   it("preserva secoes fixas e adapta apenas skills e projetos", () => {
     const resume = compileResume({ profile, matchResult: match });
     expect(resume.header.title).toBe(profile.title);
+    expect(resume.header.cep).toBe(profile.cep);
     expect(resume.summary).toBe(profile.summary);
     expect(resume.education).toEqual(profile.educations);
     expect(resume.experiences[0].description).toBe(profile.experiences[0].description);
@@ -52,15 +52,15 @@ describe("resume compiler", () => {
     expect(resume.skillsInline).toContain("Backend: Node.js");
     expect(resume.skillsInline).not.toContain("Docker");
     expect(resume.projects[0].summary).toBe("Resumo curto exatamente cadastrado pelo usuario.");
-    expect(resume.projects[0].bullets).toHaveLength(3);
+    expect(resume.projects[0]).not.toHaveProperty("stack");
+    expect(resume.projects[0]).not.toHaveProperty("bullets");
   });
 
-  it("usa a descricao cadastrada como resumo para projeto legado sem resumo curto", () => {
+  it("nao usa descricao legada como resumo de projeto", () => {
     const resume = compileResume({
       profile,
-      matchResult: { ...match, selectedProjects: [{ id: "legacy", title: "Legado", description: "API cadastrada anteriormente.", technologies: ["Node.js"] }] },
+      matchResult: { ...match, selectedProjects: [{ id: "legacy", title: "Legado", description: "API cadastrada anteriormente." }] },
     });
-    expect(resume.projects[0].summary).toBe("API cadastrada anteriormente.");
-    expect(resume.projects[0].bullets).toEqual([]);
+    expect(resume.projects[0].summary).toBe("");
   });
 });

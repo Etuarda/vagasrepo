@@ -5,10 +5,6 @@ const profileInclude = {
   skills: { orderBy: { name: "asc" } },
   projects: {
     orderBy: { createdAt: "desc" },
-    include: {
-      technologies: { orderBy: { name: "asc" } },
-      bullets: { where: { isActive: true }, orderBy: [{ weight: "desc" }, { createdAt: "asc" }] },
-    },
   },
   experiences: { orderBy: { createdAt: "desc" } },
   courses: { orderBy: { createdAt: "desc" } },
@@ -18,14 +14,7 @@ const profileInclude = {
   subprofileSkills: { where: { isVisible: true }, include: { skill: true }, orderBy: { relevanceWeight: "desc" } },
   subprofileProjects: {
     where: { isVisible: true },
-    include: {
-      project: {
-        include: {
-          technologies: { orderBy: { name: "asc" } },
-          bullets: { where: { isActive: true }, orderBy: { weight: "desc" } },
-        },
-      },
-    },
+    include: { project: true },
     orderBy: { relevanceWeight: "desc" },
   },
   subprofileExperiences: { where: { isVisible: true }, include: { experience: true }, orderBy: { relevanceWeight: "desc" } },
@@ -56,6 +45,7 @@ function serializeProfile(profile) {
     emailContact: profile.emailContact || "",
     phone: profile.phone || "",
     location: profile.location || "",
+    cep: profile.cep || "",
     linkedin: profile.linkedin || "",
     github: profile.github || "",
     lattes: profile.lattes || "",
@@ -67,24 +57,11 @@ function serializeProfile(profile) {
     projects: projects.map((project) => ({
       id: project.id,
       title: project.customTitle || project.title,
-      description: project.description,
       category: project.category || "other",
-      shortDescription: project.customSummary || project.shortDescription || project.description,
-      businessProblem: project.businessProblem || "",
-      technicalSolution: project.technicalSolution || "",
-      architecture: project.architecture || "",
+      shortDescription: project.customSummary || project.shortDescription || "",
       relevanceWeight: project.relevanceWeight || 50,
       repositoryUrl: project.repositoryUrl || "",
       deployUrl: project.deployUrl || "",
-      technologies: (project.technologies || []).map((tech) => tech.name),
-      bullets: (project.bullets || []).map((bullet) => ({
-        id: bullet.id,
-        category: bullet.category,
-        content: bullet.content,
-        keywords: bullet.keywords || [],
-        weight: bullet.weight,
-        isActive: bullet.isActive,
-      })),
     })),
     experiences: experiences.map((experience) => ({
       id: experience.id,
@@ -159,6 +136,7 @@ async function ensureDefaultProfile(userId) {
       emailContact: user.emailContact || user.email || "",
       phone: user.phone || "",
       location: user.location || "",
+      cep: user.cep || "",
       linkedin: user.linkedin || "",
       github: user.github || "",
       lattes: user.lattes || "",
@@ -216,6 +194,7 @@ async function createProfile(userId, { profileName }) {
       emailContact: base.emailContact,
       phone: base.phone,
       location: base.location,
+      cep: base.cep,
       linkedin: base.linkedin,
       github: base.github,
       lattes: base.lattes,
@@ -345,25 +324,21 @@ async function updateSkills(userId, profileId, skills) {
 
 async function addProject(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
-  const technologies = [...new Set(data.technologies.map((tech) => tech.trim()).filter(Boolean))];
 
   const ownerProfile = profile.isGlobal ? profile : await ensureDefaultProfile(userId);
   const project = await prisma.project.create({
     data: {
       title: data.title,
-      description: data.description,
-      shortDescription: data.shortDescription || data.description,
+      description: data.shortDescription,
+      shortDescription: data.shortDescription,
       category: data.category || "other",
-      businessProblem: data.businessProblem || "",
-      technicalSolution: data.technicalSolution || "",
-      architecture: data.architecture || "",
+      businessProblem: "",
+      technicalSolution: "",
+      architecture: "",
       repositoryUrl: data.repositoryUrl || "",
       deployUrl: data.deployUrl || "",
       userId,
       profileId: ownerProfile.id,
-      technologies: {
-        create: technologies.map((name) => ({ name, normalizedName: normalizeTerm(name) })),
-      },
     },
   });
   if (!profile.isGlobal) {
@@ -381,22 +356,23 @@ async function updateProject(userId, profileId, id, data) {
     err.statusCode = 404;
     throw err;
   }
-  const technologies = [...new Set(data.technologies.map((tech) => tech.trim()).filter(Boolean))];
   await prisma.project.update({
     where: { id: project.id },
     data: {
       title: data.title,
-      description: data.description,
-      shortDescription: data.shortDescription || data.description,
+      description: data.shortDescription,
+      shortDescription: data.shortDescription,
       category: data.category || "other",
-      businessProblem: data.businessProblem || "",
-      technicalSolution: data.technicalSolution || "",
-      architecture: data.architecture || "",
+      businessProblem: "",
+      technicalSolution: "",
+      architecture: "",
       repositoryUrl: data.repositoryUrl || "",
       deployUrl: data.deployUrl || "",
       technologies: {
         deleteMany: {},
-        create: technologies.map((name) => ({ name, normalizedName: normalizeTerm(name) })),
+      },
+      bullets: {
+        deleteMany: {},
       },
     },
   });
@@ -412,63 +388,6 @@ async function deleteProject(userId, profileId, id) {
   const result = await prisma.project.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
     const err = new Error("Projeto não encontrado");
-    err.statusCode = 404;
-    throw err;
-  }
-  return getProfile(userId, profile.id);
-}
-
-async function addProjectBullet(userId, profileId, projectId, data) {
-  const profile = await resolveProfile(userId, profileId);
-  const project = await prisma.project.findFirst({
-    where: {
-      id: projectId,
-      userId,
-      OR: [{ profileId: profile.id }, { subprofiles: { some: { subprofileId: profile.id, isVisible: true } } }],
-    },
-  });
-  if (!project) {
-    const err = new Error("Projeto nao encontrado");
-    err.statusCode = 404;
-    throw err;
-  }
-  await prisma.projectBullet.create({
-    data: {
-      projectId,
-      category: data.category,
-      content: data.content,
-      keywords: data.keywords.map(normalizeTerm),
-      weight: data.weight,
-    },
-  });
-  return getProfile(userId, profile.id);
-}
-
-async function updateProjectBullet(userId, profileId, projectId, id, data) {
-  const profile = await resolveProfile(userId, profileId);
-  const project = await prisma.project.findFirst({
-    where: {
-      id: projectId,
-      userId,
-      OR: [{ profileId: profile.id }, { subprofiles: { some: { subprofileId: profile.id, isVisible: true } } }],
-    },
-  });
-  if (!project) {
-    const err = new Error("Projeto nao encontrado");
-    err.statusCode = 404;
-    throw err;
-  }
-  const result = await prisma.projectBullet.updateMany({
-    where: { id, projectId },
-    data: {
-      category: data.category,
-      content: data.content,
-      keywords: data.keywords.map(normalizeTerm),
-      weight: data.weight,
-    },
-  });
-  if (!result.count) {
-    const err = new Error("Bullet nao encontrado");
     err.statusCode = 404;
     throw err;
   }
@@ -647,8 +566,6 @@ module.exports = {
   updateSkills,
   addProject,
   updateProject,
-  addProjectBullet,
-  updateProjectBullet,
   deleteProject,
   addExperience,
   updateExperience,

@@ -105,10 +105,10 @@ function renderProjects() {
             <div>
               <h4 class="font-serif text-2xl">${escapeHtml(project.title)}</h4>
               <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(project.category || "other")}</p>
-              <p class="text-sm text-taupe mt-2 leading-relaxed">${escapeHtml(project.shortDescription || project.description)}</p>
+              <p class="text-sm text-taupe mt-2 leading-relaxed">${escapeHtml(project.shortDescription)}</p>
               <div class="flex flex-wrap gap-4 mt-3">
-                ${project.repositoryUrl ? `<a href="${escapeHtml(project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Repositório</a>` : ""}
-                ${project.deployUrl ? `<a href="${escapeHtml(project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Deploy</a>` : ""}
+                ${project.repositoryUrl ? `<a href="${escapeHtml(project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(project.repositoryUrl)}</a>` : ""}
+                ${project.deployUrl ? `<a href="${escapeHtml(project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(project.deployUrl)}</a>` : ""}
               </div>
             </div>
             <div class="flex gap-3">
@@ -116,21 +116,6 @@ function renderProjects() {
               <button type="button" data-remove-project="${project.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
             </div>
           </div>
-          <div class="flex flex-wrap gap-2 mt-4">
-            ${(project.technologies || []).map((tech) => `<span class="tag-pill">${escapeHtml(tech)}</span>`).join("")}
-          </div>
-          <div class="mt-4 space-y-2">
-            ${(project.bullets || []).map((bullet) => `<p class="text-sm text-taupe flex justify-between gap-3"><span>- ${escapeHtml(bullet.content)}</span><button type="button" data-edit-project-bullet="${bullet.id}" data-project-id="${project.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button></p>`).join("")}
-          </div>
-          <form data-project-bullet-form="${project.id}" class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4 border-t border-borderLight pt-4">
-            <select name="category" class="editorial-input text-xs bg-white">
-              <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="data">Dados</option><option value="architecture">Arquitetura</option><option value="devops">DevOps</option><option value="business">Negócio</option>
-            </select>
-            <input name="content" required minlength="10" maxlength="240" placeholder="Bullet factual reutilizável" class="editorial-input text-xs md:col-span-2" />
-            <button type="submit" data-bullet-submit-label="Adicionar bullet" class="bg-ink text-paper rounded-full text-[10px] font-bold uppercase">Adicionar bullet</button>
-            <input name="keywords" placeholder="Keywords: node, sql, docker" class="editorial-input text-xs md:col-span-3" />
-            <input name="weight" type="number" min="0" max="100" value="50" class="editorial-input text-xs" />
-          </form>
         </article>
       `
     )
@@ -193,7 +178,7 @@ function renderCoursesAndCertifications() {
                 <div class="flex items-start justify-between gap-4">
                   <div>
                     <h4 class="font-bold">${escapeHtml(course.title)}</h4>
-                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(course.institution || "Instituição não informada")} ${course.period ? ` | ${escapeHtml(course.period)}` : ""}${course.workload ? ` | ${escapeHtml(course.workload)}` : ""}</p>
+                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(course.institution || "Instituição não informada")} ${course.period ? ` | ${escapeHtml(course.period)}` : ""}${course.workload ? ` | Duração: ${escapeHtml(course.workload)}` : ""}</p>
                     ${course.description ? `<p class="text-sm text-taupe mt-3">${escapeHtml(course.description)}</p>` : ""}
                   </div>
                   <div class="flex gap-3"><button type="button" data-edit-course="${course.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button><button type="button" data-remove-course="${course.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button></div>
@@ -215,8 +200,8 @@ function renderCoursesAndCertifications() {
                 <div class="flex items-start justify-between gap-4">
                   <div>
                     <h4 class="font-bold">${escapeHtml(certification.title)}</h4>
-                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(certification.issuer || "Emissor não informado")} ${certification.period ? ` | ${escapeHtml(certification.period)}` : ""}${certification.workload ? ` | ${escapeHtml(certification.workload)}` : ""}</p>
-                    ${certification.credentialUrl ? `<a href="${escapeHtml(certification.credentialUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest underline">Credencial</a>` : ""}
+                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(certification.issuer || "Emissor não informado")} ${certification.period ? ` | ${escapeHtml(certification.period)}` : ""}${certification.workload ? ` | Duração: ${escapeHtml(certification.workload)}` : ""}</p>
+                    ${certification.credentialUrl ? `<a href="${escapeHtml(certification.credentialUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-xs text-[#0563C1] underline break-all">${escapeHtml(certification.credentialUrl)}</a>` : ""}
                   </div>
                   <div class="flex gap-3"><button type="button" data-edit-certification="${certification.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button><button type="button" data-remove-certification="${certification.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button></div>
                 </div>
@@ -238,6 +223,7 @@ function renderProfileForm() {
   setValue("profile-email-contact", profile.emailContact);
   setValue("profile-phone", profile.phone);
   setValue("profile-location", profile.location);
+  setValue("profile-cep", profile.cep);
   setValue("profile-linkedin", profile.linkedin);
   setValue("profile-github", profile.github);
   setValue("profile-lattes", profile.lattes);
@@ -428,8 +414,8 @@ function renderMatchResult(result) {
                 </div>
                 <p class="text-sm text-taupe mt-2">${escapeHtml(item.reason)}</p>
                 <div class="flex flex-wrap gap-4 mt-3">
-                  ${item.project.repositoryUrl ? `<a href="${escapeHtml(item.project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Repositório</a>` : ""}
-                  ${item.project.deployUrl ? `<a href="${escapeHtml(item.project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Deploy</a>` : ""}
+                  ${item.project.repositoryUrl ? `<a href="${escapeHtml(item.project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(item.project.repositoryUrl)}</a>` : ""}
+                  ${item.project.deployUrl ? `<a href="${escapeHtml(item.project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(item.project.deployUrl)}</a>` : ""}
                 </div>
               </article>
             `
@@ -519,6 +505,7 @@ export const career = {
       emailContact: document.getElementById("profile-email-contact")?.value || "",
       phone: document.getElementById("profile-phone")?.value || "",
       location: document.getElementById("profile-location")?.value || "",
+      cep: document.getElementById("profile-cep")?.value || "",
       linkedin: document.getElementById("profile-linkedin")?.value || "",
       github: document.getElementById("profile-github")?.value || "",
       lattes: document.getElementById("profile-lattes")?.value || "",
@@ -598,20 +585,6 @@ export const career = {
     state.profile = out.user;
     renderProfileForm();
     ui.notify("Projeto atualizado.");
-  },
-
-  async addProjectBullet(projectId, payload) {
-    const out = await api(`/profile/projects/${projectId}/bullets`, { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
-    ui.notify("Bullet cadastrado para seleção determinística.");
-  },
-
-  async updateProjectBullet(projectId, id, payload) {
-    const out = await api(`/profile/projects/${projectId}/bullets/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
-    ui.notify("Bullet atualizado.");
   },
 
   async removeProject(id) {
@@ -742,7 +715,7 @@ export const career = {
     return out;
   },
 
-  beginEdit(type, id, parentId = "") {
+  beginEdit(type, id) {
     const collections = {
       education: state.profile?.educations,
       experience: state.profile?.experiences,
@@ -751,19 +724,6 @@ export const career = {
       certification: state.profile?.certifications,
       language: state.profile?.languages,
     };
-    if (type === "bullet") {
-      const project = (state.profile?.projects || []).find((item) => item.id === parentId);
-      const bullet = project?.bullets?.find((item) => item.id === id);
-      const form = document.querySelector(`[data-project-bullet-form="${parentId}"]`);
-      if (!bullet || !form) return;
-      form.dataset.editId = id;
-      form.elements.category.value = bullet.category || "backend";
-      form.elements.content.value = bullet.content || "";
-      form.elements.keywords.value = (bullet.keywords || []).join(", ");
-      form.elements.weight.value = bullet.weight ?? 50;
-      form.querySelector("[data-bullet-submit-label]").textContent = "Salvar bullet";
-      return;
-    }
     const item = (collections[type] || []).find((entry) => entry.id === id);
     if (!item) return;
     if (type === "education") {
@@ -779,14 +739,9 @@ export const career = {
     } else if (type === "project") {
       setValue("project-title", item.title);
       setValue("project-category", item.category);
-      setValue("project-techs", (item.technologies || []).join(", "));
       setValue("project-short-description", item.shortDescription);
       setValue("project-repository-url", item.repositoryUrl);
       setValue("project-deploy-url", item.deployUrl);
-      setValue("project-description", item.description);
-      setValue("project-business-problem", item.businessProblem);
-      setValue("project-technical-solution", item.technicalSolution);
-      setValue("project-architecture", item.architecture);
     } else if (type === "course") {
       setValue("course-title", item.title);
       setValue("course-institution", item.institution);

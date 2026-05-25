@@ -12,8 +12,6 @@ router.put("/profile", profileController.updateProfile);
 router.put("/profile/skills", profileController.updateSkills);
 router.post("/profile/projects", profileController.addProject);
 router.put("/profile/projects/:id", profileController.updateProject);
-router.post("/profile/projects/:id/bullets", profileController.addProjectBullet);
-router.put("/profile/projects/:id/bullets/:bulletId", profileController.updateProjectBullet);
 router.delete("/profile/projects/:id", profileController.deleteProject);
 router.post("/profile/experiences", profileController.addExperience);
 router.put("/profile/experiences/:id", profileController.updateExperience);
