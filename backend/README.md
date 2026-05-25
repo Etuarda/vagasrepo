@@ -19,6 +19,9 @@ npm install
 - `JWT_SECRET`: chave com pelo menos 32 caracteres.
 - `CORS_ORIGIN`: origens adicionais permitidas, separadas por virgula. A API ja autoriza `https://gestaodevagas.vercel.app` e previews `https://gestaodevagas-*-eduardas-projects-9a8623c8.vercel.app`.
 - `REDIS_URL`: conexao Redis TLS (`rediss://...`) usada para sessoes, rate limiting e cache das telas de perfil, historico e candidaturas.
+- `FRONTEND_URL`: URL publica da Vercel usada no link de recuperacao de senha.
+- `RESEND_API_KEY`: chave da API Resend usada para enviar a recuperacao de senha.
+- `EMAIL_FROM`: remetente verificado no Resend, por exemplo `Vagas.io <recuperacao@seudominio.com>`.
 
 3. Rode migrations e gere o client:
 
@@ -44,12 +47,15 @@ API: `http://localhost:3000`
 5. Use `npm start` como start command.
 6. Configure `CORS_ORIGIN` no Render somente para dominios adicionais ou preview local que precise acessar a API publicada.
 7. Crie um Redis gerenciado e configure `REDIS_URL` no Render; sem essa variavel a API funciona, mas as consultas voltam a acessar o Neon a cada carregamento.
+8. Configure `FRONTEND_URL`, `RESEND_API_KEY` e `EMAIL_FROM` no Render para habilitar o envio de links de recuperacao.
 
 ## Endpoints
 
 - `GET /health`
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
 - `GET /auth/me` com Bearer token
 - `GET /jobs` com Bearer token; filtros: `q`, `status`, `period`, `dateFrom`, `dateTo`
 - `POST /jobs` com Bearer token

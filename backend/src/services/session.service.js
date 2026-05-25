@@ -52,4 +52,16 @@ async function revokeSession(token) {
   await redis.del(`session:${tokenHash}`);
 }
 
-module.exports = { createSession, validateSession, revokeSession, hashToken };
+async function revokeAllUserSessions(userId) {
+  const sessions = await prisma.authSession.findMany({
+    where: { userId, revokedAt: null },
+    select: { tokenHash: true },
+  });
+  await prisma.authSession.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  await Promise.all(sessions.map((session) => redis.del(`session:${session.tokenHash}`)));
+}
+
+module.exports = { createSession, validateSession, revokeSession, revokeAllUserSessions, hashToken };

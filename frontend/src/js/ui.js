@@ -109,15 +109,19 @@ export const ui = {
   },
 
   switchAuth(type) {
-    const isLogin = type === "login";
-
     const title = document.getElementById("auth-title");
-    const formLogin = document.getElementById("form-login");
-    const formRegister = document.getElementById("form-register");
+    const views = {
+      login: { title: "Entrar.", form: "form-login" },
+      register: { title: "Criar.", form: "form-register" },
+      forgot: { title: "Recuperar.", form: "form-forgot-password" },
+      reset: { title: "Nova senha.", form: "form-reset-password" },
+    };
+    const active = views[type] || views.login;
 
-    if (title) title.innerText = isLogin ? "Entrar." : "Criar.";
-    if (formLogin) formLogin.classList.toggle("hidden", !isLogin);
-    if (formRegister) formRegister.classList.toggle("hidden", isLogin);
+    if (title) title.innerText = active.title;
+    Object.values(views).forEach(({ form }) => {
+      document.getElementById(form)?.classList.toggle("hidden", form !== active.form);
+    });
   },
 
   // --- Job modal

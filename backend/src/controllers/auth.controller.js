@@ -1,4 +1,4 @@
-const { registerSchema, loginSchema } = require("../schemas/auth.schema");
+const { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require("../schemas/auth.schema");
 const authService = require("../services/auth.service");
 
 async function register(req, res, next) {
@@ -30,6 +30,26 @@ async function me(req, res, next) {
   }
 }
 
+async function forgotPassword(req, res, next) {
+  try {
+    const payload = forgotPasswordSchema.parse(req.body);
+    const out = await authService.requestPasswordReset(payload);
+    return res.json(out);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function resetPassword(req, res, next) {
+  try {
+    const payload = resetPasswordSchema.parse(req.body);
+    const out = await authService.resetPassword(payload);
+    return res.json(out);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function logout(req, res, next) {
   try {
     const out = await authService.logoutUser(req.token);
@@ -39,4 +59,4 @@ async function logout(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, me };
+module.exports = { register, login, forgotPassword, resetPassword, logout, me };

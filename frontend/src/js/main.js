@@ -131,9 +131,40 @@ function wireEvents() {
         async () => {
           const name = document.getElementById("reg-name")?.value || "";
           const email = document.getElementById("reg-email")?.value || "";
+          const phone = document.getElementById("reg-phone")?.value || "";
           const password = document.getElementById("reg-password")?.value || "";
-          await auth.register(name, email, password);
+          await auth.register(name, email, phone, password);
         }
+      );
+    });
+  }
+
+  const formForgotPassword = document.getElementById("form-forgot-password");
+  if (formForgotPassword) {
+    formForgotPassword.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await runWithFeedback(
+        getSubmitButton(e, formForgotPassword),
+        { busyText: "Enviando...", notice: "Solicitando recuperacao..." },
+        () => auth.requestPasswordReset(document.getElementById("forgot-email")?.value || "")
+      );
+    });
+  }
+
+  const formResetPassword = document.getElementById("form-reset-password");
+  if (formResetPassword) {
+    formResetPassword.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const password = document.getElementById("reset-password")?.value || "";
+      const confirmation = document.getElementById("reset-password-confirm")?.value || "";
+      if (password !== confirmation) {
+        ui.notify("As senhas informadas nao coincidem.", "error");
+        return;
+      }
+      await runWithFeedback(
+        getSubmitButton(e, formResetPassword),
+        { busyText: "Salvando...", notice: "Validando link de recuperacao..." },
+        () => auth.resetPassword(document.getElementById("reset-token")?.value || "", password)
       );
     });
   }
@@ -141,6 +172,13 @@ function wireEvents() {
   document.querySelectorAll("[data-open-auth]").forEach((el) => {
     el.addEventListener("click", () => ui.openAuthModal(el.dataset.openAuth));
   });
+
+  const resetToken = new URLSearchParams(window.location.search).get("resetToken");
+  if (resetToken) {
+    const tokenInput = document.getElementById("reset-token");
+    if (tokenInput) tokenInput.value = resetToken;
+    ui.openAuthModal("reset");
+  }
 
   const openJobBtn = document.querySelector("[data-open-job]");
   if (openJobBtn) openJobBtn.addEventListener("click", () => ui.openJobModal(null));

@@ -7,6 +7,9 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().optional(),
   NODE_ENV: z.string().default("development"),
   REDIS_URL: z.string().optional(),
+  FRONTEND_URL: z.string().url().default("https://gestaodevagas.vercel.app"),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

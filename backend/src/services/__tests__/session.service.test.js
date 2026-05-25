@@ -3,6 +3,7 @@ jest.mock("../../lib/prisma", () => ({
     authSession: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      findMany: jest.fn(),
       updateMany: jest.fn(),
     },
   },
@@ -41,5 +42,18 @@ describe("session.service", () => {
 
     await expect(sessionService.validateSession("user-1", "jwt-token")).resolves.toBe(true);
     expect(prisma.authSession.findFirst).toHaveBeenCalled();
+  });
+
+  it("revoga todas as sessoes apos redefinicao de senha", async () => {
+    prisma.authSession.findMany.mockResolvedValue([{ tokenHash: "hash-1" }, { tokenHash: "hash-2" }]);
+
+    await sessionService.revokeAllUserSessions("user-1");
+
+    expect(prisma.authSession.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user-1", revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+    expect(redis.del).toHaveBeenCalledWith("session:hash-1");
+    expect(redis.del).toHaveBeenCalledWith("session:hash-2");
   });
 });

@@ -40,13 +40,37 @@ export const auth = {
     onLoggedIn?.();
   },
 
-  async register(name, email, password) {
+  async register(name, email, phone, password) {
     await api(
       "/auth/register",
-      { method: "POST", body: JSON.stringify({ name, email, password }) },
+      { method: "POST", body: JSON.stringify({ name, email, phone, password }) },
       null
     );
     ui.notify("Conta criada. Por favor, acesse.");
+    ui.switchAuth("login");
+  },
+
+  async requestPasswordReset(email) {
+    const out = await api(
+      "/auth/forgot-password",
+      { method: "POST", body: JSON.stringify({ email }) },
+      null
+    );
+    ui.notify(out.message);
+    ui.switchAuth("login");
+    return out;
+  },
+
+  async resetPassword(token, password) {
+    const out = await api(
+      "/auth/reset-password",
+      { method: "POST", body: JSON.stringify({ token, password }) },
+      null
+    );
+    ui.notify(out.message);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("resetToken");
+    window.history.replaceState({}, "", url);
     ui.switchAuth("login");
   },
 

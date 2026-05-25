@@ -96,6 +96,8 @@ app.use(express.json({ limit: "1mb" }));
  */
 app.use("/auth/login", authLimiter);
 app.use("/auth/register", authLimiter);
+app.use("/auth/forgot-password", authLimiter);
+app.use("/auth/reset-password", authLimiter);
 app.use("/auth", authRoutes);
 app.use("/jobs", jobsRoutes);
 app.use("/resume-files", heavyLimiter, resumeFilesRoutes);
