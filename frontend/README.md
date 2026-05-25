@@ -30,10 +30,10 @@ Se o endereco do backend mudar, atualize `src/js/config.js`.
 4. Deixe o build command vazio; o projeto e estatico.
 5. O `vercel.json` ja define o output directory como `.`.
 6. Confirme o healthcheck do backend em `https://gerenciadorpessoaldevagas.onrender.com/health`.
-7. Adicione a URL final do frontend da Vercel em `CORS_ORIGIN` no backend do Render.
+7. O backend ja permite o dominio `gestaodevagas.vercel.app` e previews deste projeto na equipe Vercel configurada.
 
-Como o navegador chama o Render diretamente, o backend deve aceitar as origens local e publicada:
+Como o navegador chama o Render diretamente, use `CORS_ORIGIN` no backend apenas para origens adicionais, como o preview local:
 
 ```env
-CORS_ORIGIN="http://localhost:5500,https://seu-projeto.vercel.app"
+CORS_ORIGIN="http://localhost:5500"
 ```

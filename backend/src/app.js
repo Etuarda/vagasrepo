@@ -5,6 +5,7 @@ const express = require("express");
 const cors = require("cors");
 
 const env = require("./config/env");
+const { HOSTED_FRONTEND_ORIGINS, createOriginMatcher } = require("./config/cors");
 const { errorHandler } = require("./middlewares/errorHandler");
 const { securityHeaders, requestContext, rateLimit } = require("./middlewares/security");
 
@@ -37,18 +38,21 @@ const devFallbackOrigins =
         "http://localhost:5500",
       ];
 
-const origins = [...new Set([...allowedOrigins, ...devFallbackOrigins])];
+const origins = [...new Set([...HOSTED_FRONTEND_ORIGINS, ...allowedOrigins, ...devFallbackOrigins])];
+const isAllowedOrigin = createOriginMatcher(origins);
 
 const corsOptions = {
   origin: (origin, callback) => {
     // permite chamadas sem origin (ex: Postman, curl, Render healthcheck)
     if (!origin) return callback(null, true);
 
-    if (origins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
 
-    return callback(new Error(`CORS bloqueado para: ${origin}`));
+    const err = new Error(`CORS bloqueado para: ${origin}`);
+    err.statusCode = 403;
+    return callback(err);
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],

@@ -17,7 +17,7 @@ npm install
 
 - `DATABASE_URL`: connection string Postgres do Neon com `sslmode=require`.
 - `JWT_SECRET`: chave com pelo menos 32 caracteres.
-- `CORS_ORIGIN`: origens permitidas, separadas por virgula.
+- `CORS_ORIGIN`: origens adicionais permitidas, separadas por virgula. A API ja autoriza `https://gestaodevagas.vercel.app` e previews `https://gestaodevagas-*-eduardas-projects-9a8623c8.vercel.app`.
 
 3. Rode migrations e gere o client:
 
@@ -41,6 +41,7 @@ API: `http://localhost:3000`
 3. Configure as mesmas variaveis no provedor da API.
 4. Use `npm install && npm run prisma:deploy` como build command.
 5. Use `npm start` como start command.
+6. Configure `CORS_ORIGIN` no Render somente para dominios adicionais ou preview local que precise acessar a API publicada.
 
 ## Endpoints
 
