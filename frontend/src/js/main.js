@@ -24,7 +24,7 @@ async function runWithFeedback(button, options, action) {
   if (target) {
     target.dataset.busy = "true";
     target.setAttribute("aria-busy", "true");
-    target.classList.add("opacity-60", "cursor-not-allowed");
+    target.classList.add("is-busy", "cursor-not-allowed");
     if ("disabled" in target) target.disabled = true;
     if (options.busyText) target.innerHTML = options.busyText;
   }
@@ -38,7 +38,7 @@ async function runWithFeedback(button, options, action) {
     if (target) {
       if (originalHtml !== undefined) target.innerHTML = originalHtml;
       if ("disabled" in target) target.disabled = originalDisabled;
-      target.classList.remove("opacity-60", "cursor-not-allowed");
+      target.classList.remove("is-busy", "cursor-not-allowed");
       target.removeAttribute("aria-busy");
       delete target.dataset.busy;
     }

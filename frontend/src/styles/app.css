@@ -1,14 +1,18 @@
 :root {
   /* Base (modo normal) */
   --paper: #F7F5F2;
+  --surface: #FFFFFF;
   --ink: #12100E;
 
   /* Texto secundário com mais contraste */
   --taupe: #3F3A36;
-  --stone: #6B645E;
+  --stone: #514A44;
 
   /* Bordas mais visíveis */
-  --borderLight: #CFC9C2;
+  --borderLight: #756D66;
+  --link: #064F9E;
+  --danger: #8B1E1E;
+  --success: #166534;
 
   /* Acessibilidade (tokens) */
   --a11y-yellow: #FFFF00;
@@ -29,22 +33,33 @@ body {
 /* reforça contraste mesmo usando Tailwind classes no HTML */
 .text-taupe { color: var(--taupe) !important; }
 .text-stone { color: var(--stone) !important; }
+.text-red-700,
+.text-red-800 { color: var(--danger) !important; }
+.text-green-800 { color: var(--success) !important; }
+
+a {
+  color: inherit;
+}
+
+a.text-\[\#0563C1\] {
+  color: var(--link) !important;
+}
 
 .editorial-shadow {
   box-shadow: 0 10px 40px -10px rgba(18, 16, 14, 0.14);
 }
 
 .editorial-card {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--borderLight);
 }
 
 .editorial-input {
   width: 100%;
   padding: 1rem;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
-  border: 1px solid rgba(63, 58, 54, 0.25); /* mais presente */
+  border: 1px solid var(--borderLight);
   border-radius: 1rem;
   outline: none;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -52,7 +67,7 @@ body {
 
 .editorial-input:focus {
   border-color: var(--ink);
-  box-shadow: 0 0 0 3px rgba(18, 16, 14, 0.10);
+  box-shadow: 0 0 0 3px rgba(18, 16, 14, 0.2);
 }
 
 .dashboard-tab.is-active {
@@ -61,13 +76,26 @@ body {
   border-color: var(--ink);
 }
 
+.dashboard-tab:not(.is-active):hover,
+button:not(:disabled):hover {
+  text-decoration: underline;
+  text-underline-offset: 0.22rem;
+}
+
+.is-busy,
+button:disabled {
+  cursor: not-allowed;
+  border-color: var(--ink) !important;
+  box-shadow: inset 0 0 0 2px var(--surface);
+}
+
 .tag-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   border-radius: 9999px;
   border: 1px solid var(--borderLight);
-  background: #fff;
+  background: var(--surface);
   padding: 0.45rem 0.75rem;
   font-size: 0.7rem;
   font-weight: 700;
@@ -75,7 +103,7 @@ body {
 
 .tag-pill button {
   font-weight: 900;
-  color: #8b1e1e;
+  color: var(--danger);
 }
 
 .profile-card-grid {
@@ -89,7 +117,7 @@ body {
   min-height: 7.25rem;
   border: 1px solid var(--borderLight);
   border-radius: 1rem;
-  background: #fff;
+  background: var(--surface);
   padding: 0.8rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -132,7 +160,7 @@ body {
   position: absolute;
   right: 0.5rem;
   top: 0.5rem;
-  color: #8b1e1e;
+  color: var(--danger);
   font-size: 0.65rem;
   font-weight: 800;
   line-height: 1;
@@ -166,6 +194,14 @@ body {
 body.high-contrast {
   background-color: #000 !important;
   color: #fff !important;
+  color-scheme: dark;
+}
+
+body.high-contrast nav,
+body.high-contrast table thead {
+  background-color: #000 !important;
+  border-color: #fff !important;
+  color: #fff !important;
 }
 
 /* Cards com borda amarela (alto contraste) */
@@ -173,6 +209,27 @@ body.high-contrast .editorial-card {
   background-color: #000 !important;
   border: 3px solid var(--a11y-yellow) !important;
   color: #fff !important;
+}
+
+body.high-contrast .bg-white,
+body.high-contrast .profile-card,
+body.high-contrast .tag-pill,
+body.high-contrast fieldset {
+  background-color: #000 !important;
+  border-color: #fff !important;
+  color: #fff !important;
+}
+
+body.high-contrast .profile-card__icon {
+  background-color: #000 !important;
+  border-color: #fff !important;
+  color: #fff !important;
+}
+
+body.high-contrast tbody tr:hover {
+  background-color: #000 !important;
+  outline: 2px solid var(--a11y-yellow);
+  outline-offset: -2px;
 }
 
 /* Inputs: texto amarelo, borda branca, foco ciano */
@@ -206,11 +263,54 @@ body.high-contrast button.bg-ink {
   border-color: var(--a11y-blue) !important;
 }
 
+body.high-contrast .dashboard-tab.is-active,
+body.high-contrast .profile-card.is-active .profile-card__icon {
+  background-color: var(--a11y-yellow) !important;
+  border-color: var(--a11y-yellow) !important;
+  color: #000 !important;
+}
+
+body.high-contrast .profile-card.is-active {
+  border-color: var(--a11y-yellow) !important;
+  box-shadow: inset 0 0 0 2px var(--a11y-yellow);
+}
+
 /* Textos utilitários no alto contraste */
 body.high-contrast .text-stone,
 body.high-contrast .text-taupe {
   color: #fff !important;
   opacity: 1 !important;
+}
+
+body.high-contrast .text-red-700,
+body.high-contrast .text-red-800,
+body.high-contrast .profile-card__delete,
+body.high-contrast .tag-pill button {
+  color: #ff8f8f !important;
+}
+
+body.high-contrast .text-green-800 {
+  color: #8dffac !important;
+}
+
+body.high-contrast a {
+  color: var(--a11y-yellow) !important;
+}
+
+body.high-contrast [class*="text-paper"] {
+  color: #fff !important;
+  opacity: 1 !important;
+}
+
+body.high-contrast input[type="checkbox"] {
+  accent-color: var(--a11y-blue);
+}
+
+body.high-contrast .is-busy,
+body.high-contrast button:disabled {
+  border-color: #fff !important;
+  background-color: #000 !important;
+  color: #fff !important;
 }
 
 /* foco no alto contraste: vermelho */

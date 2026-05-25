@@ -69,7 +69,7 @@ API: `http://localhost:3000`
 - `POST /profile/certifications` com Bearer token
 - `DELETE /profile/certifications/:id` com Bearer token
 - `POST /match` com Bearer token
-- `GET /shared-matched-jobs?period=day|week|month` com Bearer token
+- `GET /shared-matched-jobs?period=day|week|month` com Bearer token; retorna cargo, empresa e link das vagas pesquisadas no matching ou cadastradas em acompanhamento, sem identificar usuarios
 - `GET /optimized-resumes` com Bearer token
 - `DELETE /optimized-resumes/:id` com Bearer token
 - `GET /resume-files` com Bearer token
@@ -79,4 +79,4 @@ API: `http://localhost:3000`
 
 O historico de matching (`JobAnalysis` e PDFs otimizados associados) fica disponivel por 30 dias. Registros expirados nao sao retornados; a limpeza fisica e iniciada em segundo plano para nao atrasar a tela. Candidaturas ja registradas permanecem salvas.
 
-Com `REDIS_URL` configurado, leituras repetidas de perfis e catalogo global, historico de matching, acompanhamento de vagas, arquivos PDF e vagas pesquisadas compartilhadas usam cache com expiracao e invalidacao automatica apos alteracoes.
+Com `REDIS_URL` configurado, leituras repetidas de perfis e catalogo global, historico de matching, acompanhamento de vagas, arquivos PDF e vagas compartilhadas usam cache com expiracao e invalidacao automatica apos alteracoes.

@@ -71,7 +71,10 @@ async function createJob(userId, data) {
   const job = await prisma.job.create({
     data: { ...data, userId },
   });
-  await cache.invalidate("jobs", userId);
+  await Promise.all([
+    cache.invalidate("jobs", userId),
+    cache.invalidate("shared-jobs-board", "global"),
+  ]);
   return job;
 }
 
@@ -107,6 +110,7 @@ async function updateJob(userId, id, data) {
   await Promise.all([
     cache.invalidate("jobs", userId),
     cache.invalidate("match-history", userId),
+    cache.invalidate("shared-jobs-board", "global"),
   ]);
   return { message: "Atualizado", job };
 }
@@ -125,6 +129,7 @@ async function deleteJob(userId, id) {
   await Promise.all([
     cache.invalidate("jobs", userId),
     cache.invalidate("match-history", userId),
+    cache.invalidate("shared-jobs-board", "global"),
   ]);
   return { message: "Removido" };
 }

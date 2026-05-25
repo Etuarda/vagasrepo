@@ -19,7 +19,7 @@ O produto nao utiliza IA generativa, LLM ou servicos externos de geracao textual
 - Historico de analises editavel e versionado, com estados `draft`, `reviewed`, `applied`, `archived` e `rejected`.
 - Registro opcional de candidatura a partir do curriculo gerado, vinculado a analise e ao curriculo otimizado.
 - Registro da data de aplicacao ao marcar um curriculo como aplicado.
-- Mural autenticado de vagas pesquisadas no matching, compartilhando somente cargo, empresa e link com filtros de ultimo dia, semana ou mes.
+- Mural autenticado de vagas compartilhadas, reunindo matchings e acompanhamentos e exibindo somente cargo, empresa e link com filtros de ultimo dia, semana ou mes.
 - Camada preparada para metadados de exportacao Google Docs, sem OAuth no MVP.
 
 ## Diferencial
@@ -70,7 +70,7 @@ backend/src/
 - `Project`, `ProjectTechnology` e `ProjectBullet`: portifolio estruturado e evidencias selecionaveis.
 - `SubprofileSkill`, `SubprofileProject`, `SubprofileExperience`, `SubprofileEducation`, `SubprofileCourse`, `SubprofileCertification` e `SubprofileLanguage`: selecao e visibilidade por estrategia.
 - `JobAnalysis`: descricao, categoria, score, selecoes, status e encadeamento de versoes.
-- `SharedMatchedJob`: cargo, empresa, link e data de vagas pesquisadas, visiveis a usuarios autenticados.
+- `SharedMatchedJob`: cargo, empresa, link e data de vagas pesquisadas; o mural tambem agrega as vagas cadastradas em `Job`, sem expor o usuario.
 - `OptimizedResume`: snapshot da selecao e arquivo PDF gerado.
 - `Job`: candidatura acompanhada no painel; quando originada pelo matching, referencia `JobAnalysis` e `OptimizedResume`.
 - `GoogleDocsExport`: metadados reservados para exportacao futura.
@@ -108,7 +108,7 @@ O formulario de analise salva cargo, empresa, link e descricao da vaga em `JobAn
 
 Na tela de matching, o usuario pode selecionar um perfil especifico ou deixar o motor sugerir o perfil mais aderente. Em ambos os casos, anexos PDF permanecem apenas para leitura e visualizacao.
 
-Cargo, empresa e link da vaga sao obrigatorios para gerar um matching. A cada geracao, esses tres campos sao registrados em `SharedMatchedJob` e ficam visiveis para qualquer usuario autenticado na aba Vagas pesquisadas. Descricao da vaga, perfil selecionado, score e dados do candidato nao sao compartilhados.
+Cargo, empresa e link da vaga sao obrigatorios para gerar um matching. A cada geracao, esses tres campos sao registrados em `SharedMatchedJob`. A aba Vagas compartilhadas tambem lista vagas cadastradas para acompanhamento e fica visivel para qualquer usuario autenticado. Descricao da vaga, perfil selecionado, score e dados do candidato nao sao compartilhados.
 
 ## Registro de candidatura
 

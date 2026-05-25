@@ -358,7 +358,7 @@ function renderSharedMatchedJobs() {
 
   const rows = state.sharedMatchedJobs || [];
   if (!rows.length) {
-    root.innerHTML = `<p class="text-sm text-taupe">Nenhuma vaga pesquisada neste periodo.</p>`;
+    root.innerHTML = `<p class="text-sm text-taupe">Nenhuma vaga compartilhada neste periodo.</p>`;
     return;
   }
 
@@ -368,7 +368,7 @@ function renderSharedMatchedJobs() {
         <article class="editorial-card rounded-2xl p-5">
           <h3 class="font-bold text-lg">${escapeHtml(item.jobTitle)}</h3>
           <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-2">${escapeHtml(item.company)}</p>
-          <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))}</p>
+          <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))} · ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
           <a href="${escapeHtml(item.jobUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 text-[10px] font-bold uppercase tracking-widest underline">Abrir vaga</a>
         </article>
       `
@@ -966,5 +966,8 @@ export const career = {
     document.querySelectorAll("[data-dashboard-panel]").forEach((panel) => {
       panel.classList.toggle("hidden", panel.dataset.dashboardPanel !== tab);
     });
+    if (tab === "shared-jobs") {
+      career.loadSharedMatchedJobs().catch(() => {});
+    }
   },
 };

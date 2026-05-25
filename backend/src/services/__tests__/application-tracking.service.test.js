@@ -59,6 +59,7 @@ describe("application tracking from analysis", () => {
     expect(tx.jobAnalysis.update).not.toHaveBeenCalled();
     expect(cache.invalidate).toHaveBeenCalledWith("jobs", "user");
     expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
+    expect(cache.invalidate).toHaveBeenCalledWith("shared-jobs-board", "global");
     expect(out.message).toBe("Candidatura registrada com sucesso.");
   });
 

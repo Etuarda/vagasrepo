@@ -22,10 +22,10 @@
 
             // Textos secundários
             taupe: "#3F3A36",
-            stone: "#6B645E",
+            stone: "#514A44",
 
             // Bordas
-            borderLight: "#CFC9C2",
+            borderLight: "#756D66",
 
             // Tokens modo acessibilidade (usados no CSS)
             accessible: { yellow: "#FFFF00", blue: "#00FFFF", red: "#FF0000" }
@@ -52,7 +52,7 @@
     <div class="flex items-center gap-10">
       <span class="font-serif text-3xl italic tracking-tighter cursor-default">vagas.io</span>
       <div class="hidden md:flex items-center gap-6 border-l border-[#2B2A27] pl-10">
-        <button data-toggle-contrast class="text-[10px] font-bold uppercase tracking-[0.2em] hover:opacity-80 transition-colors flex items-center gap-2">
+        <button data-toggle-contrast aria-pressed="false" class="text-[10px] font-bold uppercase tracking-[0.2em] hover:underline transition-colors flex items-center gap-2">
           ◑ Modo Acessibilidade
         </button>
       </div>
@@ -96,19 +96,19 @@
           Matching ATS
         </button>
         <button type="button" data-dashboard-tab="shared-jobs" class="dashboard-tab px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
-          Vagas pesquisadas
+          Vagas compartilhadas
         </button>
       </div>
 
       <div id="panel-jobs" data-dashboard-panel="jobs" class="space-y-16">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 p-10 editorial-card rounded-3xl editorial-shadow">
         <div class="space-y-3">
-          <label for="filter-q" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Busca Textual</label>
+          <label for="filter-q" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Busca Textual</label>
           <input type="text" id="filter-q" placeholder="Ex: Desenvolvedor..." class="editorial-input text-sm" />
         </div>
 
         <div class="space-y-3">
-          <label for="filter-status" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Filtrar Status</label>
+          <label for="filter-status" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Filtrar Status</label>
           <select id="filter-status" class="editorial-input text-sm bg-white">
             <option value="">Todos os Registros</option>
             <option value="Ativa">Candidatura Ativa</option>
@@ -118,7 +118,7 @@
         </div>
 
         <div class="space-y-3">
-          <label for="periodFilter" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Período</label>
+          <label for="periodFilter" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Período</label>
           <select id="periodFilter" class="editorial-input text-sm bg-white">
             <option value="all">Tudo</option>
             <option value="last7">Última semana</option>
@@ -130,12 +130,12 @@
 
       <div id="dateRange" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8 p-10 editorial-card rounded-3xl editorial-shadow">
         <div class="space-y-3">
-          <label for="dateFrom" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">De</label>
+          <label for="dateFrom" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">De</label>
           <input type="date" id="dateFrom" class="editorial-input text-sm" />
         </div>
 
         <div class="space-y-3">
-          <label for="dateTo" class="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Até</label>
+          <label for="dateTo" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Até</label>
           <input type="date" id="dateTo" class="editorial-input text-sm" />
         </div>
       </div>
@@ -380,7 +380,7 @@
               A geração usa exclusivamente Perfil Global e Subperfil preenchidos manualmente; PDFs anexados não alimentam o matching.
             </p>
             <p class="text-xs text-taupe leading-relaxed">
-              Cargo, empresa e link da vaga serao compartilhados com usuarios autenticados na area Vagas pesquisadas.
+              Cargo, empresa e link da vaga serao compartilhados com usuarios autenticados na area Vagas compartilhadas.
             </p>
             <textarea id="match-job-description" rows="14" required minlength="30" maxlength="15000" placeholder="Cole a descrição completa da vaga" class="editorial-input text-sm leading-relaxed"></textarea>
             <button type="submit" class="w-full bg-ink text-paper py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
@@ -400,9 +400,9 @@
       <section id="panel-shared-jobs" data-dashboard-panel="shared-jobs" class="hidden space-y-8" aria-labelledby="shared-jobs-title">
         <header class="editorial-card rounded-3xl editorial-shadow p-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Pesquisa coletiva</p>
-            <h2 id="shared-jobs-title" class="font-serif text-5xl tracking-tight mt-3">Vagas pesquisadas.</h2>
-            <p class="text-sm text-taupe leading-relaxed mt-4">Cargo, empresa e link informados em matchings realizados por usuarios autenticados.</p>
+            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Painel global</p>
+            <h2 id="shared-jobs-title" class="font-serif text-5xl tracking-tight mt-3">Vagas compartilhadas.</h2>
+            <p class="text-sm text-taupe leading-relaxed mt-4">Cargo, empresa e link das vagas cadastradas ou pesquisadas no matching por usuarios autenticados.</p>
           </div>
           <label class="space-y-2 min-w-56">
             <span class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone">Periodo</span>
@@ -430,7 +430,7 @@
         <input type="email" id="login-email" placeholder="Seu e-mail" required class="editorial-input" />
         <input type="password" id="login-password" placeholder="Sua senha" required class="editorial-input" />
         <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Acessar Sistema</button>
-        <p class="text-center text-[10px] uppercase tracking-widest opacity-40">
+        <p class="text-center text-[10px] uppercase tracking-widest text-stone">
           Novo aqui?
           <button type="button" onclick="window.__uiSwitchAuth?.('register')" class="underline font-bold">Criar conta</button>
         </p>
@@ -441,7 +441,7 @@
         <input type="email" id="reg-email" placeholder="E-mail" required class="editorial-input" />
         <input type="password" id="reg-password" placeholder="Senha (min. 10 caracteres)" required class="editorial-input" minlength="10" />
         <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Registrar Profissional</button>
-        <button type="button" onclick="window.__uiSwitchAuth?.('login')" class="w-full text-[10px] uppercase tracking-widest opacity-40 font-bold underline">Já possuo cadastro</button>
+        <button type="button" onclick="window.__uiSwitchAuth?.('login')" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Já possuo cadastro</button>
       </form>
     </div>
   </div>
@@ -503,7 +503,7 @@
         </div>
 
         <div class="lg:col-span-2 flex justify-end gap-8 pt-10 border-t border-borderLight mt-6">
-          <button type="button" data-close-job class="text-[10px] font-bold uppercase tracking-[0.3em] opacity-30">Cancelar</button>
+          <button type="button" data-close-job class="text-[10px] font-bold uppercase tracking-[0.3em] text-stone">Cancelar</button>
           <button type="submit" class="bg-ink text-paper px-16 py-5 rounded-full font-bold uppercase tracking-widest text-xs">Arquivar</button>
         </div>
       </form>

@@ -23,9 +23,11 @@ export const ui = {
 
   toggleContrast() {
     document.body.classList.toggle("high-contrast");
+    const enabled = document.body.classList.contains("high-contrast");
+    document.querySelector("[data-toggle-contrast]")?.setAttribute("aria-pressed", String(enabled));
     localStorage.setItem(
       "vagas_contrast",
-      String(document.body.classList.contains("high-contrast"))
+      String(enabled)
     );
   },
 
@@ -35,7 +37,7 @@ export const ui = {
 
     if (state.user) {
       nav.innerHTML = `
-        <span class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">
+        <span class="text-[10px] font-bold uppercase tracking-[0.2em]">
           voce so precisa de um SIM, ${escapeHtml(state.user.name)}
         </span>
         <button data-action="logout" class="text-[10px] font-bold uppercase tracking-[0.2em] underline">
@@ -46,7 +48,7 @@ export const ui = {
     }
 
     nav.innerHTML = `
-      <button data-action="open-login" class="text-[10px] font-bold uppercase tracking-[0.2em] hover:opacity-60 transition-colors">
+      <button data-action="open-login" class="text-[10px] font-bold uppercase tracking-[0.2em] hover:underline transition-colors">
         Acessar
       </button>
     `;
@@ -271,7 +273,7 @@ export const ui = {
           ${job.feedbackBool ? `<div class="text-xs text-taupe mt-1">Feedback: ${escapeHtml(job.feedbackTxt || "recebido")}</div>` : ""}
         </td>
         <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest">${escapeHtml(job.fase)}</td>
-        <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest opacity-40">${escapeHtml(job.status)}</td>
+        <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest text-stone">${escapeHtml(job.status)}</td>
         <td class="py-10 px-6 text-right">
           <button data-action="edit" data-id="${job.id}" class="text-[9px] font-bold uppercase tracking-widest hover:underline">
             Editar

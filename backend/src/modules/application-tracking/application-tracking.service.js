@@ -83,6 +83,7 @@ async function createFromAnalysis(userId, analysisId, payload) {
   await Promise.all([
     cache.invalidate("jobs", userId),
     cache.invalidate("match-history", userId),
+    cache.invalidate("shared-jobs-board", "global"),
   ]);
 
   return {

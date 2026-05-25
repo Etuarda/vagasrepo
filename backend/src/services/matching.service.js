@@ -186,7 +186,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
   });
   await Promise.all([
     cache.invalidate("match-history", userId),
-    cache.invalidate("shared-matched-jobs", "global"),
+    cache.invalidate("shared-jobs-board", "global"),
   ]);
 
   return {
