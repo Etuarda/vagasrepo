@@ -586,6 +586,7 @@ export const career = {
       state.profile = profile;
       state.activeProfileId = profile.id;
       renderProfileForm();
+      ui.renderNav();
       if (announce) setLoadStatus("profile-load-status", `Informacoes de ${profile.profileName || label} carregadas em ${loadElapsed(startedAt)}.`, "loaded", 5000);
       return profile;
     } catch (err) {

@@ -10,6 +10,12 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function firstName(value) {
+  const name = String(value || "").trim();
+  if (!name || name.includes("@")) return "";
+  return name.split(/\s+/)[0];
+}
+
 export const ui = {
   navigate(view) {
     ["landing", "dashboard"].forEach((v) => {
@@ -36,9 +42,10 @@ export const ui = {
     if (!nav) return;
 
     if (state.user) {
+      const greetingName = firstName(state.profile?.name) || firstName(state.user.name);
       nav.innerHTML = `
         <span class="text-[10px] font-bold uppercase tracking-[0.2em]">
-          voce so precisa de um SIM, ${escapeHtml(state.user.name)}
+          voce so precisa de um SIM${greetingName ? `, ${escapeHtml(greetingName)}` : ""}
         </span>
         <button data-action="logout" class="text-[10px] font-bold uppercase tracking-[0.2em] underline">
           Sair
