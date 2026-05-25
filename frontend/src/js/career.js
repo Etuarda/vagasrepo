@@ -55,7 +55,7 @@ function renderSkills() {
   root.innerHTML = skills
     .map(
       (skill) => `
-        <span class="tag-pill">
+        <span class="tag-pill contrast-chip">
           ${escapeHtml(skill)}
           <button type="button" data-remove-skill="${escapeHtml(skill)}" aria-label="Remover ${escapeHtml(skill)}">x</button>
         </span>
@@ -77,7 +77,7 @@ function renderLanguages() {
   root.innerHTML = languages
     .map(
       (language) => `
-        <span class="tag-pill">
+        <span class="tag-pill contrast-chip">
           ${escapeHtml([language.name, language.level].filter(Boolean).join(" - "))}
           <button type="button" data-edit-language="${escapeHtml(language.id)}" aria-label="Editar ${escapeHtml(language.name)}">editar</button>
           <button type="button" data-remove-language="${escapeHtml(language.id)}" aria-label="Remover ${escapeHtml(language.name)}">x</button>
@@ -100,7 +100,7 @@ function renderProjects() {
   root.innerHTML = projects
     .map(
       (project) => `
-        <article class="border border-borderLight rounded-2xl p-5 bg-white">
+        <article class="contrast-surface border border-borderLight rounded-2xl p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
               <h4 class="font-serif text-2xl">${escapeHtml(project.title)}</h4>
@@ -163,7 +163,7 @@ function renderEducations() {
   if (!root) return;
   const items = state.profile?.educations || [];
   root.innerHTML = items.length ? items.map((item) => `
-    <article class="border border-borderLight rounded-2xl p-4 bg-white flex justify-between gap-3">
+    <article class="contrast-surface border border-borderLight rounded-2xl p-4 flex justify-between gap-3">
       <p class="text-sm"><strong>${escapeHtml(item.title)}</strong> | ${escapeHtml(item.institution)}${item.period ? ` | ${escapeHtml(item.period)}` : ""}</p>
       ${state.profile?.isGlobal ? `<div class="flex gap-3"><button type="button" data-edit-education="${item.id}" class="text-[10px] font-bold uppercase">Editar</button><button type="button" data-remove-education="${item.id}" class="text-[10px] font-bold uppercase text-red-700">Remover</button></div>` : ""}
     </article>`).join("") : `<p class="text-sm text-taupe">Nenhuma formação cadastrada.</p>`;
@@ -182,7 +182,7 @@ function renderExperiences() {
   root.innerHTML = experiences
     .map(
       (experience) => `
-        <article class="border border-borderLight rounded-2xl p-5 bg-white">
+        <article class="contrast-surface border border-borderLight rounded-2xl p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
               <h4 class="font-bold">${escapeHtml(experience.role)}</h4>
@@ -210,7 +210,7 @@ function renderCoursesAndCertifications() {
       ? courses
           .map(
             (course) => `
-              <article class="border border-borderLight rounded-2xl p-5 bg-white">
+              <article class="contrast-surface border border-borderLight rounded-2xl p-5">
                 <div class="flex items-start justify-between gap-4">
                   <div>
                     <h4 class="font-bold">${escapeHtml(course.title)}</h4>
@@ -232,7 +232,7 @@ function renderCoursesAndCertifications() {
       ? certifications
           .map(
             (certification) => `
-              <article class="border border-borderLight rounded-2xl p-5 bg-white">
+              <article class="contrast-surface border border-borderLight rounded-2xl p-5">
                 <div class="flex items-start justify-between gap-4">
                   <div>
                     <h4 class="font-bold">${escapeHtml(certification.title)}</h4>
@@ -323,7 +323,7 @@ function renderHistory() {
   root.innerHTML = rows
     .map(
       (item) => `
-        <article class="border border-borderLight rounded-2xl p-4 bg-white">
+        <article class="contrast-surface border border-borderLight rounded-2xl p-4">
           <div class="flex items-start justify-between gap-3">
             <div>
               <button type="button" data-open-analysis="${item.analysisId}" class="font-bold text-sm underline text-left">${escapeHtml(item.targetTitle)}</button>
@@ -390,7 +390,7 @@ function renderResumeFiles() {
   list.innerHTML = files
     .map(
       (file) => `
-        <article class="border border-borderLight rounded-2xl p-5 bg-white">
+        <article class="contrast-surface border border-borderLight rounded-2xl p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
               <h4 class="font-bold text-sm">${escapeHtml(file.fileName)}</h4>
@@ -421,7 +421,7 @@ function renderMatchResult(result) {
       <h4 class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone mb-3">${title}</h4>
       ${
         items.length
-          ? `<div class="flex flex-wrap gap-2">${items.map((item) => `<span class="tag-pill ${positive ? "text-green-800" : "text-red-800"}">${escapeHtml(item)}</span>`).join("")}</div>`
+          ? `<div class="flex flex-wrap gap-2">${items.map((item) => `<span class="tag-pill contrast-chip ${positive ? "text-green-800" : "text-red-800"}">${escapeHtml(item)}</span>`).join("")}</div>`
           : `<p class="text-sm text-taupe">Nenhum item encontrado.</p>`
       }
     </section>
@@ -468,7 +468,7 @@ function renderMatchResult(result) {
           .slice(0, 2)
           .map(
             (item) => `
-              <article class="border border-borderLight rounded-2xl p-5 bg-white">
+              <article class="contrast-surface border border-borderLight rounded-2xl p-5">
                 <div class="flex justify-between gap-4">
                   <h5 class="font-bold">${escapeHtml(item.project.title)}</h5>
                   <span class="font-bold">${item.score}%</span>

@@ -54,6 +54,11 @@ a.text-\[\#0563C1\] {
   border: 1px solid var(--borderLight);
 }
 
+.contrast-surface {
+  background-color: var(--surface);
+  color: var(--ink);
+}
+
 .editorial-input {
   width: 100%;
   padding: 1rem;
@@ -99,6 +104,11 @@ button:disabled {
   padding: 0.45rem 0.75rem;
   font-size: 0.7rem;
   font-weight: 700;
+}
+
+.contrast-chip {
+  background-color: var(--surface);
+  color: var(--ink);
 }
 
 .tag-pill button {
@@ -214,7 +224,22 @@ body.high-contrast .editorial-card {
 body.high-contrast .bg-white,
 body.high-contrast .profile-card,
 body.high-contrast .tag-pill,
+body.high-contrast .contrast-surface,
+body.high-contrast .contrast-chip,
 body.high-contrast fieldset {
+  background-color: #000 !important;
+  border-color: #fff !important;
+  color: #fff !important;
+}
+
+body.high-contrast #skills-list > *,
+body.high-contrast #languages-list > *,
+body.high-contrast #projects-list article,
+body.high-contrast #experiences-list article,
+body.high-contrast #courses-list article,
+body.high-contrast #certifications-list article,
+body.high-contrast #match-history article,
+body.high-contrast #resume-files-list article {
   background-color: #000 !important;
   border-color: #fff !important;
   color: #fff !important;
