@@ -1,5 +1,14 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "outputDirectory": ".",
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://gerenciadorpessoaldevagas.onrender.com/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

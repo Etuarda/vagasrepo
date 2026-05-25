@@ -58,7 +58,7 @@ describe("resume compiler", () => {
     expect(resume.skillsInline).not.toContain("Docker");
     expect(resume.skillsInline).not.toContain("React");
     expect(resume.projects[0].summary).toBe("Resumo curto exatamente cadastrado pelo usuario.");
-    expect(resume.projects[0].stack).toBe("Node.js, PostgreSQL");
+    expect(resume.projects[0]).not.toHaveProperty("stack");
     expect(resume.projects[0]).not.toHaveProperty("bullets");
   });
 

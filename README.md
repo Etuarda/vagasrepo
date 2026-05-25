@@ -100,7 +100,7 @@ A formula do score final no modo otimizado por vaga e:
 40% projetos compativeis
 ```
 
-O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme alocados no perfil selecionado, sem ranking, reescrita ou truncamento. Habilidades tecnicas especificas sao selecionadas pela vaga; competencias transversais previamente cadastradas, como Git, GitHub, Scrum, Kanban, metodologias ageis e versionamento de codigo, permanecem no curriculo independentemente da area. Para projetos, a aderencia usa titulo, categoria/area, resumo curto e stack textual cadastrados; dados legados ocultos nao alimentam o calculo. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos e informa a justificativa do ranking.
+O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme alocados no perfil selecionado, sem ranking, reescrita ou truncamento. Habilidades tecnicas especificas sao selecionadas pela vaga; competencias transversais previamente cadastradas, como Git, GitHub, Scrum, Kanban, metodologias ageis e versionamento de codigo, permanecem no curriculo independentemente da area. Para projetos, a aderencia usa titulo, categoria/area, resumo curto e stack textual cadastrados; a stack serve somente como parametro de matching e nao e impressa no curriculo otimizado. Dados legados ocultos nao alimentam o calculo. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos e informa a justificativa do ranking.
 
 O formulario de analise salva cargo, empresa, link e descricao da vaga em `JobAnalysis`. A analise permanece acessivel no historico e pode originar uma candidatura persistida; quando disponivel, o link salvo e preenchido automaticamente no cadastro de acompanhamento.
 
@@ -131,7 +131,7 @@ npm run prisma:migrate
 npm run dev
 ```
 
-Sirva a pasta `frontend` por um servidor estatico e configure a URL da API em `frontend/src/js/config.js`.
+Sirva a pasta `frontend` por um servidor estatico. Em ambiente local, ela chama a API em `http://localhost:3000`; na Vercel, o rewrite `/api/*` definido em `frontend/vercel.json` encaminha as chamadas para o backend publicado.
 
 ## Variaveis de ambiente
 
