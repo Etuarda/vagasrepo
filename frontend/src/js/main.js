@@ -52,8 +52,9 @@ function getSubmitButton(event, form) {
 let __vlibrasStarted = false;
 
 async function loadDashboardData() {
-  await Promise.all([jobs.load(), career.loadProfiles(), career.loadSharedMatchedJobs()]);
-  await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
+  const independentLoads = Promise.all([jobs.load(), career.loadSharedMatchedJobs()]);
+  await career.loadProfiles();
+  await Promise.all([independentLoads, career.loadActiveProfileData({ announce: true })]);
 }
 
 function forceVlibrasZIndex() {

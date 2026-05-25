@@ -279,7 +279,11 @@ async function deleteProfile(userId, profileId) {
   }
 
   await prisma.careerProfile.delete({ where: { id: profile.id } });
-  await invalidateProfileCache(userId);
+  await Promise.all([
+    invalidateProfileCache(userId),
+    cache.invalidate("resume-files", userId),
+    cache.invalidate("match-history", userId),
+  ]);
   return { message: "Subperfil removido." };
 }
 

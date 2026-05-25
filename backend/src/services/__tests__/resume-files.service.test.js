@@ -2,6 +2,7 @@ jest.mock("../../lib/prisma", () => ({
   prisma: {
     resumeFile: {
       create: jest.fn(),
+      findMany: jest.fn(),
     },
   },
 }));
@@ -16,7 +17,7 @@ jest.mock("../profile.service", () => ({
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
 const profileService = require("../profile.service");
-const { uploadResumeFile } = require("../resume-files.service");
+const { listResumeFiles, uploadResumeFile } = require("../resume-files.service");
 
 describe("resume PDF attachment", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -49,5 +50,15 @@ describe("resume PDF attachment", () => {
     expect(result).not.toHaveProperty("profile");
     expect(result).not.toHaveProperty("extractedText");
     expect(cache.invalidate).toHaveBeenCalledWith("resume-files", "user");
+  });
+
+  it("nao consulta o perfil novamente quando a lista de PDFs esta em cache", async () => {
+    cache.remember.mockResolvedValueOnce([]);
+
+    await expect(listResumeFiles("cached-user", "profile")).resolves.toEqual([]);
+
+    expect(cache.remember).toHaveBeenCalledWith("resume-files", "cached-user", "profile", expect.any(Function));
+    expect(profileService.resolveProfile).not.toHaveBeenCalled();
+    expect(prisma.resumeFile.findMany).not.toHaveBeenCalled();
   });
 });

@@ -50,8 +50,8 @@ async function uploadResumeFile(userId, file, profileId = null) {
 }
 
 async function listResumeFiles(userId, profileId = null) {
-  const profile = await profileService.resolveProfile(userId, profileId);
-  return cache.remember("resume-files", userId, profile.id, async () => {
+  return cache.remember("resume-files", userId, profileId || "default", async () => {
+    const profile = await profileService.resolveProfile(userId, profileId);
     const rows = await prisma.resumeFile.findMany({
       where: { userId, profileId: profile.id },
       orderBy: { createdAt: "desc" },

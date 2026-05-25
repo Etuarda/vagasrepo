@@ -204,8 +204,8 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
 async function listHistory(userId, profileId = null) {
   const cutoff = historyRetentionCutoff();
   scheduleExpiredHistoryPurge(userId);
-  const profile = await profileService.resolveProfile(userId, profileId);
-  const history = await cache.remember("match-history", userId, profile.id, async () => {
+  const history = await cache.remember("match-history", userId, profileId || "default", async () => {
+    const profile = await profileService.resolveProfile(userId, profileId);
     const rows = await prisma.jobAnalysis.findMany({
       where: { userId, selectedSubprofileId: profile.id, createdAt: { gte: cutoff } },
       orderBy: { createdAt: "desc" },

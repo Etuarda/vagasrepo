@@ -17,6 +17,37 @@ function setValue(id, value) {
   if (el) el.value = value || "";
 }
 
+let activeProfileRequestId = 0;
+const loadStatusTimers = new Map();
+
+function profileLabel(profileId) {
+  return (state.profiles || []).find((profile) => profile.id === profileId)?.profileName || "perfil selecionado";
+}
+
+function loadElapsed(startedAt) {
+  const elapsed = performance.now() - startedAt;
+  return elapsed < 1000 ? `${Math.round(elapsed)} ms` : `${(elapsed / 1000).toFixed(1)} s`;
+}
+
+function setLoadStatus(id, message, status, hideAfter = 0) {
+  const root = document.getElementById(id);
+  if (!root) return;
+
+  window.clearTimeout(loadStatusTimers.get(id));
+  root.textContent = message;
+  root.classList.remove("hidden", "is-loading", "is-loaded", "is-error");
+  root.classList.add(`is-${status}`);
+
+  if (hideAfter) {
+    loadStatusTimers.set(id, window.setTimeout(() => root.classList.add("hidden"), hideAfter));
+  }
+}
+
+function isCurrentProfileRequest(requestId, profileId) {
+  if (profileId !== state.activeProfileId) return false;
+  return !requestId || requestId === activeProfileRequestId;
+}
+
 function setEditMode(type, id) {
   const form = document.getElementById(`form-${type}`);
   if (!form) return;
@@ -542,19 +573,51 @@ export const career = {
     renderMatchProfileOptions();
   },
 
-  async loadProfile() {
-    const query = state.activeProfileId ? `?profileId=${encodeURIComponent(state.activeProfileId)}` : "";
-    const profile = await api(`/profile${query}`, {}, state.token);
-    state.profile = profile;
-    state.activeProfileId = profile.id;
-    renderProfileForm();
+  async loadProfile({ requestId = null, announce = false } = {}) {
+    const selectedProfileId = state.activeProfileId;
+    const label = profileLabel(selectedProfileId);
+    const startedAt = performance.now();
+    const query = selectedProfileId ? `?profileId=${encodeURIComponent(selectedProfileId)}` : "";
+    if (announce) setLoadStatus("profile-load-status", `Carregando informacoes de ${label}...`, "loading");
+
+    try {
+      const profile = await api(`/profile${query}`, {}, state.token);
+      if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
+      state.profile = profile;
+      state.activeProfileId = profile.id;
+      renderProfileForm();
+      if (announce) setLoadStatus("profile-load-status", `Informacoes de ${profile.profileName || label} carregadas em ${loadElapsed(startedAt)}.`, "loaded", 5000);
+      return profile;
+    } catch (err) {
+      if (announce && isCurrentProfileRequest(requestId, selectedProfileId)) {
+        setLoadStatus("profile-load-status", `Nao foi possivel carregar ${label}.`, "error");
+      }
+      throw err;
+    }
   },
 
-  async loadHistory() {
-    const query = state.activeProfileId ? `?profileId=${encodeURIComponent(state.activeProfileId)}` : "";
-    const history = await api(`/optimized-resumes${query}`, {}, state.token);
-    state.matchHistory = Array.isArray(history) ? history : [];
-    renderHistory();
+  async loadHistory({ requestId = null, announce = true } = {}) {
+    const selectedProfileId = state.activeProfileId;
+    const startedAt = performance.now();
+    const query = selectedProfileId ? `?profileId=${encodeURIComponent(selectedProfileId)}` : "";
+    if (announce) setLoadStatus("match-history-status", "Carregando historico de matching...", "loading");
+
+    try {
+      const history = await api(`/optimized-resumes${query}`, {}, state.token);
+      if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
+      state.matchHistory = Array.isArray(history) ? history : [];
+      renderHistory();
+      if (announce) {
+        const total = state.matchHistory.length;
+        setLoadStatus("match-history-status", `Historico carregado em ${loadElapsed(startedAt)}: ${total} registro${total === 1 ? "" : "s"}.`, "loaded", 5000);
+      }
+      return state.matchHistory;
+    } catch (err) {
+      if (announce && isCurrentProfileRequest(requestId, selectedProfileId)) {
+        setLoadStatus("match-history-status", "Nao foi possivel carregar o historico.", "error");
+      }
+      throw err;
+    }
   },
 
   async loadSharedMatchedJobs() {
@@ -738,11 +801,13 @@ export const career = {
     const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId }) }, state.token);
     state.lastMatchResult = result;
     renderMatchResult(result);
-    const reloads = [career.loadHistory(), career.loadSharedMatchedJobs()];
+    const reloads = [career.loadSharedMatchedJobs()];
     if (result.selectedSubprofileId && result.selectedSubprofileId !== state.activeProfileId) {
       state.activeProfileId = result.selectedSubprofileId;
       renderProfileCards();
-      reloads.push(career.loadProfile());
+      reloads.push(career.loadActiveProfileData({ announce: true }));
+    } else {
+      reloads.push(career.loadHistory());
     }
     await Promise.all(reloads);
   },
@@ -841,11 +906,14 @@ export const career = {
     clearEditMode(type);
   },
 
-  async loadResumeFiles() {
-    const query = state.activeProfileId ? `?profileId=${encodeURIComponent(state.activeProfileId)}` : "";
+  async loadResumeFiles({ requestId = null } = {}) {
+    const selectedProfileId = state.activeProfileId;
+    const query = selectedProfileId ? `?profileId=${encodeURIComponent(selectedProfileId)}` : "";
     const files = await api(`/resume-files${query}`, {}, state.token);
+    if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
     state.resumeFiles = Array.isArray(files) ? files : [];
     renderResumeFiles();
+    return state.resumeFiles;
   },
 
   async uploadResumeFile(file) {
@@ -936,7 +1004,7 @@ export const career = {
     const profile = await api("/profiles", { method: "POST", body: JSON.stringify({ profileName }) }, state.token);
     state.activeProfileId = profile.id;
     await career.loadProfiles();
-    await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
+    await career.loadActiveProfileData({ announce: true });
     ui.notify("Perfil criado.");
   },
 
@@ -949,14 +1017,23 @@ export const career = {
     if (!state.profiles.some((profile) => profile.id === state.activeProfileId)) {
       state.activeProfileId = state.profiles.find((profile) => profile.isGlobal)?.id || state.profiles[0]?.id || "";
     }
-    await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
+    await career.loadActiveProfileData({ announce: true });
     ui.notify("Subperfil removido.");
   },
 
   async switchProfile(profileId) {
     state.activeProfileId = profileId;
     renderProfileCards();
-    await Promise.all([career.loadProfile(), career.loadResumeFiles(), career.loadHistory()]);
+    await career.loadActiveProfileData({ announce: true });
+  },
+
+  async loadActiveProfileData({ announce = false } = {}) {
+    const requestId = ++activeProfileRequestId;
+    await Promise.all([
+      career.loadProfile({ requestId, announce }),
+      career.loadResumeFiles({ requestId }),
+      career.loadHistory({ requestId, announce }),
+    ]);
   },
 
   setTab(tab) {
@@ -968,6 +1045,9 @@ export const career = {
     });
     if (tab === "shared-jobs") {
       career.loadSharedMatchedJobs().catch(() => {});
+    }
+    if (tab === "matching") {
+      career.loadHistory().catch(() => {});
     }
   },
 };

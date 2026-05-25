@@ -19,6 +19,7 @@ jest.mock("../profile.service", () => ({
 jest.mock("../pdf-output.service", () => ({ generateOptimizedResumePdf: jest.fn() }));
 
 const { prisma } = require("../../lib/prisma");
+const cache = require("../../lib/cache");
 const profileService = require("../profile.service");
 const {
   MATCH_HISTORY_RETENTION_DAYS,
@@ -69,6 +70,16 @@ describe("matching history retention", () => {
         createdAt: { gte: expect.any(Date) },
       },
     }));
+  });
+
+  it("nao consulta o perfil novamente quando o historico esta em cache", async () => {
+    cache.remember.mockResolvedValueOnce([]);
+
+    await listHistory("cached-user", "profile");
+
+    expect(cache.remember).toHaveBeenCalledWith("match-history", "cached-user", "profile", expect.any(Function), 2 * 60);
+    expect(profileService.resolveProfile).not.toHaveBeenCalled();
+    expect(prisma.jobAnalysis.findMany).not.toHaveBeenCalled();
   });
 
   it("nao bloqueia a listagem enquanto a limpeza fisica esta pendente", async () => {

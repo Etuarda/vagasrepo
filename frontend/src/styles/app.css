@@ -111,6 +111,43 @@ button:disabled {
   color: var(--ink);
 }
 
+.load-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--borderLight);
+  border-radius: 9999px;
+  background: var(--surface);
+  color: var(--taupe);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.load-status.hidden {
+  display: none;
+}
+
+.load-status.is-loading::before {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid var(--borderLight);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: statusSpin 0.8s linear infinite;
+}
+
+.load-status.is-loaded {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.load-status.is-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .tag-pill button {
   font-weight: 900;
   color: var(--danger);
@@ -318,6 +355,27 @@ body.high-contrast .text-green-800 {
   color: #8dffac !important;
 }
 
+body.high-contrast .load-status {
+  background-color: #000 !important;
+  border-color: #fff !important;
+  color: #fff !important;
+}
+
+body.high-contrast .load-status.is-loading::before {
+  border-color: #fff;
+  border-top-color: var(--a11y-blue);
+}
+
+body.high-contrast .load-status.is-loaded {
+  border-color: #8dffac !important;
+  color: #8dffac !important;
+}
+
+body.high-contrast .load-status.is-error {
+  border-color: #ff8f8f !important;
+  color: #ff8f8f !important;
+}
+
 body.high-contrast a {
   color: var(--a11y-yellow) !important;
 }
@@ -352,6 +410,10 @@ body.high-contrast *:focus-visible {
 @keyframes modalFadeIn {
   from { opacity: 0; transform: scale(0.95) translateY(10px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes statusSpin {
+  to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
