@@ -1,4 +1,5 @@
 const { prisma } = require("../../lib/prisma");
+const cache = require("../../lib/cache");
 
 const PERIOD_DAYS = Object.freeze({
   day: 1,
@@ -21,8 +22,9 @@ async function createSharedMatchedJob(db, data) {
 }
 
 async function listSharedMatchedJobs(period = "month") {
-  return prisma.sharedMatchedJob.findMany({
-    where: { createdAt: { gte: periodCutoff(period) } },
+  const cutoff = periodCutoff(period);
+  const jobs = await cache.remember("shared-matched-jobs", "global", period, () => prisma.sharedMatchedJob.findMany({
+    where: { createdAt: { gte: cutoff } },
     orderBy: { createdAt: "desc" },
     take: 200,
     select: {
@@ -32,7 +34,8 @@ async function listSharedMatchedJobs(period = "month") {
       jobUrl: true,
       createdAt: true,
     },
-  });
+  }));
+  return jobs.filter((job) => new Date(job.createdAt) >= cutoff);
 }
 
 module.exports = { PERIOD_DAYS, periodCutoff, createSharedMatchedJob, listSharedMatchedJobs };

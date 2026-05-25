@@ -1,4 +1,5 @@
 const { prisma } = require("../lib/prisma");
+const cache = require("../lib/cache");
 const profileService = require("./profile.service");
 const { generateOptimizedResumePdf } = require("./pdf-output.service");
 const { classifyJob, normalizeTerm } = require("../modules/matching/keyword-normalizer");
@@ -183,6 +184,10 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
     await createSharedMatchedJob(tx, { jobTitle: targetTitle, company: metadata.company, linkVaga: metadata.linkVaga });
     return { saved: savedResume, jobAnalysis: analysisRow };
   });
+  await Promise.all([
+    cache.invalidate("match-history", userId),
+    cache.invalidate("shared-matched-jobs", "global"),
+  ]);
 
   return {
     ...result,
@@ -200,35 +205,38 @@ async function listHistory(userId, profileId = null) {
   const cutoff = historyRetentionCutoff();
   scheduleExpiredHistoryPurge(userId);
   const profile = await profileService.resolveProfile(userId, profileId);
-  const rows = await prisma.jobAnalysis.findMany({
-    where: { userId, selectedSubprofileId: profile.id, createdAt: { gte: cutoff } },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: {
-      generatedResume: { select: { id: true, generatedFileName: true, resumeFileId: true } },
-      applications: {
-        where: { userId },
-        orderBy: { data: "desc" },
-        take: 1,
-        select: { id: true, status: true, fase: true, data: true, linkCV: true },
+  const history = await cache.remember("match-history", userId, profile.id, async () => {
+    const rows = await prisma.jobAnalysis.findMany({
+      where: { userId, selectedSubprofileId: profile.id, createdAt: { gte: cutoff } },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        generatedResume: { select: { id: true, generatedFileName: true, resumeFileId: true } },
+        applications: {
+          where: { userId },
+          orderBy: { data: "desc" },
+          take: 1,
+          select: { id: true, status: true, fase: true, data: true, linkCV: true },
+        },
       },
-    },
-  });
-  return rows.map((row) => ({
-    id: row.generatedResume?.id || row.id,
-    analysisId: row.id,
-    targetTitle: row.jobTitle,
-    company: row.company,
-    linkVaga: row.jobUrl,
-    score: row.matchScore,
-    status: row.status,
-    jobCategory: row.jobCategory,
-    generatedFileName: row.generatedResume?.generatedFileName,
-    resumeFileId: row.generatedResume?.resumeFileId,
-    application: row.applications[0] || null,
-    appliedAt: row.appliedAt,
-    createdAt: row.createdAt,
-  }));
+    });
+    return rows.map((row) => ({
+      id: row.generatedResume?.id || row.id,
+      analysisId: row.id,
+      targetTitle: row.jobTitle,
+      company: row.company,
+      linkVaga: row.jobUrl,
+      score: row.matchScore,
+      status: row.status,
+      jobCategory: row.jobCategory,
+      generatedFileName: row.generatedResume?.generatedFileName,
+      resumeFileId: row.generatedResume?.resumeFileId,
+      application: row.applications[0] || null,
+      appliedAt: row.appliedAt,
+      createdAt: row.createdAt,
+    }));
+  }, 2 * 60);
+  return history.filter((row) => new Date(row.createdAt) >= cutoff);
 }
 
 async function updateAnalysis(userId, id, data) {
@@ -242,8 +250,9 @@ async function updateAnalysis(userId, id, data) {
   }
   const appliedAt = data.status === "applied" ? (existing.appliedAt || new Date()) : existing.appliedAt;
   const createsVersion = ["notes", "jobTitle", "company", "linkVaga", "jobDescription"].some((key) => data[key] !== undefined);
+  let updated;
   if (createsVersion) {
-    return prisma.jobAnalysis.create({
+    updated = await prisma.jobAnalysis.create({
       data: {
         userId,
         jobTitle: data.jobTitle ?? existing.jobTitle,
@@ -264,12 +273,15 @@ async function updateAnalysis(userId, id, data) {
         version: existing.version + 1,
       },
     });
+  } else {
+    const { linkVaga, ...updates } = data;
+    updated = await prisma.jobAnalysis.update({
+      where: { id },
+      data: { ...updates, ...(linkVaga !== undefined ? { jobUrl: linkVaga } : {}), appliedAt },
+    });
   }
-  const { linkVaga, ...updates } = data;
-  return prisma.jobAnalysis.update({
-    where: { id },
-    data: { ...updates, ...(linkVaga !== undefined ? { jobUrl: linkVaga } : {}), appliedAt },
-  });
+  await cache.invalidate("match-history", userId);
+  return updated;
 }
 
 async function getAnalysis(userId, id) {
@@ -314,6 +326,7 @@ async function deleteHistory(userId, id) {
     err.statusCode = 404;
     throw err;
   }
+  await cache.invalidate("match-history", userId);
   return { message: "Removido" };
 }
 

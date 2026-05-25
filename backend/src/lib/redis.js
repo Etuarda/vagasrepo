@@ -56,4 +56,10 @@ async function incrWithTtl(key, ttlSeconds) {
   return count;
 }
 
-module.exports = { get, set, del, incrWithTtl };
+async function incr(key) {
+  const redis = await getClient();
+  if (!redis) return null;
+  return redis.incr(key);
+}
+
+module.exports = { get, set, del, incr, incrWithTtl };

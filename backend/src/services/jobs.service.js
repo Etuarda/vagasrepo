@@ -1,4 +1,5 @@
 const { prisma } = require("../lib/prisma");
+const cache = require("../lib/cache");
 const { linkedJobInclude } = require("../modules/application-tracking/application-tracking.service");
 
 function startOfDay(d) {
@@ -20,6 +21,11 @@ function parseYMD(ymd) {
 }
 
 async function listJobs(userId, { q, status, period, dateFrom, dateTo, page = 1, limit = 50 }) {
+  const variant = JSON.stringify({ q: q || "", status: status || "", period: period || "", dateFrom: dateFrom || "", dateTo: dateTo || "", page, limit });
+  return cache.remember("jobs", userId, variant, () => loadJobs(userId, { q, status, period, dateFrom, dateTo, page, limit }));
+}
+
+async function loadJobs(userId, { q, status, period, dateFrom, dateTo, page = 1, limit = 50 }) {
   const and = [];
 
   // A) Busca textual (case-insensitive)
@@ -62,9 +68,11 @@ async function listJobs(userId, { q, status, period, dateFrom, dateTo, page = 1,
 }
 
 async function createJob(userId, data) {
-  return prisma.job.create({
+  const job = await prisma.job.create({
     data: { ...data, userId },
   });
+  await cache.invalidate("jobs", userId);
+  return job;
 }
 
 async function getJob(userId, id) {
@@ -96,6 +104,10 @@ async function updateJob(userId, id, data) {
       data: { status: "applied", appliedAt: new Date() },
     });
   }
+  await Promise.all([
+    cache.invalidate("jobs", userId),
+    cache.invalidate("match-history", userId),
+  ]);
   return { message: "Atualizado", job };
 }
 
@@ -110,6 +122,10 @@ async function deleteJob(userId, id) {
     throw err;
   }
 
+  await Promise.all([
+    cache.invalidate("jobs", userId),
+    cache.invalidate("match-history", userId),
+  ]);
   return { message: "Removido" };
 }
 

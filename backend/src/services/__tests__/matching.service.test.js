@@ -1,4 +1,8 @@
 jest.mock("../../lib/prisma", () => ({ prisma: {} }));
+jest.mock("../../lib/cache", () => ({
+  remember: jest.fn((namespace, owner, variant, loader) => loader()),
+  invalidate: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("../profile.service", () => ({}));
 jest.mock("../pdf-output.service", () => ({ generateOptimizedResumePdf: jest.fn() }));
 

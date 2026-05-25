@@ -1,4 +1,5 @@
 const { prisma } = require("../lib/prisma");
+const cache = require("../lib/cache");
 const profileService = require("./profile.service");
 
 const MAX_PDF_BYTES = 3 * 1024 * 1024;
@@ -44,24 +45,27 @@ async function uploadResumeFile(userId, file, profileId = null) {
     },
   });
 
+  await cache.invalidate("resume-files", userId);
   return serializeResumeFile(saved);
 }
 
 async function listResumeFiles(userId, profileId = null) {
   const profile = await profileService.resolveProfile(userId, profileId);
-  const rows = await prisma.resumeFile.findMany({
-    where: { userId, profileId: profile.id },
-    orderBy: { createdAt: "desc" },
-    take: 30,
-    select: {
-      id: true,
-      fileName: true,
-      mimeType: true,
-      sizeBytes: true,
-      createdAt: true,
-    },
+  return cache.remember("resume-files", userId, profile.id, async () => {
+    const rows = await prisma.resumeFile.findMany({
+      where: { userId, profileId: profile.id },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        fileName: true,
+        mimeType: true,
+        sizeBytes: true,
+        createdAt: true,
+      },
+    });
+    return rows.map(serializeResumeFile);
   });
-  return rows.map(serializeResumeFile);
 }
 
 async function getResumeFile(userId, id) {
@@ -81,6 +85,7 @@ async function deleteResumeFile(userId, id) {
     err.statusCode = 404;
     throw err;
   }
+  await cache.invalidate("resume-files", userId);
   return { message: "Removido" };
 }
 

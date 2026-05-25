@@ -9,6 +9,10 @@ jest.mock("../../lib/prisma", () => ({
     },
   },
 }));
+jest.mock("../../lib/cache", () => ({
+  remember: jest.fn((namespace, owner, variant, loader) => loader()),
+  invalidate: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("../profile.service", () => ({
   resolveProfile: jest.fn(),
 }));

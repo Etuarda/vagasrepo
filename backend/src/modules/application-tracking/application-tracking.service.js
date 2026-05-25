@@ -1,4 +1,5 @@
 const { prisma } = require("../../lib/prisma");
+const cache = require("../../lib/cache");
 
 const linkedJobInclude = {
   jobAnalysis: {
@@ -79,6 +80,10 @@ async function createFromAnalysis(userId, analysisId, payload) {
     }
     return created;
   });
+  await Promise.all([
+    cache.invalidate("jobs", userId),
+    cache.invalidate("match-history", userId),
+  ]);
 
   return {
     message: "Candidatura registrada com sucesso.",

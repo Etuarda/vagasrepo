@@ -9,8 +9,13 @@ jest.mock("../../lib/prisma", () => ({
     },
   },
 }));
+jest.mock("../../lib/cache", () => ({
+  remember: jest.fn((namespace, owner, variant, loader) => loader()),
+  invalidate: jest.fn().mockResolvedValue(undefined),
+}));
 
 const { prisma } = require("../../lib/prisma");
+const cache = require("../../lib/cache");
 const { createProfile, deleteProfile, updateExperience } = require("../profile.service");
 
 describe("subprofile deletion", () => {
@@ -39,6 +44,7 @@ describe("subprofile deletion", () => {
       select: { id: true, isGlobal: true },
     });
     expect(prisma.careerProfile.delete).toHaveBeenCalledWith({ where: { id: "subprofile" } });
+    expect(cache.invalidate).toHaveBeenCalledWith("profile", "user");
   });
 
   it("impede exclusao do Perfil Global", async () => {

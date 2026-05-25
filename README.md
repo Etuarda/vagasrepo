@@ -147,12 +147,12 @@ JWT_SECRET="uma-chave-segura-com-pelo-menos-32-caracteres"
 CORS_ORIGIN="http://localhost:5500"
 PORT=3000
 NODE_ENV=development
-# REDIS_URL="redis://localhost:6379"
+REDIS_URL="rediss://default:senha@host:porta"
 # RESUME_FONT_PATH="/caminho/para/arial.ttf"
 # RESUME_BOLD_FONT_PATH="/caminho/para/arialbd.ttf"
 ```
 
-`REDIS_URL` e opcional; sem Redis o rate limiter utiliza armazenamento em memoria. No Windows, o gerador detecta Arial automaticamente em `C:\Windows\Fonts`. Em outros ambientes, configure `RESUME_FONT_PATH` e `RESUME_BOLD_FONT_PATH` com arquivos Arial licenciados para incorporar a tipografia exigida no PDF; sem eles, o renderer usa a fonte sans-serif PDF padrao como fallback.
+`REDIS_URL` deve ser configurada no Render para acelerar a troca de perfis, Itens do Perfil Global, historico de matching e acompanhamento de vagas; sem Redis essas leituras continuam funcionando, mas consultam o Neon novamente. O Redis tambem e usado para sessao e rate limiting. No Windows, o gerador detecta Arial automaticamente em `C:\Windows\Fonts`. Em outros ambientes, configure `RESUME_FONT_PATH` e `RESUME_BOLD_FONT_PATH` com arquivos Arial licenciados para incorporar a tipografia exigida no PDF; sem eles, o renderer usa a fonte sans-serif PDF padrao como fallback.
 
 ## Testes
 

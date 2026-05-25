@@ -18,6 +18,7 @@ npm install
 - `DATABASE_URL`: connection string Postgres do Neon com `sslmode=require`.
 - `JWT_SECRET`: chave com pelo menos 32 caracteres.
 - `CORS_ORIGIN`: origens adicionais permitidas, separadas por virgula. A API ja autoriza `https://gestaodevagas.vercel.app` e previews `https://gestaodevagas-*-eduardas-projects-9a8623c8.vercel.app`.
+- `REDIS_URL`: conexao Redis TLS (`rediss://...`) usada para sessoes, rate limiting e cache das telas de perfil, historico e candidaturas.
 
 3. Rode migrations e gere o client:
 
@@ -42,6 +43,7 @@ API: `http://localhost:3000`
 4. Use `npm install && npm run prisma:deploy` como build command.
 5. Use `npm start` como start command.
 6. Configure `CORS_ORIGIN` no Render somente para dominios adicionais ou preview local que precise acessar a API publicada.
+7. Crie um Redis gerenciado e configure `REDIS_URL` no Render; sem essa variavel a API funciona, mas as consultas voltam a acessar o Neon a cada carregamento.
 
 ## Endpoints
 
@@ -76,3 +78,5 @@ API: `http://localhost:3000`
 - `DELETE /resume-files/:id` com Bearer token
 
 O historico de matching (`JobAnalysis` e PDFs otimizados associados) fica disponivel por 30 dias. Registros expirados nao sao retornados; a limpeza fisica e iniciada em segundo plano para nao atrasar a tela. Candidaturas ja registradas permanecem salvas.
+
+Com `REDIS_URL` configurado, leituras repetidas de perfis e catalogo global, historico de matching, acompanhamento de vagas, arquivos PDF e vagas pesquisadas compartilhadas usam cache com expiracao e invalidacao automatica apos alteracoes.

@@ -5,11 +5,16 @@ jest.mock("../../lib/prisma", () => ({
     },
   },
 }));
+jest.mock("../../lib/cache", () => ({
+  remember: jest.fn((namespace, owner, variant, loader) => loader()),
+  invalidate: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("../profile.service", () => ({
   resolveProfile: jest.fn(),
 }));
 
 const { prisma } = require("../../lib/prisma");
+const cache = require("../../lib/cache");
 const profileService = require("../profile.service");
 const { uploadResumeFile } = require("../resume-files.service");
 
@@ -43,5 +48,6 @@ describe("resume PDF attachment", () => {
     });
     expect(result).not.toHaveProperty("profile");
     expect(result).not.toHaveProperty("extractedText");
+    expect(cache.invalidate).toHaveBeenCalledWith("resume-files", "user");
   });
 });

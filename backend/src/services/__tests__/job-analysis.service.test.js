@@ -7,10 +7,15 @@ jest.mock("../../lib/prisma", () => ({
     },
   },
 }));
+jest.mock("../../lib/cache", () => ({
+  remember: jest.fn((namespace, owner, variant, loader) => loader()),
+  invalidate: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("../profile.service", () => ({}));
 jest.mock("../pdf-output.service", () => ({ generateOptimizedResumePdf: jest.fn() }));
 
 const { prisma } = require("../../lib/prisma");
+const cache = require("../../lib/cache");
 const { updateAnalysis } = require("../matching.service");
 
 describe("job analysis status", () => {
@@ -27,6 +32,7 @@ describe("job analysis status", () => {
       where: { id: "analysis" },
       data: expect.objectContaining({ status: "applied", appliedAt: expect.any(Date) }),
     }));
+    expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
   });
 
   it("cria nova versao ao editar conteudo da analise", async () => {
@@ -43,5 +49,6 @@ describe("job analysis status", () => {
     expect(prisma.jobAnalysis.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ parentAnalysisId: "analysis", version: 2, notes: "Revisada", jobUrl: "https://example.com/nova-vaga" }),
     });
+    expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
   });
 });

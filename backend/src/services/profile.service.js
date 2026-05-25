@@ -1,4 +1,5 @@
 const { prisma } = require("../lib/prisma");
+const cache = require("../lib/cache");
 const { normalizeTerm } = require("../modules/matching/keyword-normalizer");
 
 const profileInclude = {
@@ -201,12 +202,26 @@ async function resolveProfile(userId, profileId = null) {
 }
 
 async function listProfiles(userId) {
-  await ensureDefaultProfile(userId);
-  return prisma.careerProfile.findMany({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, profileName: true, isGlobal: true, title: true, updatedAt: true },
+  return cache.remember("profiles", userId, "list", async () => {
+    await ensureDefaultProfile(userId);
+    return prisma.careerProfile.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, profileName: true, isGlobal: true, title: true, updatedAt: true },
+    });
   });
+}
+
+async function invalidateProfileCache(userId) {
+  await Promise.all([
+    cache.invalidate("profiles", userId),
+    cache.invalidate("profile", userId),
+  ]);
+}
+
+async function refreshedProfile(userId, profileId) {
+  await invalidateProfileCache(userId);
+  return getProfile(userId, profileId);
 }
 
 async function createProfile(userId, { profileName }) {
@@ -244,7 +259,7 @@ async function createProfile(userId, { profileName }) {
   });
 
   await inheritGlobalCollections(profile.id, base.id);
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function deleteProfile(userId, profileId) {
@@ -264,6 +279,7 @@ async function deleteProfile(userId, profileId) {
   }
 
   await prisma.careerProfile.delete({ where: { id: profile.id } });
+  await invalidateProfileCache(userId);
   return { message: "Subperfil removido." };
 }
 
@@ -283,7 +299,7 @@ async function inheritGlobalCollections(subprofileId, globalProfileId) {
   ]);
 }
 
-async function getProfile(userId, profileId = null) {
+async function loadProfile(userId, profileId = null) {
   const profile = await resolveProfile(userId, profileId);
   const full = await prisma.careerProfile.findFirst({
     where: { id: profile.id, userId },
@@ -300,6 +316,10 @@ async function getProfile(userId, profileId = null) {
     return serialized;
   }
   return serializeProfile(full);
+}
+
+async function getProfile(userId, profileId = null) {
+  return cache.remember("profile", userId, profileId || "global", () => loadProfile(userId, profileId));
 }
 
 async function updateSubprofileAllocation(userId, data) {
@@ -365,7 +385,7 @@ async function updateSubprofileAllocation(userId, data) {
     }));
   }
   await prisma.$transaction(operations);
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function updateProfile(userId, profileId, data) {
@@ -390,6 +410,7 @@ async function updateProfile(userId, profileId, data) {
     data,
     include: profileInclude,
   });
+  await invalidateProfileCache(userId);
   return serializeProfile(updated);
 }
 
@@ -422,7 +443,7 @@ async function updateSkills(userId, profileId, skills) {
         skipDuplicates: true,
       }),
     ]);
-    return getProfile(userId, profile.id);
+    return refreshedProfile(userId, profile.id);
   }
 
   await prisma.$transaction([
@@ -433,7 +454,7 @@ async function updateSkills(userId, profileId, skills) {
     }),
   ]);
 
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function addProject(userId, profileId, data) {
@@ -460,7 +481,7 @@ async function addProject(userId, profileId, data) {
     await prisma.subprofileProject.create({ data: { subprofileId: profile.id, projectId: project.id } });
   }
 
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function updateProject(userId, profileId, id, data) {
@@ -492,14 +513,14 @@ async function updateProject(userId, profileId, id, data) {
       },
     },
   });
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function deleteProject(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
     const hidden = await prisma.subprofileProject.updateMany({ where: { projectId: id, subprofileId: profile.id }, data: { isVisible: false } });
-    if (hidden.count) return getProfile(userId, profile.id);
+    if (hidden.count) return refreshedProfile(userId, profile.id);
   }
   const result = await prisma.project.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
@@ -507,13 +528,13 @@ async function deleteProject(userId, profileId, id) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function addExperience(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   await prisma.experience.create({ data: { ...data, userId, profileId: profile.id } });
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function updateExperience(userId, profileId, id, data) {
@@ -525,14 +546,14 @@ async function updateExperience(userId, profileId, id, data) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function deleteExperience(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
     const hidden = await prisma.subprofileExperience.updateMany({ where: { experienceId: id, subprofileId: profile.id }, data: { isVisible: false } });
-    if (hidden.count) return getProfile(userId, profile.id);
+    if (hidden.count) return refreshedProfile(userId, profile.id);
   }
   const result = await prisma.experience.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
@@ -540,13 +561,13 @@ async function deleteExperience(userId, profileId, id) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function addCourse(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   await prisma.course.create({ data: { ...data, userId, profileId: profile.id } });
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function updateCourse(userId, profileId, id, data) {
@@ -558,14 +579,14 @@ async function updateCourse(userId, profileId, id, data) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function deleteCourse(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
     const hidden = await prisma.subprofileCourse.updateMany({ where: { courseId: id, subprofileId: profile.id }, data: { isVisible: false } });
-    if (hidden.count) return getProfile(userId, profile.id);
+    if (hidden.count) return refreshedProfile(userId, profile.id);
   }
   const result = await prisma.course.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
@@ -573,13 +594,13 @@ async function deleteCourse(userId, profileId, id) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function addCertification(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   await prisma.certification.create({ data: { ...data, userId, profileId: profile.id } });
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function updateCertification(userId, profileId, id, data) {
@@ -591,14 +612,14 @@ async function updateCertification(userId, profileId, id, data) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function deleteCertification(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
     const hidden = await prisma.subprofileCertification.updateMany({ where: { certificationId: id, subprofileId: profile.id }, data: { isVisible: false } });
-    if (hidden.count) return getProfile(userId, profile.id);
+    if (hidden.count) return refreshedProfile(userId, profile.id);
   }
   const result = await prisma.certification.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
@@ -606,7 +627,7 @@ async function deleteCertification(userId, profileId, id) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function addLanguage(userId, profileId, data) {
@@ -616,7 +637,7 @@ async function addLanguage(userId, profileId, data) {
   if (!profile.isGlobal) {
     await prisma.subprofileLanguage.create({ data: { subprofileId: profile.id, languageId: language.id } });
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function updateLanguage(userId, profileId, id, data) {
@@ -628,7 +649,7 @@ async function updateLanguage(userId, profileId, id, data) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function addEducation(userId, profileId, data) {
@@ -638,7 +659,7 @@ async function addEducation(userId, profileId, data) {
   if (!profile.isGlobal) {
     await prisma.subprofileEducation.create({ data: { subprofileId: profile.id, educationId: education.id } });
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function updateEducation(userId, profileId, id, data) {
@@ -650,14 +671,14 @@ async function updateEducation(userId, profileId, id, data) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function deleteEducation(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
     const hidden = await prisma.subprofileEducation.updateMany({ where: { educationId: id, subprofileId: profile.id }, data: { isVisible: false } });
-    if (hidden.count) return getProfile(userId, profile.id);
+    if (hidden.count) return refreshedProfile(userId, profile.id);
   }
   const result = await prisma.education.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (!result.count) {
@@ -665,14 +686,14 @@ async function deleteEducation(userId, profileId, id) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 async function deleteLanguage(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
     const hidden = await prisma.subprofileLanguage.updateMany({ where: { languageId: id, subprofileId: profile.id }, data: { isVisible: false } });
-    if (hidden.count) return getProfile(userId, profile.id);
+    if (hidden.count) return refreshedProfile(userId, profile.id);
   }
   const result = await prisma.language.deleteMany({ where: { id, userId, profileId: profile.id } });
   if (result.count === 0) {
@@ -680,7 +701,7 @@ async function deleteLanguage(userId, profileId, id) {
     err.statusCode = 404;
     throw err;
   }
-  return getProfile(userId, profile.id);
+  return refreshedProfile(userId, profile.id);
 }
 
 module.exports = {

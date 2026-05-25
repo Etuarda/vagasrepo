@@ -5,8 +5,12 @@ jest.mock("../../lib/prisma", () => ({
     $transaction: jest.fn(),
   },
 }));
+jest.mock("../../lib/cache", () => ({
+  invalidate: jest.fn().mockResolvedValue(undefined),
+}));
 
 const { prisma } = require("../../lib/prisma");
+const cache = require("../../lib/cache");
 const { createFromAnalysis } = require("../../modules/application-tracking/application-tracking.service");
 
 describe("application tracking from analysis", () => {
@@ -53,6 +57,8 @@ describe("application tracking from analysis", () => {
       }),
     }));
     expect(tx.jobAnalysis.update).not.toHaveBeenCalled();
+    expect(cache.invalidate).toHaveBeenCalledWith("jobs", "user");
+    expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
     expect(out.message).toBe("Candidatura registrada com sucesso.");
   });
 

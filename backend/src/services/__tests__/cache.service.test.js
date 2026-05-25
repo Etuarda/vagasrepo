@@ -1,0 +1,47 @@
+jest.mock("../../lib/redis", () => ({
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+  incr: jest.fn(),
+}));
+
+const redis = require("../../lib/redis");
+const cache = require("../../lib/cache");
+
+describe("redis read cache", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    redis.get.mockResolvedValue(null);
+    redis.set.mockResolvedValue(true);
+    redis.incr.mockResolvedValue(1);
+  });
+
+  it("armazena o resultado carregado com expiracao", async () => {
+    const loader = jest.fn().mockResolvedValue({ id: "profile" });
+
+    await expect(cache.remember("profile", "user", "global", loader)).resolves.toEqual({ id: "profile" });
+
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(redis.set).toHaveBeenCalledWith(
+      "cache:profile:user:v0:global",
+      JSON.stringify({ id: "profile" }),
+      cache.DEFAULT_CACHE_TTL_SECONDS
+    );
+  });
+
+  it("retorna valor armazenado sem recarregar o banco", async () => {
+    redis.get.mockResolvedValueOnce("3").mockResolvedValueOnce(JSON.stringify([{ id: "job" }]));
+    const loader = jest.fn();
+
+    await expect(cache.remember("jobs", "user", "all", loader)).resolves.toEqual([{ id: "job" }]);
+
+    expect(loader).not.toHaveBeenCalled();
+    expect(redis.set).not.toHaveBeenCalled();
+  });
+
+  it("invalida o namespace incrementando sua versao", async () => {
+    await cache.invalidate("match-history", "user");
+
+    expect(redis.incr).toHaveBeenCalledWith("cache-version:match-history:user");
+  });
+});
