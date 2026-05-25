@@ -17,6 +17,25 @@ function setValue(id, value) {
   if (el) el.value = value || "";
 }
 
+function setEditMode(type, id) {
+  const form = document.getElementById(`form-${type}`);
+  if (!form) return;
+  form.dataset.editId = id;
+  const submit = form.querySelector("[data-submit-label]");
+  if (submit) submit.textContent = "Salvar alteracoes";
+  form.querySelector(`[data-cancel-edit="${type}"]`)?.classList.remove("hidden");
+}
+
+function clearEditMode(type) {
+  const form = document.getElementById(`form-${type}`);
+  if (!form) return;
+  delete form.dataset.editId;
+  form.reset();
+  const submit = form.querySelector("[data-submit-label]");
+  if (submit) submit.textContent = submit.dataset.submitLabel;
+  form.querySelector(`[data-cancel-edit="${type}"]`)?.classList.add("hidden");
+}
+
 function formatDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Data indisponível";
@@ -60,6 +79,7 @@ function renderLanguages() {
       (language) => `
         <span class="tag-pill">
           ${escapeHtml([language.name, language.level].filter(Boolean).join(" - "))}
+          <button type="button" data-edit-language="${escapeHtml(language.id)}" aria-label="Editar ${escapeHtml(language.name)}">editar</button>
           <button type="button" data-remove-language="${escapeHtml(language.id)}" aria-label="Remover ${escapeHtml(language.name)}">x</button>
         </span>
       `
@@ -84,26 +104,30 @@ function renderProjects() {
           <div class="flex items-start justify-between gap-4">
             <div>
               <h4 class="font-serif text-2xl">${escapeHtml(project.title)}</h4>
-              <p class="text-sm text-taupe mt-2 leading-relaxed">${escapeHtml(project.description)}</p>
+              <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(project.category || "other")}</p>
+              <p class="text-sm text-taupe mt-2 leading-relaxed">${escapeHtml(project.shortDescription || project.description)}</p>
               <div class="flex flex-wrap gap-4 mt-3">
                 ${project.repositoryUrl ? `<a href="${escapeHtml(project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Repositório</a>` : ""}
                 ${project.deployUrl ? `<a href="${escapeHtml(project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Deploy</a>` : ""}
               </div>
             </div>
-            <button type="button" data-remove-project="${project.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+            <div class="flex gap-3">
+              <button type="button" data-edit-project="${project.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button>
+              <button type="button" data-remove-project="${project.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+            </div>
           </div>
           <div class="flex flex-wrap gap-2 mt-4">
             ${(project.technologies || []).map((tech) => `<span class="tag-pill">${escapeHtml(tech)}</span>`).join("")}
           </div>
           <div class="mt-4 space-y-2">
-            ${(project.bullets || []).map((bullet) => `<p class="text-sm text-taupe">- ${escapeHtml(bullet.content)}</p>`).join("")}
+            ${(project.bullets || []).map((bullet) => `<p class="text-sm text-taupe flex justify-between gap-3"><span>- ${escapeHtml(bullet.content)}</span><button type="button" data-edit-project-bullet="${bullet.id}" data-project-id="${project.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button></p>`).join("")}
           </div>
           <form data-project-bullet-form="${project.id}" class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4 border-t border-borderLight pt-4">
             <select name="category" class="editorial-input text-xs bg-white">
               <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="data">Dados</option><option value="architecture">Arquitetura</option><option value="devops">DevOps</option><option value="business">Negócio</option>
             </select>
             <input name="content" required minlength="10" maxlength="240" placeholder="Bullet factual reutilizável" class="editorial-input text-xs md:col-span-2" />
-            <button type="submit" class="bg-ink text-paper rounded-full text-[10px] font-bold uppercase">Adicionar bullet</button>
+            <button type="submit" data-bullet-submit-label="Adicionar bullet" class="bg-ink text-paper rounded-full text-[10px] font-bold uppercase">Adicionar bullet</button>
             <input name="keywords" placeholder="Keywords: node, sql, docker" class="editorial-input text-xs md:col-span-3" />
             <input name="weight" type="number" min="0" max="100" value="50" class="editorial-input text-xs" />
           </form>
@@ -120,7 +144,7 @@ function renderEducations() {
   root.innerHTML = items.length ? items.map((item) => `
     <article class="border border-borderLight rounded-2xl p-4 bg-white flex justify-between gap-3">
       <p class="text-sm"><strong>${escapeHtml(item.title)}</strong> | ${escapeHtml(item.institution)}${item.period ? ` | ${escapeHtml(item.period)}` : ""}</p>
-      ${state.profile?.isGlobal ? `<button type="button" data-remove-education="${item.id}" class="text-[10px] font-bold uppercase text-red-700">Remover</button>` : ""}
+      ${state.profile?.isGlobal ? `<div class="flex gap-3"><button type="button" data-edit-education="${item.id}" class="text-[10px] font-bold uppercase">Editar</button><button type="button" data-remove-education="${item.id}" class="text-[10px] font-bold uppercase text-red-700">Remover</button></div>` : ""}
     </article>`).join("") : `<p class="text-sm text-taupe">Nenhuma formação cadastrada.</p>`;
 }
 
@@ -141,9 +165,12 @@ function renderExperiences() {
           <div class="flex items-start justify-between gap-4">
             <div>
               <h4 class="font-bold">${escapeHtml(experience.role)}</h4>
-              <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(experience.company)} · ${escapeHtml(experience.period)}</p>
+              <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(experience.company)} | ${escapeHtml(experience.period)}${experience.workload ? ` | ${escapeHtml(experience.workload)}` : ""}</p>
             </div>
-            <button type="button" data-remove-experience="${experience.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+            <div class="flex gap-3">
+              <button type="button" data-edit-experience="${experience.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button>
+              <button type="button" data-remove-experience="${experience.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+            </div>
           </div>
           <p class="text-sm text-taupe mt-3 leading-relaxed">${escapeHtml(experience.description)}</p>
         </article>
@@ -166,10 +193,10 @@ function renderCoursesAndCertifications() {
                 <div class="flex items-start justify-between gap-4">
                   <div>
                     <h4 class="font-bold">${escapeHtml(course.title)}</h4>
-                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(course.institution || "Instituição não informada")} ${course.period ? `· ${escapeHtml(course.period)}` : ""}</p>
+                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(course.institution || "Instituição não informada")} ${course.period ? ` | ${escapeHtml(course.period)}` : ""}${course.workload ? ` | ${escapeHtml(course.workload)}` : ""}</p>
                     ${course.description ? `<p class="text-sm text-taupe mt-3">${escapeHtml(course.description)}</p>` : ""}
                   </div>
-                  <button type="button" data-remove-course="${course.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+                  <div class="flex gap-3"><button type="button" data-edit-course="${course.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button><button type="button" data-remove-course="${course.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button></div>
                 </div>
               </article>
             `
@@ -188,10 +215,10 @@ function renderCoursesAndCertifications() {
                 <div class="flex items-start justify-between gap-4">
                   <div>
                     <h4 class="font-bold">${escapeHtml(certification.title)}</h4>
-                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(certification.issuer || "Emissor não informado")} ${certification.period ? `· ${escapeHtml(certification.period)}` : ""}</p>
+                    <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(certification.issuer || "Emissor não informado")} ${certification.period ? ` | ${escapeHtml(certification.period)}` : ""}${certification.workload ? ` | ${escapeHtml(certification.workload)}` : ""}</p>
                     ${certification.credentialUrl ? `<a href="${escapeHtml(certification.credentialUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest underline">Credencial</a>` : ""}
                   </div>
-                  <button type="button" data-remove-certification="${certification.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+                  <div class="flex gap-3"><button type="button" data-edit-certification="${certification.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button><button type="button" data-remove-certification="${certification.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button></div>
                 </div>
               </article>
             `
@@ -249,6 +276,17 @@ function renderProfileCards() {
   `).join("");
 }
 
+function renderMatchProfileOptions() {
+  const select = document.getElementById("match-profile-id");
+  if (!select) return;
+  const selected = select.value;
+  select.innerHTML = `
+    <option value="">Escolher perfil automaticamente pelo matching</option>
+    ${(state.profiles || []).map((profile) => `<option value="${profile.id}">${escapeHtml(profile.profileName)}</option>`).join("")}
+  `;
+  if ([...(state.profiles || []).map((profile) => profile.id), ""].includes(selected)) select.value = selected;
+}
+
 function renderHistory() {
   const root = document.getElementById("match-history");
   if (!root) return;
@@ -267,6 +305,7 @@ function renderHistory() {
             <div>
               <button type="button" data-open-analysis="${item.analysisId}" class="font-bold text-sm underline text-left">${escapeHtml(item.targetTitle)}</button>
               <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${escapeHtml(item.company || "")} ${item.company ? "·" : ""} ${formatDateTime(item.createdAt)} · ${item.score}% · ${escapeHtml(item.status || "draft")}</p>
+              ${item.linkVaga ? `<a href="${escapeHtml(item.linkVaga)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest underline">Link da vaga</a>` : ""}
               ${item.application ? `<p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-2">Candidatura: ${escapeHtml(item.application.status)} · ${escapeHtml(item.application.fase)}${item.appliedAt ? ` · aplicada em ${escapeHtml(formatDateTime(item.appliedAt))}` : ""}</p>` : ""}
               ${
                 item.generatedFileName || item.resumeFileId
@@ -412,6 +451,7 @@ function renderAnalysisEditor(analysis) {
         <input name="jobTitle" value="${escapeHtml(analysis.jobTitle)}" required class="editorial-input text-sm" />
         <input name="company" value="${escapeHtml(analysis.company || "")}" placeholder="Empresa" class="editorial-input text-sm" />
       </div>
+      <input type="url" name="linkVaga" value="${escapeHtml(analysis.jobUrl || "")}" placeholder="Link da vaga" class="editorial-input text-sm" />
       <textarea name="jobDescription" rows="10" required minlength="30" maxlength="15000" class="editorial-input text-sm">${escapeHtml(analysis.jobDescription)}</textarea>
       <textarea name="notes" rows="3" placeholder="Notas da revisão" class="editorial-input text-sm">${escapeHtml(analysis.notes || "")}</textarea>
       <select name="status" class="editorial-input text-sm bg-white">
@@ -452,6 +492,7 @@ export const career = {
       state.activeProfileId = state.profiles[0].id;
     }
     renderProfileCards();
+    renderMatchProfileOptions();
   },
 
   async loadProfile() {
@@ -512,11 +553,25 @@ export const career = {
     ui.notify("Idioma cadastrado.");
   },
 
+  async updateLanguage(id, payload) {
+    const out = await api(`/profile/languages/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Idioma atualizado.");
+  },
+
   async addEducation(payload) {
     const out = await api("/profile/educations", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
     state.profile = out.user;
     renderProfileForm();
     ui.notify("Formação cadastrada no Perfil Global.");
+  },
+
+  async updateEducation(id, payload) {
+    const out = await api(`/profile/educations/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Formacao atualizada.");
   },
 
   async removeEducation(id) {
@@ -538,11 +593,25 @@ export const career = {
     ui.notify("Projeto cadastrado.");
   },
 
+  async updateProject(id, payload) {
+    const out = await api(`/profile/projects/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Projeto atualizado.");
+  },
+
   async addProjectBullet(projectId, payload) {
     const out = await api(`/profile/projects/${projectId}/bullets`, { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
     state.profile = out.user;
     renderProfileForm();
     ui.notify("Bullet cadastrado para seleção determinística.");
+  },
+
+  async updateProjectBullet(projectId, id, payload) {
+    const out = await api(`/profile/projects/${projectId}/bullets/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Bullet atualizado.");
   },
 
   async removeProject(id) {
@@ -558,6 +627,13 @@ export const career = {
     ui.notify("Experiência cadastrada.");
   },
 
+  async updateExperience(id, payload) {
+    const out = await api(`/profile/experiences/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Experiencia atualizada.");
+  },
+
   async removeExperience(id) {
     const out = await api(`/profile/experiences/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
     state.profile = out.user;
@@ -569,6 +645,13 @@ export const career = {
     state.profile = out.user;
     renderProfileForm();
     ui.notify("Curso cadastrado.");
+  },
+
+  async updateCourse(id, payload) {
+    const out = await api(`/profile/courses/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Curso atualizado.");
   },
 
   async removeCourse(id) {
@@ -584,6 +667,13 @@ export const career = {
     ui.notify("Certificação cadastrada.");
   },
 
+  async updateCertification(id, payload) {
+    const out = await api(`/profile/certifications/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
+    state.profile = out.user;
+    renderProfileForm();
+    ui.notify("Certificacao atualizada.");
+  },
+
   async removeCertification(id) {
     const out = await api(`/profile/certifications/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
     state.profile = out.user;
@@ -594,9 +684,16 @@ export const career = {
     renderMatchLoading();
     const jobTitle = document.getElementById("match-job-title")?.value || "";
     const company = document.getElementById("match-company")?.value || "";
-    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, profileId: state.activeProfileId }) }, state.token);
+    const linkVaga = document.getElementById("match-job-link")?.value || "";
+    const requestedProfileId = document.getElementById("match-profile-id")?.value || undefined;
+    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId }) }, state.token);
     state.lastMatchResult = result;
     renderMatchResult(result);
+    if (result.selectedSubprofileId && result.selectedSubprofileId !== state.activeProfileId) {
+      state.activeProfileId = result.selectedSubprofileId;
+      renderProfileCards();
+      await career.loadProfile();
+    }
     await career.loadHistory();
   },
 
@@ -618,6 +715,7 @@ export const career = {
       targetTitle: analysis.jobTitle,
       selectedSubprofileName: analysis.selectedSubprofile?.profileName || "",
       score: analysis.matchScore,
+      linkVaga: analysis.jobUrl || "",
     };
     renderAnalysisEditor(analysis);
   },
@@ -642,6 +740,74 @@ export const career = {
     await career.loadHistory();
     ui.notify("Candidatura registrada com sucesso. Você poderá acompanhar essa vaga no painel de candidaturas.");
     return out;
+  },
+
+  beginEdit(type, id, parentId = "") {
+    const collections = {
+      education: state.profile?.educations,
+      experience: state.profile?.experiences,
+      project: state.profile?.projects,
+      course: state.profile?.courses,
+      certification: state.profile?.certifications,
+      language: state.profile?.languages,
+    };
+    if (type === "bullet") {
+      const project = (state.profile?.projects || []).find((item) => item.id === parentId);
+      const bullet = project?.bullets?.find((item) => item.id === id);
+      const form = document.querySelector(`[data-project-bullet-form="${parentId}"]`);
+      if (!bullet || !form) return;
+      form.dataset.editId = id;
+      form.elements.category.value = bullet.category || "backend";
+      form.elements.content.value = bullet.content || "";
+      form.elements.keywords.value = (bullet.keywords || []).join(", ");
+      form.elements.weight.value = bullet.weight ?? 50;
+      form.querySelector("[data-bullet-submit-label]").textContent = "Salvar bullet";
+      return;
+    }
+    const item = (collections[type] || []).find((entry) => entry.id === id);
+    if (!item) return;
+    if (type === "education") {
+      setValue("education-title-field", item.title);
+      setValue("education-institution", item.institution);
+      setValue("education-period", item.period);
+    } else if (type === "experience") {
+      setValue("experience-company", item.company);
+      setValue("experience-role", item.role);
+      setValue("experience-period", item.period);
+      setValue("experience-workload", item.workload);
+      setValue("experience-description", item.description);
+    } else if (type === "project") {
+      setValue("project-title", item.title);
+      setValue("project-category", item.category);
+      setValue("project-techs", (item.technologies || []).join(", "));
+      setValue("project-short-description", item.shortDescription);
+      setValue("project-repository-url", item.repositoryUrl);
+      setValue("project-deploy-url", item.deployUrl);
+      setValue("project-description", item.description);
+      setValue("project-business-problem", item.businessProblem);
+      setValue("project-technical-solution", item.technicalSolution);
+      setValue("project-architecture", item.architecture);
+    } else if (type === "course") {
+      setValue("course-title", item.title);
+      setValue("course-institution", item.institution);
+      setValue("course-period", item.period);
+      setValue("course-workload", item.workload);
+      setValue("course-description", item.description);
+    } else if (type === "certification") {
+      setValue("certification-title", item.title);
+      setValue("certification-issuer", item.issuer);
+      setValue("certification-period", item.period);
+      setValue("certification-workload", item.workload);
+      setValue("certification-url", item.credentialUrl);
+    } else if (type === "language") {
+      setValue("language-name", item.name);
+      setValue("language-level", item.level);
+    }
+    setEditMode(type, id);
+  },
+
+  cancelEdit(type) {
+    clearEditMode(type);
   },
 
   async loadResumeFiles() {

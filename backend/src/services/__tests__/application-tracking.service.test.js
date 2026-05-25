@@ -16,6 +16,7 @@ describe("application tracking from analysis", () => {
     jobTitle: "Backend Developer",
     company: "Empresa",
     jobDescription: "Descricao original",
+    jobUrl: "https://example.com/original",
     generatedResume: { id: "resume" },
     status: "draft",
     appliedAt: null,
@@ -74,6 +75,19 @@ describe("application tracking from analysis", () => {
     expect(tx.jobAnalysis.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "analysis" },
       data: expect.objectContaining({ status: "applied", appliedAt: expect.any(Date) }),
+    }));
+  });
+
+  it("reutiliza o link salvo na analise quando o formulario nao informar outro", async () => {
+    prisma.jobAnalysis.findFirst.mockResolvedValue(analysis);
+    prisma.job.findFirst.mockResolvedValue(null);
+    const tx = { job: { create: jest.fn().mockResolvedValue({ id: "job" }) }, jobAnalysis: { update: jest.fn() } };
+    prisma.$transaction.mockImplementation((work) => work(tx));
+
+    await createFromAnalysis("user", "analysis", { ...payload, linkVaga: "" });
+
+    expect(tx.job.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ linkVaga: "https://example.com/original" }),
     }));
   });
 });

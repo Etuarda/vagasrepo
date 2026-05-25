@@ -199,7 +199,7 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
     section(ctx, "Experiencia profissional");
     resume.experiences.forEach((item) => {
       write(ctx, item.title, { font: bold });
-      write(ctx, item.period, { size: 10, color: ctx.muted, lineHeight: 13 });
+      write(ctx, [item.period, item.workload].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
       bullet(ctx, item.description);
       ctx.y -= 4;
     });
@@ -225,11 +225,13 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
   if (resume.certifications.length || resume.courses.length) {
     section(ctx, "Certificacoes / Cursos");
     resume.certifications.forEach((item) => {
-      write(ctx, [item.title, item.issuer, item.period].filter(Boolean).join(" | "), { font: bold });
+      const title = item.workload ? `${item.title} (${item.workload})` : item.title;
+      write(ctx, [title, item.issuer, item.period].filter(Boolean).join(" | "), { font: bold });
       if (item.credentialUrl) writeSegments(ctx, [{ label: "Credencial", uri: toUrl(item.credentialUrl) }], { size: 10.5 });
     });
     resume.courses.forEach((item) => {
-      write(ctx, [item.title, item.institution, item.period].filter(Boolean).join(" | "), { font: bold });
+      const title = item.workload ? `${item.title} (${item.workload})` : item.title;
+      write(ctx, [title, item.institution, item.period].filter(Boolean).join(" | "), { font: bold });
       if (item.description) write(ctx, item.description);
     });
   }

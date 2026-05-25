@@ -33,6 +33,12 @@ async function createFromAnalysis(userId, analysisId, payload) {
     err.statusCode = 400;
     throw err;
   }
+  const linkVaga = payload.linkVaga || analysis.jobUrl;
+  if (!linkVaga) {
+    const err = new Error("Informe o link da vaga para cadastrar a candidatura");
+    err.statusCode = 400;
+    throw err;
+  }
 
   const previous = await prisma.job.findFirst({ where: { userId, jobAnalysisId: analysisId }, select: { id: true } });
   if (previous && !payload.confirmDuplicate) {
@@ -50,7 +56,7 @@ async function createFromAnalysis(userId, analysisId, payload) {
         jobDescription: analysis.jobDescription,
         jobAnalysisId: analysis.id,
         optimizedResumeId: analysis.generatedResume.id,
-        linkVaga: payload.linkVaga,
+        linkVaga,
         linkCV: payload.linkCV,
         data: new Date(),
         status: "Ativa",

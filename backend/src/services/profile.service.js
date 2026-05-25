@@ -67,9 +67,9 @@ function serializeProfile(profile) {
     projects: projects.map((project) => ({
       id: project.id,
       title: project.customTitle || project.title,
-      description: project.customSummary || project.shortDescription || project.description,
+      description: project.description,
       category: project.category || "other",
-      shortDescription: project.shortDescription || project.description,
+      shortDescription: project.customSummary || project.shortDescription || project.description,
       businessProblem: project.businessProblem || "",
       technicalSolution: project.technicalSolution || "",
       architecture: project.architecture || "",
@@ -91,6 +91,7 @@ function serializeProfile(profile) {
       company: experience.company,
       role: experience.role,
       period: experience.period,
+      workload: experience.workload || "",
       description: experience.description,
     })),
     courses: courses.map((course) => ({
@@ -98,6 +99,7 @@ function serializeProfile(profile) {
       title: course.title,
       institution: course.institution || "",
       period: course.period || "",
+      workload: course.workload || "",
       description: course.description || "",
     })),
     certifications: certifications.map((certification) => ({
@@ -105,6 +107,7 @@ function serializeProfile(profile) {
       title: certification.title,
       issuer: certification.issuer || "",
       period: certification.period || "",
+      workload: certification.workload || "",
       credentialUrl: certification.credentialUrl || "",
     })),
     languages: (profile.languages || []).map((language) => ({
@@ -370,6 +373,36 @@ async function addProject(userId, profileId, data) {
   return getProfile(userId, profile.id);
 }
 
+async function updateProject(userId, profileId, id, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const project = await prisma.project.findFirst({ where: { id, userId } });
+  if (!project) {
+    const err = new Error("Projeto nao encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  const technologies = [...new Set(data.technologies.map((tech) => tech.trim()).filter(Boolean))];
+  await prisma.project.update({
+    where: { id: project.id },
+    data: {
+      title: data.title,
+      description: data.description,
+      shortDescription: data.shortDescription || data.description,
+      category: data.category || "other",
+      businessProblem: data.businessProblem || "",
+      technicalSolution: data.technicalSolution || "",
+      architecture: data.architecture || "",
+      repositoryUrl: data.repositoryUrl || "",
+      deployUrl: data.deployUrl || "",
+      technologies: {
+        deleteMany: {},
+        create: technologies.map((name) => ({ name, normalizedName: normalizeTerm(name) })),
+      },
+    },
+  });
+  return getProfile(userId, profile.id);
+}
+
 async function deleteProject(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
@@ -411,9 +444,52 @@ async function addProjectBullet(userId, profileId, projectId, data) {
   return getProfile(userId, profile.id);
 }
 
+async function updateProjectBullet(userId, profileId, projectId, id, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      userId,
+      OR: [{ profileId: profile.id }, { subprofiles: { some: { subprofileId: profile.id, isVisible: true } } }],
+    },
+  });
+  if (!project) {
+    const err = new Error("Projeto nao encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  const result = await prisma.projectBullet.updateMany({
+    where: { id, projectId },
+    data: {
+      category: data.category,
+      content: data.content,
+      keywords: data.keywords.map(normalizeTerm),
+      weight: data.weight,
+    },
+  });
+  if (!result.count) {
+    const err = new Error("Bullet nao encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  return getProfile(userId, profile.id);
+}
+
 async function addExperience(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   await prisma.experience.create({ data: { ...data, userId, profileId: profile.id } });
+  return getProfile(userId, profile.id);
+}
+
+async function updateExperience(userId, profileId, id, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const { profileId: ignoredProfileId, ...updates } = data;
+  const result = await prisma.experience.updateMany({ where: { id, userId }, data: updates });
+  if (!result.count) {
+    const err = new Error("Experiencia nao encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
   return getProfile(userId, profile.id);
 }
 
@@ -438,6 +514,18 @@ async function addCourse(userId, profileId, data) {
   return getProfile(userId, profile.id);
 }
 
+async function updateCourse(userId, profileId, id, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const { profileId: ignoredProfileId, ...updates } = data;
+  const result = await prisma.course.updateMany({ where: { id, userId }, data: updates });
+  if (!result.count) {
+    const err = new Error("Curso nao encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  return getProfile(userId, profile.id);
+}
+
 async function deleteCourse(userId, profileId, id) {
   const profile = await resolveProfile(userId, profileId);
   if (!profile.isGlobal) {
@@ -456,6 +544,18 @@ async function deleteCourse(userId, profileId, id) {
 async function addCertification(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   await prisma.certification.create({ data: { ...data, userId, profileId: profile.id } });
+  return getProfile(userId, profile.id);
+}
+
+async function updateCertification(userId, profileId, id, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const { profileId: ignoredProfileId, ...updates } = data;
+  const result = await prisma.certification.updateMany({ where: { id, userId }, data: updates });
+  if (!result.count) {
+    const err = new Error("Certificacao nao encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
   return getProfile(userId, profile.id);
 }
 
@@ -480,10 +580,34 @@ async function addLanguage(userId, profileId, data) {
   return getProfile(userId, profile.id);
 }
 
+async function updateLanguage(userId, profileId, id, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const { profileId: ignoredProfileId, ...updates } = data;
+  const result = await prisma.language.updateMany({ where: { id, userId }, data: updates });
+  if (!result.count) {
+    const err = new Error("Idioma nao encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  return getProfile(userId, profile.id);
+}
+
 async function addEducation(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
   const owner = profile.isGlobal ? profile : await ensureDefaultProfile(userId);
   await prisma.education.create({ data: { ...data, userId, profileId: owner.id } });
+  return getProfile(userId, profile.id);
+}
+
+async function updateEducation(userId, profileId, id, data) {
+  const profile = await resolveProfile(userId, profileId);
+  const { profileId: ignoredProfileId, ...updates } = data;
+  const result = await prisma.education.updateMany({ where: { id, userId }, data: updates });
+  if (!result.count) {
+    const err = new Error("Formacao nao encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
   return getProfile(userId, profile.id);
 }
 
@@ -522,17 +646,24 @@ module.exports = {
   updateProfile,
   updateSkills,
   addProject,
+  updateProject,
   addProjectBullet,
+  updateProjectBullet,
   deleteProject,
   addExperience,
+  updateExperience,
   deleteExperience,
   addCourse,
+  updateCourse,
   deleteCourse,
   addCertification,
+  updateCertification,
   deleteCertification,
   addLanguage,
+  updateLanguage,
   deleteLanguage,
   addEducation,
+  updateEducation,
   deleteEducation,
   resolveProfile,
   serializeProfile,

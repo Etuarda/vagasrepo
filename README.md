@@ -8,9 +8,10 @@ O produto nao utiliza IA generativa, LLM ou servicos externos de geracao textual
 
 ## Funcionalidades
 
-- Perfil Global com contato, resumo, formacao, experiencias, skills, projetos, cursos, certificacoes e idiomas.
+- Perfil Global com contato, resumo, formacao, experiencias editaveis, skills, projetos, cursos, certificacoes e idiomas.
 - Subperfis como Backend, Dados ou Fullstack, com heranca por vinculo dos itens globais.
 - Projetos estruturados com stack, links, solucao tecnica, arquitetura e bullets reutilizaveis.
+- Carga horaria em experiencias, cursos e certificacoes, preservada no curriculo gerado.
 - Upload de PDF somente como anexo de referencia, com visualizacao, download e remocao.
 - Analise deterministica de descricao de vaga com keywords normalizadas e categoria profissional.
 - Ranking explicavel de skills, projetos e bullets.
@@ -100,6 +101,10 @@ A formula do score final no modo otimizado por vaga e:
 ```
 
 O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme cadastrados no perfil selecionado, sem ranking, reescrita ou truncamento. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos, seleciona ate tres bullets cadastrados por projeto e informa a justificativa do ranking.
+
+O formulario de analise salva cargo, empresa, link e descricao da vaga em `JobAnalysis`. A analise permanece acessivel no historico e pode originar uma candidatura persistida; quando disponivel, o link salvo e preenchido automaticamente no cadastro de acompanhamento.
+
+Na tela de matching, o usuario pode selecionar um perfil especifico ou deixar o motor sugerir o perfil mais aderente. Em ambos os casos, anexos PDF permanecem apenas para leitura e visualizacao.
 
 ## Registro de candidatura
 

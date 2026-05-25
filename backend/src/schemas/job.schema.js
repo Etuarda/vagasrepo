@@ -48,7 +48,7 @@ const jobSchema = z
 
 const createApplicationFromAnalysisSchema = z
   .object({
-    linkVaga: z.string().trim().url("linkVaga deve ser uma URL válida"),
+    linkVaga: z.string().trim().url("linkVaga deve ser uma URL válida").or(z.literal("")).default(""),
     linkCV: z.string().trim().url("linkCV deve ser uma URL válida").or(z.literal("")).default(""),
     fase: ApplicationPhaseEnum.default("Currículo gerado"),
     acaoNecessaria: z.boolean().default(false),

@@ -202,6 +202,7 @@ model Experience {
   company     String
   role        String
   period      String
+  workload    String   @default("")
   description String
   userId      String
   profileId   String?
@@ -220,6 +221,7 @@ model Course {
   title       String
   institution String   @default("")
   period      String   @default("")
+  workload    String   @default("")
   description String   @default("")
   userId      String
   profileId   String?
@@ -238,6 +240,7 @@ model Certification {
   title         String
   issuer        String   @default("")
   period        String   @default("")
+  workload      String   @default("")
   credentialUrl String   @default("")
   userId        String
   profileId     String?
@@ -392,6 +395,7 @@ model JobAnalysis {
   userId               String
   jobTitle             String
   company              String   @default("")
+  jobUrl               String   @default("")
   jobDescription       String
   selectedSubprofileId String?
   matchScore           Int

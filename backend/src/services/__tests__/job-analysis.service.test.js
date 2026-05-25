@@ -30,15 +30,16 @@ describe("job analysis status", () => {
   it("cria nova versao ao editar conteudo da analise", async () => {
     prisma.jobAnalysis.findFirst.mockResolvedValue({
       id: "analysis", userId: "user", jobTitle: "Backend", company: "", jobDescription: "Descricao de vaga suficientemente longa para teste.",
+      jobUrl: "https://example.com/vaga",
       selectedSubprofileId: "profile", matchScore: 80, jobCategory: "backend", matchedSkills: [], missingSkills: [],
       selectedProjectIds: [], generatedResumeId: "resume", status: "draft", notes: "", appliedAt: null, version: 1,
     });
     prisma.jobAnalysis.create.mockResolvedValue({ version: 2 });
 
-    await updateAnalysis("user", "analysis", { notes: "Revisada" });
+    await updateAnalysis("user", "analysis", { notes: "Revisada", linkVaga: "https://example.com/nova-vaga" });
 
     expect(prisma.jobAnalysis.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ parentAnalysisId: "analysis", version: 2, notes: "Revisada" }),
+      data: expect.objectContaining({ parentAnalysisId: "analysis", version: 2, notes: "Revisada", jobUrl: "https://example.com/nova-vaga" }),
     });
   });
 });

@@ -108,6 +108,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
     targetTitle,
     selectedSubprofileId: profile.id,
     selectedSubprofileName: profile.profileName,
+    linkVaga: metadata.linkVaga || "",
     suggestedSummary: profile.summary,
     semanticFeedback: `Matching deterministico: skills 60% e projetos 40%. Resumo, formacao, experiencias, cursos, certificacoes e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
   };
@@ -135,6 +136,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
       userId,
       jobTitle: targetTitle,
       company: metadata.company || "",
+      jobUrl: metadata.linkVaga || "",
       jobDescription: text,
       selectedSubprofileId: profile.id,
       matchScore: result.score,
@@ -180,6 +182,7 @@ async function listHistory(userId, profileId = null) {
     analysisId: row.id,
     targetTitle: row.jobTitle,
     company: row.company,
+    linkVaga: row.jobUrl,
     score: row.matchScore,
     status: row.status,
     jobCategory: row.jobCategory,
@@ -199,13 +202,14 @@ async function updateAnalysis(userId, id, data) {
     throw err;
   }
   const appliedAt = data.status === "applied" ? (existing.appliedAt || new Date()) : existing.appliedAt;
-  const createsVersion = ["notes", "jobTitle", "company", "jobDescription"].some((key) => data[key] !== undefined);
+  const createsVersion = ["notes", "jobTitle", "company", "linkVaga", "jobDescription"].some((key) => data[key] !== undefined);
   if (createsVersion) {
     return prisma.jobAnalysis.create({
       data: {
         userId,
         jobTitle: data.jobTitle ?? existing.jobTitle,
         company: data.company ?? existing.company,
+        jobUrl: data.linkVaga ?? existing.jobUrl,
         jobDescription: data.jobDescription ?? existing.jobDescription,
         selectedSubprofileId: existing.selectedSubprofileId,
         matchScore: existing.matchScore,
@@ -222,7 +226,11 @@ async function updateAnalysis(userId, id, data) {
       },
     });
   }
-  return prisma.jobAnalysis.update({ where: { id }, data: { ...data, appliedAt } });
+  const { linkVaga, ...updates } = data;
+  return prisma.jobAnalysis.update({
+    where: { id },
+    data: { ...updates, ...(linkVaga !== undefined ? { jobUrl: linkVaga } : {}), appliedAt },
+  });
 }
 
 async function getAnalysis(userId, id) {

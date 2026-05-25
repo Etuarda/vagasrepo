@@ -69,6 +69,7 @@ const experienceSchema = z.object({
   company: z.string().trim().min(2, "Empresa e obrigatoria").max(160),
   role: z.string().trim().min(2, "Cargo e obrigatorio").max(160),
   period: z.string().trim().min(2, "Periodo e obrigatorio").max(120),
+  workload: cleanString(80),
   description: z.string().trim().min(10, "Descricao deve ter pelo menos 10 caracteres").max(3000),
 });
 
@@ -77,6 +78,7 @@ const courseSchema = z.object({
   title: z.string().trim().min(2, "Curso e obrigatorio").max(180),
   institution: cleanString(180),
   period: cleanString(120),
+  workload: cleanString(80),
   description: cleanString(1000),
 });
 
@@ -85,6 +87,7 @@ const certificationSchema = z.object({
   title: z.string().trim().min(2, "Certificacao e obrigatoria").max(180),
   issuer: cleanString(180),
   period: cleanString(120),
+  workload: cleanString(80),
   credentialUrl: z.string().trim().url("Link da credencial invalido").or(z.literal("")).default(""),
 });
 
@@ -110,6 +113,7 @@ const matchSchema = z.object({
   profileId: optionalUuid("Perfil invalido"),
   jobTitle: cleanString(160),
   company: cleanString(160),
+  linkVaga: z.string().trim().url("Link da vaga invalido").or(z.literal("")).default(""),
 });
 
 const jobAnalysisUpdateSchema = z.object({
@@ -117,6 +121,7 @@ const jobAnalysisUpdateSchema = z.object({
   notes: z.string().trim().max(3000).optional(),
   jobTitle: z.string().trim().min(2).max(160).optional(),
   company: z.string().trim().max(160).optional(),
+  linkVaga: z.string().trim().url("Link da vaga invalido").or(z.literal("")).optional(),
   jobDescription: z.string().trim().min(30).max(15000).optional(),
 });
 

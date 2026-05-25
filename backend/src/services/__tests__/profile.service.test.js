@@ -4,11 +4,14 @@ jest.mock("../../lib/prisma", () => ({
       findFirst: jest.fn(),
       delete: jest.fn(),
     },
+    experience: {
+      updateMany: jest.fn(),
+    },
   },
 }));
 
 const { prisma } = require("../../lib/prisma");
-const { createProfile, deleteProfile } = require("../profile.service");
+const { createProfile, deleteProfile, updateExperience } = require("../profile.service");
 
 describe("subprofile deletion", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -46,5 +49,24 @@ describe("subprofile deletion", () => {
       message: "O Perfil Global nao pode ser excluido",
     });
     expect(prisma.careerProfile.delete).not.toHaveBeenCalled();
+  });
+
+  it("edita experiencia somente quando o item pertence ao usuario autenticado", async () => {
+    prisma.careerProfile.findFirst.mockResolvedValue({ id: "profile" });
+    prisma.experience.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(updateExperience("user", "profile", "experience", {
+      profileId: "profile",
+      company: "Empresa",
+      role: "Backend",
+      period: "2025",
+      workload: "40h",
+      description: "Atividades reais suficientemente detalhadas.",
+    })).rejects.toMatchObject({ statusCode: 404 });
+
+    expect(prisma.experience.updateMany).toHaveBeenCalledWith({
+      where: { id: "experience", userId: "user" },
+      data: expect.objectContaining({ workload: "40h" }),
+    });
   });
 });

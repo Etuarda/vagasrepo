@@ -59,6 +59,7 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
     experiences: (profile.experiences || []).map((experience) => ({
       title: `${experience.role} | ${experience.company}`,
       period: experience.period,
+      workload: experience.workload || "",
       description: experience.description || "",
     })),
     projects,

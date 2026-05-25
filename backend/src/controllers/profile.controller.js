@@ -89,6 +89,17 @@ async function addProject(req, res, next) {
   }
 }
 
+async function updateProject(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = projectSchema.parse(req.body);
+    const profile = await profileService.updateProject(req.userId, payload.profileId, id, payload);
+    return res.json({ projects: profile.projects, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function deleteProject(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
@@ -111,11 +122,34 @@ async function addProjectBullet(req, res, next) {
   }
 }
 
+async function updateProjectBullet(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse({ id: req.params.id });
+    const { id: bulletId } = idParamSchema.parse({ id: req.params.bulletId });
+    const payload = projectBulletSchema.parse(req.body);
+    const profile = await profileService.updateProjectBullet(req.userId, payload.profileId, id, bulletId, payload);
+    return res.json({ projects: profile.projects, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function addExperience(req, res, next) {
   try {
     const payload = experienceSchema.parse(req.body);
     const profile = await profileService.addExperience(req.userId, payload.profileId, payload);
     return res.status(201).json({ experiences: profile.experiences, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function updateExperience(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = experienceSchema.parse(req.body);
+    const profile = await profileService.updateExperience(req.userId, payload.profileId, id, payload);
+    return res.json({ experiences: profile.experiences, user: profile });
   } catch (err) {
     return next(err);
   }
@@ -142,6 +176,17 @@ async function addCourse(req, res, next) {
   }
 }
 
+async function updateCourse(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = courseSchema.parse(req.body);
+    const profile = await profileService.updateCourse(req.userId, payload.profileId, id, payload);
+    return res.json({ courses: profile.courses, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function deleteCourse(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
@@ -158,6 +203,17 @@ async function addCertification(req, res, next) {
     const payload = certificationSchema.parse(req.body);
     const profile = await profileService.addCertification(req.userId, payload.profileId, payload);
     return res.status(201).json({ certifications: profile.certifications, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function updateCertification(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = certificationSchema.parse(req.body);
+    const profile = await profileService.updateCertification(req.userId, payload.profileId, id, payload);
+    return res.json({ certifications: profile.certifications, user: profile });
   } catch (err) {
     return next(err);
   }
@@ -184,6 +240,17 @@ async function addLanguage(req, res, next) {
   }
 }
 
+async function updateLanguage(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = languageSchema.parse(req.body);
+    const profile = await profileService.updateLanguage(req.userId, payload.profileId, id, payload);
+    return res.json({ languages: profile.languages, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function deleteLanguage(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
@@ -205,6 +272,16 @@ async function addEducation(req, res, next) {
   }
 }
 
+async function updateEducation(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = educationSchema.parse(req.body);
+    const profile = await profileService.updateEducation(req.userId, payload.profileId, id, payload);
+    return res.json({ educations: profile.educations, user: profile });
+  } catch (err) {
+    return next(err);
+  }
+}
 async function deleteEducation(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
@@ -302,17 +379,24 @@ module.exports = {
   updateProfile,
   updateSkills,
   addProject,
+  updateProject,
   deleteProject,
   addProjectBullet,
+  updateProjectBullet,
   addExperience,
+  updateExperience,
   deleteExperience,
   addCourse,
+  updateCourse,
   deleteCourse,
   addCertification,
+  updateCertification,
   deleteCertification,
   addLanguage,
+  updateLanguage,
   deleteLanguage,
   addEducation,
+  updateEducation,
   deleteEducation,
   match,
   listOptimized,

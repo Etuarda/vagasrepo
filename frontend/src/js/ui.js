@@ -192,6 +192,7 @@ export const ui = {
     state.pendingApplicationAnalysis = result;
     form.reset();
     document.getElementById("application-analysis-id").value = result.analysisId;
+    document.getElementById("application-link-vaga").value = result.linkVaga || "";
     const context = `${result.targetTitle}${result.selectedSubprofileName ? ` | ${result.selectedSubprofileName}` : ""} | ${result.score}%`;
     document.getElementById("application-form-context").textContent = context;
     form.classList.remove("hidden");

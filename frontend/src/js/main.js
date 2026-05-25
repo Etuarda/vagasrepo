@@ -281,6 +281,10 @@ function wireEvents() {
     button.addEventListener("click", () => career.setTab(button.dataset.dashboardTab));
   });
 
+  document.querySelectorAll("[data-cancel-edit]").forEach((button) => {
+    button.addEventListener("click", () => career.cancelEdit(button.dataset.cancelEdit));
+  });
+
   const formProfile = document.getElementById("form-profile");
   if (formProfile) {
     formProfile.addEventListener("submit", async (e) => {
@@ -351,6 +355,19 @@ function wireEvents() {
     });
   }
 
+  const skillPresets = document.getElementById("skill-presets");
+  if (skillPresets) {
+    skillPresets.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-add-skill-preset]");
+      if (!btn) return;
+      await runWithFeedback(
+        btn,
+        { busyText: "...", notice: "Adicionando habilidade selecionada..." },
+        () => career.addSkill(btn.dataset.addSkillPreset)
+      );
+    });
+  }
+
   const skillsList = document.getElementById("skills-list");
   if (skillsList) {
     skillsList.addEventListener("click", async (e) => {
@@ -375,8 +392,9 @@ function wireEvents() {
         getSubmitButton(e, formLanguage),
         { busyText: "Salvando...", notice: "Salvando idioma..." },
         async () => {
-          await career.addLanguage({ name, level });
-          formLanguage.reset();
+          if (formLanguage.dataset.editId) await career.updateLanguage(formLanguage.dataset.editId, { name, level });
+          else await career.addLanguage({ name, level });
+          career.cancelEdit("language");
         }
       );
     });
@@ -385,6 +403,8 @@ function wireEvents() {
   const languagesList = document.getElementById("languages-list");
   if (languagesList) {
     languagesList.addEventListener("click", async (e) => {
+      const edit = e.target.closest("[data-edit-language]");
+      if (edit) return career.beginEdit("language", edit.dataset.editLanguage);
       const btn = e.target.closest("[data-remove-language]");
       if (!btn) return;
       await runWithFeedback(
@@ -408,8 +428,9 @@ function wireEvents() {
         getSubmitButton(e, formEducation),
         { busyText: "Salvando...", notice: "Salvando formação..." },
         async () => {
-          await career.addEducation(payload);
-          formEducation.reset();
+          if (formEducation.dataset.editId) await career.updateEducation(formEducation.dataset.editId, payload);
+          else await career.addEducation(payload);
+          career.cancelEdit("education");
         }
       );
     });
@@ -418,6 +439,8 @@ function wireEvents() {
   const educationsList = document.getElementById("educations-list");
   if (educationsList) {
     educationsList.addEventListener("click", async (e) => {
+      const edit = e.target.closest("[data-edit-education]");
+      if (edit) return career.beginEdit("education", edit.dataset.editEducation);
       const btn = e.target.closest("[data-remove-education]");
       if (!btn) return;
       await runWithFeedback(btn, { busyText: "Removendo...", notice: "Removendo formação..." }, () => career.removeEducation(btn.dataset.removeEducation));
@@ -434,6 +457,7 @@ function wireEvents() {
       const deployUrl = document.getElementById("project-deploy-url")?.value || "";
       const category = document.getElementById("project-category")?.value || "backend";
       const shortDescription = document.getElementById("project-short-description")?.value || "";
+      const businessProblem = document.getElementById("project-business-problem")?.value || "";
       const technicalSolution = document.getElementById("project-technical-solution")?.value || "";
       const architecture = document.getElementById("project-architecture")?.value || "";
       const technologies = (document.getElementById("project-techs")?.value || "")
@@ -445,8 +469,10 @@ function wireEvents() {
         getSubmitButton(e, formProject),
         { busyText: "Salvando...", notice: "Salvando projeto..." },
         async () => {
-          await career.addProject({ title, description, category, shortDescription, technicalSolution, architecture, repositoryUrl, deployUrl, technologies });
-          formProject.reset();
+          const payload = { title, description, category, shortDescription, businessProblem, technicalSolution, architecture, repositoryUrl, deployUrl, technologies };
+          if (formProject.dataset.editId) await career.updateProject(formProject.dataset.editId, payload);
+          else await career.addProject(payload);
+          career.cancelEdit("project");
         }
       );
     });
@@ -455,6 +481,10 @@ function wireEvents() {
   const projectsList = document.getElementById("projects-list");
   if (projectsList) {
     projectsList.addEventListener("click", async (e) => {
+      const editProject = e.target.closest("[data-edit-project]");
+      if (editProject) return career.beginEdit("project", editProject.dataset.editProject);
+      const editBullet = e.target.closest("[data-edit-project-bullet]");
+      if (editBullet) return career.beginEdit("bullet", editBullet.dataset.editProjectBullet, editBullet.dataset.projectId);
       const btn = e.target.closest("[data-remove-project]");
       if (!btn) return;
       await runWithFeedback(
@@ -477,7 +507,8 @@ function wireEvents() {
         form.querySelector("button[type='submit']"),
         { busyText: "Salvando...", notice: "Salvando bullet estruturado..." },
         async () => {
-          await career.addProjectBullet(form.dataset.projectBulletForm, payload);
+          if (form.dataset.editId) await career.updateProjectBullet(form.dataset.projectBulletForm, form.dataset.editId, payload);
+          else await career.addProjectBullet(form.dataset.projectBulletForm, payload);
         }
       );
     });
@@ -491,14 +522,16 @@ function wireEvents() {
         company: document.getElementById("experience-company")?.value || "",
         role: document.getElementById("experience-role")?.value || "",
         period: document.getElementById("experience-period")?.value || "",
+        workload: document.getElementById("experience-workload")?.value || "",
         description: document.getElementById("experience-description")?.value || "",
       };
       await runWithFeedback(
         getSubmitButton(e, formExperience),
         { busyText: "Salvando...", notice: "Salvando experiencia..." },
         async () => {
-          await career.addExperience(payload);
-          formExperience.reset();
+          if (formExperience.dataset.editId) await career.updateExperience(formExperience.dataset.editId, payload);
+          else await career.addExperience(payload);
+          career.cancelEdit("experience");
         }
       );
     });
@@ -507,6 +540,8 @@ function wireEvents() {
   const experiencesList = document.getElementById("experiences-list");
   if (experiencesList) {
     experiencesList.addEventListener("click", async (e) => {
+      const edit = e.target.closest("[data-edit-experience]");
+      if (edit) return career.beginEdit("experience", edit.dataset.editExperience);
       const btn = e.target.closest("[data-remove-experience]");
       if (!btn) return;
       await runWithFeedback(
@@ -525,14 +560,16 @@ function wireEvents() {
         title: document.getElementById("course-title")?.value || "",
         institution: document.getElementById("course-institution")?.value || "",
         period: document.getElementById("course-period")?.value || "",
+        workload: document.getElementById("course-workload")?.value || "",
         description: document.getElementById("course-description")?.value || "",
       };
       await runWithFeedback(
         getSubmitButton(e, formCourse),
         { busyText: "Salvando...", notice: "Salvando curso..." },
         async () => {
-          await career.addCourse(payload);
-          formCourse.reset();
+          if (formCourse.dataset.editId) await career.updateCourse(formCourse.dataset.editId, payload);
+          else await career.addCourse(payload);
+          career.cancelEdit("course");
         }
       );
     });
@@ -541,6 +578,8 @@ function wireEvents() {
   const coursesList = document.getElementById("courses-list");
   if (coursesList) {
     coursesList.addEventListener("click", async (e) => {
+      const edit = e.target.closest("[data-edit-course]");
+      if (edit) return career.beginEdit("course", edit.dataset.editCourse);
       const btn = e.target.closest("[data-remove-course]");
       if (!btn) return;
       await runWithFeedback(
@@ -559,14 +598,16 @@ function wireEvents() {
         title: document.getElementById("certification-title")?.value || "",
         issuer: document.getElementById("certification-issuer")?.value || "",
         period: document.getElementById("certification-period")?.value || "",
+        workload: document.getElementById("certification-workload")?.value || "",
         credentialUrl: document.getElementById("certification-url")?.value || "",
       };
       await runWithFeedback(
         getSubmitButton(e, formCertification),
         { busyText: "Salvando...", notice: "Salvando certificacao..." },
         async () => {
-          await career.addCertification(payload);
-          formCertification.reset();
+          if (formCertification.dataset.editId) await career.updateCertification(formCertification.dataset.editId, payload);
+          else await career.addCertification(payload);
+          career.cancelEdit("certification");
         }
       );
     });
@@ -575,6 +616,8 @@ function wireEvents() {
   const certificationsList = document.getElementById("certifications-list");
   if (certificationsList) {
     certificationsList.addEventListener("click", async (e) => {
+      const edit = e.target.closest("[data-edit-certification]");
+      if (edit) return career.beginEdit("certification", edit.dataset.editCertification);
       const btn = e.target.closest("[data-remove-certification]");
       if (!btn) return;
       await runWithFeedback(
@@ -610,6 +653,7 @@ function wireEvents() {
       const payload = {
         jobTitle: form.elements.jobTitle.value,
         company: form.elements.company.value,
+        linkVaga: form.elements.linkVaga.value,
         jobDescription: form.elements.jobDescription.value,
         notes: form.elements.notes.value,
         status: form.elements.status.value,
@@ -720,6 +764,7 @@ function wireEvents() {
           targetTitle: analysis?.targetTitle || "Vaga analisada",
           selectedSubprofileName: state.profile?.profileName || "",
           score: analysis?.score || 0,
+          linkVaga: analysis?.linkVaga || "",
         });
         return;
       }
