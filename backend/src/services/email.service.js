@@ -1,4 +1,8 @@
 const env = require("../config/env");
+const crypto = require("crypto");
+const { Resend } = require("resend");
+
+let resendClient = null;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -15,6 +19,16 @@ function resetUrl(token) {
   return url.toString();
 }
 
+function resetEmailIdempotencyKey(token) {
+  const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
+  return `password-reset-${tokenHash}`;
+}
+
+function getResendClient() {
+  if (!resendClient) resendClient = new Resend(env.RESEND_API_KEY);
+  return resendClient;
+}
+
 async function sendPasswordResetEmail(user, token) {
   const link = resetUrl(token);
   const safeName = escapeHtml(user.name);
@@ -27,22 +41,18 @@ async function sendPasswordResetEmail(user, token) {
     throw err;
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const { error } = await getResendClient().emails.send(
+    {
       from: env.EMAIL_FROM,
       to: [user.email],
       subject: "Recuperacao de senha - Vagas.io",
       text: `Ola, ${user.name}. Use este link para criar uma nova senha. O link expira em 30 minutos: ${link}`,
       html: `<p>Ola, ${safeName}.</p><p>Use o link abaixo para criar uma nova senha. Ele expira em 30 minutos.</p><p><a href="${safeLink}">Redefinir senha</a></p>`,
-    }),
-  });
+    },
+    { idempotencyKey: resetEmailIdempotencyKey(token) }
+  );
 
-  if (!response.ok) {
+  if (error) {
     const err = new Error("Nao foi possivel enviar o e-mail de recuperacao.");
     err.statusCode = 503;
     throw err;
@@ -51,4 +61,4 @@ async function sendPasswordResetEmail(user, token) {
   return {};
 }
 
-module.exports = { sendPasswordResetEmail, resetUrl };
+module.exports = { sendPasswordResetEmail, resetUrl, resetEmailIdempotencyKey };

@@ -2,7 +2,7 @@
 
 ## Requisitos
 
-- Node.js 18+
+- Node.js 20+
 - Postgres local ou Neon
 
 ## Setup local
@@ -21,7 +21,7 @@ npm install
 - `REDIS_URL`: conexao Redis TLS (`rediss://...`) usada para sessoes, rate limiting e cache das telas de perfil, historico e candidaturas.
 - `FRONTEND_URL`: URL publica da Vercel usada no link de recuperacao de senha.
 - `RESEND_API_KEY`: chave da API Resend usada para enviar a recuperacao de senha.
-- `EMAIL_FROM`: remetente verificado no Resend, por exemplo `Vagas.io <recuperacao@seudominio.com>`.
+- `EMAIL_FROM`: remetente verificado no Resend, por exemplo `Vagas.io <recuperacao@seudominio.com>`. Para um teste inicial enviado somente ao e-mail da propria conta Resend, use `Vagas.io <onboarding@resend.dev>`.
 - `SLOW_QUERY_MS`: limiar para log estruturado de consultas Prisma lentas; padrao `500`.
 
 3. Rode migrations e gere o client:
@@ -51,6 +51,8 @@ API: `http://localhost:3000`
 8. Configure `FRONTEND_URL`, `RESEND_API_KEY` e `EMAIL_FROM` no Render para habilitar o envio de links de recuperacao.
 
 O frontend publicado encaminha `/api/*` para a Render. Assim, o navegador recebe a sessao em cookie `HttpOnly`, sem armazenar JWT em `localStorage`. O backend ainda aceita Bearer token durante a transicao de clientes antigos.
+
+O envio de recuperacao usa o SDK oficial `resend`. O dominio de teste `resend.dev` nao atende usuarios finais: para producao, valide um dominio no Resend e configure `EMAIL_FROM` com esse dominio.
 
 Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` nos logs da Render. Encaminhe esses logs e `/metrics` para sua ferramenta de monitoramento para alertas e historico operacional.
 

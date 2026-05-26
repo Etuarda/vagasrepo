@@ -257,7 +257,7 @@ export const ui = {
     if (!state.jobs || !state.jobs.length) {
       list.innerHTML = `
         <tr>
-          <td colspan="4" class="py-10 px-6 text-sm text-taupe">
+          <td colspan="4" class="jobs-empty py-8 sm:py-10 px-4 sm:px-6 text-sm text-taupe">
             Nenhum registro encontrado com os filtros atuais.
           </td>
         </tr>
@@ -269,8 +269,8 @@ export const ui = {
       .map(
         (job) => `
       <tr class="group hover:bg-stone-50 transition-colors">
-        <td class="py-10 px-6">
-          <div class="font-bold text-xl">${escapeHtml(job.titulo)}</div>
+        <td data-label="Registro" class="py-5 sm:py-10 px-4 sm:px-6">
+          <div class="font-bold text-lg sm:text-xl">${escapeHtml(job.titulo)}</div>
           <div class="text-[9px] uppercase tracking-[0.4em] text-stone mt-2 font-bold">${escapeHtml(job.empresa)}</div>
           ${job.jobAnalysis ? `<div class="text-xs text-taupe mt-3">Aderência: ${job.jobAnalysis.matchScore}% | Perfil: ${escapeHtml(job.jobAnalysis.selectedSubprofile?.profileName || "—")}</div>` : ""}
           ${job.jobAnalysis?.matchedSkills?.length ? `<div class="text-xs text-taupe mt-1">Skills: ${escapeHtml(job.jobAnalysis.matchedSkills.join(", "))}</div>` : ""}
@@ -283,9 +283,9 @@ export const ui = {
           ${job.acaoNecessaria ? `<div class="text-xs text-red-700 mt-1">Ação: ${escapeHtml(job.qualAcao || "pendente")}</div>` : ""}
           ${job.feedbackBool ? `<div class="text-xs text-taupe mt-1">Feedback: ${escapeHtml(job.feedbackTxt || "recebido")}</div>` : ""}
         </td>
-        <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest">${escapeHtml(job.fase)}</td>
-        <td class="py-10 px-6 text-[10px] font-bold uppercase tracking-widest text-stone">${escapeHtml(job.status)}</td>
-        <td class="py-10 px-6 text-right">
+        <td data-label="Estágio" class="py-4 sm:py-10 px-4 sm:px-6 text-[10px] font-bold uppercase tracking-widest">${escapeHtml(job.fase)}</td>
+        <td data-label="Status" class="py-4 sm:py-10 px-4 sm:px-6 text-[10px] font-bold uppercase tracking-widest text-stone">${escapeHtml(job.status)}</td>
+        <td data-label="Ações" class="job-actions py-4 sm:py-10 px-4 sm:px-6 text-right">
           <button data-action="edit" data-id="${job.id}" class="text-[9px] font-bold uppercase tracking-widest hover:underline">
             Editar
           </button>

@@ -2,6 +2,29 @@ import { api } from "./http.js";
 import { state } from "./state.js";
 import { ui } from "./ui.js";
 
+const JSPDF_SRC = "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+let listRequestController = null;
+let pdfLibraryPromise = null;
+
+function loadPdfLibrary() {
+  if (window.jspdf?.jsPDF) return Promise.resolve(window.jspdf);
+  if (pdfLibraryPromise) return pdfLibraryPromise;
+
+  pdfLibraryPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = JSPDF_SRC;
+    script.async = true;
+    script.onload = () => resolve(window.jspdf);
+    script.onerror = () => reject(new Error("Falha ao carregar o gerador de PDF."));
+    document.head.appendChild(script);
+  }).catch((err) => {
+    pdfLibraryPromise = null;
+    throw err;
+  });
+
+  return pdfLibraryPromise;
+}
+
 function buildListParams(filters) {
   const params = new URLSearchParams();
 
@@ -46,18 +69,30 @@ function periodLabelFromFilters(filters) {
 
 export const jobs = {
   async load() {
+    listRequestController?.abort();
+    const controller = new AbortController();
+    listRequestController = controller;
     const params = buildListParams(state.filters);
 
     const qs = params.toString();
     const url = qs ? `/jobs?${qs}` : "/jobs";
 
-    const out = await api(url, {}, state.token);
-    state.jobs = Array.isArray(out) ? out : [];
-    ui.renderJobs();
+    try {
+      const out = await api(url, { signal: controller.signal }, state.token);
+      if (controller.signal.aborted || listRequestController !== controller) return;
+      state.jobs = Array.isArray(out) ? out : [];
+      ui.renderJobs();
+    } catch (err) {
+      if (err.name !== "AbortError") throw err;
+    } finally {
+      if (listRequestController === controller) listRequestController = null;
+    }
   },
 
   async exportPdf() {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
+    try {
+      await loadPdfLibrary();
+    } catch {
       ui.notify("Não foi possível gerar o PDF das candidaturas.", "error");
       return;
     }

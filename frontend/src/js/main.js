@@ -49,13 +49,16 @@ function getSubmitButton(event, form) {
   return event.submitter || form?.querySelector('button[type="submit"], input[type="submit"]');
 }
 
+function activeProfileName() {
+  return (state.profiles || []).find((profile) => profile.id === state.activeProfileId)?.profileName
+    || state.profile?.profileName
+    || "";
+}
+
 let __vlibrasStarted = false;
 
 async function loadDashboardData() {
-  const independentLoads = jobs.load();
-  await career.loadProfiles();
-  await Promise.all([independentLoads, career.loadActiveProfileData({ announce: true })]);
-  career.preloadProfileData().catch(() => {});
+  await jobs.load();
 }
 
 function forceVlibrasZIndex() {
@@ -715,7 +718,7 @@ function wireEvents() {
         ui.openApplicationForm(state.lastMatchResult || {
           analysisId: registrationBtn.dataset.registerApplication,
           targetTitle: "Vaga analisada",
-          selectedSubprofileName: state.profile?.profileName || "",
+          selectedSubprofileName: activeProfileName(),
           score: 0,
         });
         return;
@@ -807,7 +810,7 @@ function wireEvents() {
         ui.openApplicationForm({
           analysisId: registerBtn.dataset.registerHistoryApplication,
           targetTitle: analysis?.targetTitle || "Vaga analisada",
-          selectedSubprofileName: state.profile?.profileName || "",
+          selectedSubprofileName: activeProfileName(),
           score: analysis?.score || 0,
           linkVaga: analysis?.linkVaga || "",
         });
@@ -899,12 +902,7 @@ function wireEvents() {
 }
 
 // DOMContentLoaded é mais seguro que load para o container [vw] já existir
-document.addEventListener("DOMContentLoaded", () => {
-  safeInitVlibras();
-});
-
-window.addEventListener("load", async () => {
-  // tenta de novo no load (caso script demore)
+document.addEventListener("DOMContentLoaded", async () => {
   safeInitVlibras();
 
   if (localStorage.getItem("vagas_contrast") === "true") ui.toggleContrast();

@@ -31,6 +31,7 @@ const RESUME_FILES_CLIENT_CACHE_MS = 5 * 60 * 1000;
 const resumeFilesCache = new Map();
 const resumeFilesRequests = new Map();
 let resumeFilesRevision = 0;
+let profilesRequest = null;
 
 function profileLabel(profileId) {
   return (state.profiles || []).find((profile) => profile.id === profileId)?.profileName || "perfil selecionado";
@@ -41,10 +42,13 @@ function profileCacheKey(profileId) {
 }
 
 function showProfile(profile) {
+  const requiresRender = state.profile !== profile || state.activeProfileId !== profile.id;
   state.profile = profile;
   state.activeProfileId = profile.id;
-  renderProfileForm();
-  ui.renderNav();
+  if (requiresRender) {
+    renderProfileForm();
+    ui.renderNav();
+  }
 }
 
 function replaceEditedProfile(profile) {
@@ -53,7 +57,6 @@ function replaceEditedProfile(profile) {
   profileRequests.clear();
   profileCache.set(profileCacheKey(profile.id), { profile, savedAt: Date.now() });
   showProfile(profile);
-  window.setTimeout(() => career.preloadProfileData().catch(() => {}), 0);
 }
 
 function historyCacheKey(profileId) {
@@ -518,13 +521,13 @@ function renderMatchResult(result) {
     </section>
   `;
 
-  root.className = "lg:col-span-7 space-y-6";
+  root.className = "lg:col-span-7 space-y-4 sm:space-y-6";
   root.innerHTML = `
-    <section class="editorial-card rounded-3xl editorial-shadow p-8">
+    <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Relatório de aderência</p>
-          <h3 class="font-serif text-5xl mt-3">${result.scoreDetails.totalScore}%</h3>
+          <h3 class="font-serif text-4xl sm:text-5xl mt-3">${result.scoreDetails.totalScore}%</h3>
         </div>
         <div class="grid grid-cols-2 gap-3 text-center">
           <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.skillsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Skills</span></div>
@@ -542,7 +545,7 @@ function renderMatchResult(result) {
         }
       </div>
     </section>
-    <section class="editorial-card rounded-3xl p-8">
+    <section class="editorial-card rounded-2xl sm:rounded-3xl p-4 sm:p-8">
       <h4 class="font-serif text-3xl mb-4">Resumo cadastrado.</h4>
       <p class="text-sm text-taupe leading-relaxed">${escapeHtml(result.suggestedSummary)}</p>
     </section>
@@ -552,7 +555,7 @@ function renderMatchResult(result) {
       ${block("Keywords reconhecidas", result.jobKeywords || [], true)}
       ${block("Avisos", result.warnings || [])}
     </div>
-    <section class="editorial-card rounded-3xl p-8">
+    <section class="editorial-card rounded-2xl sm:rounded-3xl p-4 sm:p-8">
       <h4 class="font-serif text-3xl mb-4">Projetos mais fortes.</h4>
       <div class="space-y-4">
         ${(result.projectScores || [])
@@ -581,9 +584,9 @@ function renderMatchResult(result) {
 function renderAnalysisEditor(analysis) {
   const root = document.getElementById("match-result");
   if (!root) return;
-  root.className = "lg:col-span-7 space-y-6";
+  root.className = "lg:col-span-7 space-y-4 sm:space-y-6";
   root.innerHTML = `
-    <form data-analysis-edit-form="${analysis.id}" class="editorial-card rounded-3xl editorial-shadow p-8 space-y-5">
+    <form data-analysis-edit-form="${analysis.id}" class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-5">
       <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Análise versionada · v${analysis.version}</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <input name="jobTitle" value="${escapeHtml(analysis.jobTitle)}" required class="editorial-input text-sm" />
@@ -610,9 +613,9 @@ function renderMatchLoading() {
   const root = document.getElementById("match-result");
   if (!root) return;
 
-  root.className = "lg:col-span-7 space-y-6";
+  root.className = "lg:col-span-7 space-y-4 sm:space-y-6";
   root.innerHTML = `
-    <section class="editorial-card rounded-3xl editorial-shadow p-8">
+    <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8">
       <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Processando</p>
       <h3 class="font-serif text-4xl mt-3">Calculando aderencia ATS.</h3>
       <p class="text-sm text-taupe leading-relaxed mt-4">
@@ -631,6 +634,17 @@ export const career = {
     }
     renderProfileCards();
     renderMatchProfileOptions();
+  },
+
+  async ensureProfiles() {
+    if (state.profiles?.length) return state.profiles;
+    if (!profilesRequest) {
+      profilesRequest = career.loadProfiles().finally(() => {
+        profilesRequest = null;
+      });
+    }
+    await profilesRequest;
+    return state.profiles;
   },
 
   async prefetchProfile(profileId) {
@@ -945,10 +959,10 @@ export const career = {
     if (result.selectedSubprofileId && result.selectedSubprofileId !== state.activeProfileId) {
       state.activeProfileId = result.selectedSubprofileId;
       renderProfileCards();
-      reloads.push(career.loadActiveProfileData({
+      reloads.push(career.loadHistory({
         announce: true,
-        historyForce: true,
-        historySuccessMessage: "Histórico atualizado.",
+        force: true,
+        successMessage: "Histórico atualizado.",
       }));
     } else {
       reloads.push(career.loadHistory({ force: true, successMessage: "Histórico atualizado." }));
@@ -1090,8 +1104,10 @@ export const career = {
     const snapshot = resumeFilesCache.get(cacheKey);
     if (!force && snapshot && Date.now() - snapshot.savedAt < RESUME_FILES_CLIENT_CACHE_MS) {
       if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
-      state.resumeFiles = snapshot.files;
-      renderResumeFiles();
+      if (state.resumeFiles !== snapshot.files) {
+        state.resumeFiles = snapshot.files;
+        renderResumeFiles();
+      }
       return state.resumeFiles;
     }
     let request = !force ? resumeFilesRequests.get(cacheKey) : null;
@@ -1206,7 +1222,6 @@ export const career = {
     state.activeProfileId = profile.id;
     await career.loadProfiles();
     await career.loadActiveProfileData({ announce: true });
-    career.preloadProfileData().catch(() => {});
     ui.notify("Perfil criado.");
   },
 
@@ -1225,7 +1240,6 @@ export const career = {
       state.activeProfileId = state.profiles.find((profile) => profile.isGlobal)?.id || state.profiles[0]?.id || "";
     }
     await career.loadActiveProfileData({ announce: true });
-    career.preloadProfileData().catch(() => {});
     ui.notify("Subperfil removido.");
   },
 
@@ -1258,7 +1272,14 @@ export const career = {
       career.loadSharedMatchedJobs().catch(() => {});
     }
     if (tab === "matching") {
-      career.loadHistory({ announce: true }).catch(() => {});
+      career.ensureProfiles()
+        .then(() => career.loadHistory({ announce: true }))
+        .catch(() => {});
+    }
+    if (tab === "profile") {
+      career.ensureProfiles()
+        .then(() => career.loadActiveProfileData({ announce: true }))
+        .catch(() => {});
     }
   },
 };

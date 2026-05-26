@@ -54,6 +54,12 @@ a.text-\[\#0563C1\] {
   border: 1px solid var(--borderLight);
 }
 
+#panel-profile > .space-y-8 > .editorial-card,
+#panel-shared-jobs .editorial-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 360px;
+}
+
 .contrast-surface {
   background-color: var(--surface);
   color: var(--ink);
@@ -79,6 +85,14 @@ a.text-\[\#0563C1\] {
   background: var(--ink);
   color: var(--paper);
   border-color: var(--ink);
+}
+
+.dashboard-tabs {
+  scrollbar-width: none;
+}
+
+.dashboard-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .dashboard-tab:not(.is-active):hover,
@@ -414,6 +428,103 @@ body.high-contrast *:focus-visible {
 
 @keyframes statusSpin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 639px) {
+  #nav-actions {
+    min-width: 0;
+  }
+
+  #nav-actions span {
+    max-width: calc(100vw - 6.5rem);
+    overflow-wrap: anywhere;
+  }
+
+  .editorial-input {
+    padding: 0.875rem;
+    font-size: 1rem;
+  }
+
+  #panel-profile button[type="submit"],
+  #panel-matching button[type="submit"],
+  #panel-shared-jobs button,
+  #auth-modal button[type="submit"],
+  #application-modal button[type="submit"] {
+    min-height: 3rem;
+  }
+
+  .profile-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+  }
+
+  .jobs-list-wrap {
+    overflow: visible;
+  }
+
+  .jobs-table,
+  .jobs-table tbody,
+  .jobs-table tr,
+  .jobs-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .jobs-table thead {
+    display: none;
+  }
+
+  .jobs-table tbody {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .jobs-table tbody tr {
+    overflow: hidden;
+    border: 1px solid var(--borderLight);
+    border-radius: 1.25rem;
+    background: var(--surface);
+  }
+
+  .jobs-table tbody td:not(.jobs-empty) {
+    border: 0;
+    text-align: left;
+  }
+
+  .jobs-table tbody td:not(.jobs-empty):not(:first-child)::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.45rem;
+    color: var(--stone);
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+  }
+
+  .jobs-table .jobs-empty {
+    border: 1px solid var(--borderLight);
+    border-radius: 1.25rem;
+    background: var(--surface);
+  }
+
+  .job-actions button {
+    margin-top: 0.6rem;
+    margin-right: 1rem;
+    margin-left: 0 !important;
+  }
+
+  #projects-list article > div,
+  #experiences-list article > div,
+  #courses-list article > div,
+  #certifications-list article > div,
+  #resume-files-list article > div,
+  #match-history article > div {
+    flex-direction: column;
+  }
+
+  #toast-root > * {
+    max-width: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

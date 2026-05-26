@@ -3,7 +3,8 @@ import { toast } from "./toast.js";
 
 export async function api(endpoint, options = {}, token = null) {
   const isFormData = options.body instanceof FormData;
-  const headers = { ...(isFormData ? {} : { "Content-Type": "application/json" }), ...(options.headers || {}) };
+  const hasBody = options.body !== undefined && options.body !== null;
+  const headers = { ...(!isFormData && hasBody ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const { silent, ...requestOptions } = options;
