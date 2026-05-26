@@ -1,8 +1,31 @@
 const { prisma } = require("../lib/prisma");
+const { PDFDocument } = require("pdf-lib");
 const cache = require("../lib/cache");
 const profileService = require("./profile.service");
 
 const MAX_PDF_BYTES = 3 * 1024 * 1024;
+
+function hasPdfSignature(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 8) return false;
+  const header = buffer.subarray(0, 5).toString("ascii");
+  const trailer = buffer.subarray(Math.max(0, buffer.length - 2048)).toString("ascii");
+  return header === "%PDF-" && trailer.includes("%%EOF");
+}
+
+async function assertValidPdf(buffer) {
+  if (!hasPdfSignature(buffer)) {
+    const err = new Error("Arquivo enviado nao e um PDF valido");
+    err.statusCode = 400;
+    throw err;
+  }
+  try {
+    await PDFDocument.load(buffer, { updateMetadata: false });
+  } catch (cause) {
+    const err = new Error("Arquivo enviado nao e um PDF valido");
+    err.statusCode = 400;
+    throw err;
+  }
+}
 
 function serializeResumeFile(file) {
   return {
@@ -30,6 +53,7 @@ async function uploadResumeFile(userId, file, profileId = null) {
     err.statusCode = 400;
     throw err;
   }
+  await assertValidPdf(file.buffer);
 
   const profile = await profileService.resolveProfile(userId, profileId);
   const saved = await prisma.resumeFile.create({
@@ -94,4 +118,6 @@ module.exports = {
   listResumeFiles,
   getResumeFile,
   deleteResumeFile,
+  hasPdfSignature,
+  assertValidPdf,
 };

@@ -14,6 +14,7 @@ jest.mock("../profile.service", () => ({
   resolveProfile: jest.fn(),
 }));
 
+const { PDFDocument } = require("pdf-lib");
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
 const profileService = require("../profile.service");
@@ -32,10 +33,13 @@ describe("resume PDF attachment", () => {
       createdAt: new Date("2026-05-24T12:00:00.000Z"),
     });
 
+    const document = await PDFDocument.create();
+    document.addPage();
+    const content = Buffer.from(await document.save());
     const result = await uploadResumeFile("user", {
       mimetype: "application/pdf",
-      size: 20,
-      buffer: Buffer.from("conteudo PDF nao lido"),
+      size: content.length,
+      buffer: content,
       originalname: "cv.pdf",
     }, "profile");
 
@@ -50,6 +54,19 @@ describe("resume PDF attachment", () => {
     expect(result).not.toHaveProperty("profile");
     expect(result).not.toHaveProperty("extractedText");
     expect(cache.invalidate).toHaveBeenCalledWith("resume-files", "user");
+  });
+
+  it("recusa arquivo que declara PDF sem assinatura binaria valida", async () => {
+    await expect(uploadResumeFile("user", {
+      mimetype: "application/pdf",
+      size: 20,
+      buffer: Buffer.from("conteudo malicioso"),
+      originalname: "curriculo.pdf",
+    }, "profile")).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Arquivo enviado nao e um PDF valido",
+    });
+    expect(prisma.resumeFile.create).not.toHaveBeenCalled();
   });
 
   it("nao consulta o perfil novamente quando a lista de PDFs esta em cache", async () => {

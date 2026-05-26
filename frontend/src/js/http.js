@@ -6,7 +6,8 @@ export async function api(endpoint, options = {}, token = null) {
   const headers = { ...(isFormData ? {} : { "Content-Type": "application/json" }), ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+  const { silent, ...requestOptions } = options;
+  const res = await fetch(`${API_URL}${endpoint}`, { ...requestOptions, headers, credentials: "include" });
   let data = null;
 
   try {
@@ -20,7 +21,7 @@ export async function api(endpoint, options = {}, token = null) {
       ? data.issues.map((issue) => issue.message).filter(Boolean).join("; ")
       : "";
     const message = details || data?.error || "Erro de comunicação";
-    toast(message, "error");
+    if (!silent) toast(message, "error");
     const err = new Error(message);
     err.status = res.status;
     err.issues = data?.issues || [];

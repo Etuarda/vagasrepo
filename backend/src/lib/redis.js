@@ -62,4 +62,10 @@ async function incr(key) {
   return redis.incr(key);
 }
 
-module.exports = { get, set, del, incr, incrWithTtl };
+async function ping() {
+  const redis = await getClient();
+  if (!redis) return false;
+  return (await redis.ping()) === "PONG";
+}
+
+module.exports = { get, set, del, incr, incrWithTtl, ping };

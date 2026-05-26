@@ -402,10 +402,10 @@
         <input type="email" id="login-email" placeholder="Seu e-mail" required class="editorial-input" />
         <input type="password" id="login-password" placeholder="Sua senha" required class="editorial-input" />
         <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Acessar Sistema</button>
-        <button type="button" onclick="window.__uiSwitchAuth?.('forgot')" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Esqueci minha senha</button>
+        <button type="button" data-switch-auth="forgot" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Esqueci minha senha</button>
         <p class="text-center text-[10px] uppercase tracking-widest text-stone">
           Novo aqui?
-          <button type="button" onclick="window.__uiSwitchAuth?.('register')" class="underline font-bold">Criar conta</button>
+          <button type="button" data-switch-auth="register" class="underline font-bold">Criar conta</button>
         </p>
       </form>
 
@@ -415,14 +415,14 @@
         <input type="tel" id="reg-phone" placeholder="Telefone com DDD" required class="editorial-input" minlength="10" maxlength="25" />
         <input type="password" id="reg-password" placeholder="Senha (min. 10 caracteres)" required class="editorial-input" minlength="10" />
         <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Registrar Profissional</button>
-        <button type="button" onclick="window.__uiSwitchAuth?.('login')" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Já possuo cadastro</button>
+        <button type="button" data-switch-auth="login" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Já possuo cadastro</button>
       </form>
 
       <form id="form-forgot-password" class="space-y-6 hidden">
         <p class="text-sm text-taupe leading-relaxed">Informe seu e-mail para receber um link de recuperacao valido por 30 minutos.</p>
         <input type="email" id="forgot-email" placeholder="E-mail cadastrado" required class="editorial-input" />
         <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Enviar link</button>
-        <button type="button" onclick="window.__uiSwitchAuth?.('login')" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Voltar para entrar</button>
+        <button type="button" data-switch-auth="login" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Voltar para entrar</button>
       </form>
 
       <form id="form-reset-password" class="space-y-6 hidden">
@@ -431,7 +431,7 @@
         <input type="password" id="reset-password" placeholder="Nova senha" required class="editorial-input" minlength="10" />
         <input type="password" id="reset-password-confirm" placeholder="Confirmar nova senha" required class="editorial-input" minlength="10" />
         <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Redefinir senha</button>
-        <button type="button" onclick="window.__uiSwitchAuth?.('login')" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Voltar para entrar</button>
+        <button type="button" data-switch-auth="login" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Voltar para entrar</button>
       </form>
     </div>
   </div>
@@ -555,10 +555,6 @@
   </div>
   <script id="vlibras-script" src="https://vlibras.gov.br/app/vlibras-plugin.js" defer></script>
 
-  <script type="module">
-    import { ui } from "./src/js/ui.js";
-    window.__uiSwitchAuth = (type) => ui.switchAuth(type);
-  </script>
   <script type="module" src="./src/js/main.js"></script>
 </body>
 </html>

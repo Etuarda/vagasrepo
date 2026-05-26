@@ -1,6 +1,9 @@
+const transitionalToken = sessionStorage.getItem("vagas_legacy_token") || localStorage.getItem("vagas_token");
+localStorage.removeItem("vagas_token");
+
 export const state = {
   user: null,
-  token: localStorage.getItem("vagas_token"),
+  token: transitionalToken,
   jobs: [],
   profile: null,
   profiles: [],

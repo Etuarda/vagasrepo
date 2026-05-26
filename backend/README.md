@@ -22,6 +22,7 @@ npm install
 - `FRONTEND_URL`: URL publica da Vercel usada no link de recuperacao de senha.
 - `RESEND_API_KEY`: chave da API Resend usada para enviar a recuperacao de senha.
 - `EMAIL_FROM`: remetente verificado no Resend, por exemplo `Vagas.io <recuperacao@seudominio.com>`.
+- `SLOW_QUERY_MS`: limiar para log estruturado de consultas Prisma lentas; padrao `500`.
 
 3. Rode migrations e gere o client:
 
@@ -49,15 +50,21 @@ API: `http://localhost:3000`
 7. Crie um Redis gerenciado e configure `REDIS_URL` no Render; sem essa variavel a API funciona, mas as consultas voltam a acessar o Neon a cada carregamento.
 8. Configure `FRONTEND_URL`, `RESEND_API_KEY` e `EMAIL_FROM` no Render para habilitar o envio de links de recuperacao.
 
+O frontend publicado encaminha `/api/*` para a Render. Assim, o navegador recebe a sessao em cookie `HttpOnly`, sem armazenar JWT em `localStorage`. O backend ainda aceita Bearer token durante a transicao de clientes antigos.
+
+Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` nos logs da Render. Encaminhe esses logs e `/metrics` para sua ferramenta de monitoramento para alertas e historico operacional.
+
 ## Endpoints
 
 - `GET /health`
+- `GET /ready`; verifica conexao com o banco e informa o estado do cache.
+- `GET /metrics`; metricas HTTP basicas em formato Prometheus.
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`
 - `GET /auth/me` com Bearer token
-- `GET /jobs` com Bearer token; filtros: `q`, `status`, `period`, `dateFrom`, `dateTo`
+- `GET /jobs` autenticado; filtros: `q`, `status`, `period`, `dateFrom`, `dateTo`, `cursor`, `limit`. Use `cursor` com o ultimo `id` retornado para listas extensas.
 - `POST /jobs` com Bearer token
 - `PUT /jobs/:id` com Bearer token
 - `DELETE /jobs/:id` com Bearer token
@@ -86,3 +93,5 @@ API: `http://localhost:3000`
 O historico de matching (`JobAnalysis` e PDFs otimizados associados) fica disponivel por 30 dias. Registros expirados nao sao retornados; a limpeza fisica e iniciada em segundo plano para nao atrasar a tela. Candidaturas ja registradas permanecem salvas.
 
 Com `REDIS_URL` configurado, leituras repetidas de perfis e catalogo global, historico de matching, acompanhamento de vagas, arquivos PDF e vagas compartilhadas usam cache com expiracao e invalidacao automatica apos alteracoes.
+
+Uploads PDF sao limitados a 3 MB e validados por extensao, MIME e assinatura/trailer do arquivo antes da persistencia. Para escala acima do volume atual, arquivos e PDFs gerados devem migrar do PostgreSQL para object storage e geracao assíncrona em fila.

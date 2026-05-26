@@ -5,14 +5,10 @@ import { ui } from "./ui.js";
 export const auth = {
   async init(onLoggedIn) {
     ui.renderNav();
-
-    if (!state.token) {
-      ui.navigate("landing");
-      return;
-    }
+    localStorage.removeItem("vagas_token");
 
     try {
-      const user = await api("/auth/me", {}, state.token);
+      const user = await api("/auth/me", { silent: true }, state.token);
       state.user = user;
       ui.renderNav();
       ui.navigate("dashboard");
@@ -29,9 +25,10 @@ export const auth = {
       null
     );
 
-    state.token = token;
+    state.token = token || null;
+    if (token) sessionStorage.setItem("vagas_legacy_token", token);
+    else sessionStorage.removeItem("vagas_legacy_token");
     state.user = user;
-    localStorage.setItem("vagas_token", token);
 
     ui.closeAuthModal();
     ui.renderNav();
@@ -75,10 +72,9 @@ export const auth = {
   },
 
   logout() {
-    if (state.token) {
-      api("/auth/logout", { method: "POST" }, state.token).catch(() => {});
-    }
+  api("/auth/logout", { method: "POST", silent: true }, state.token).catch(() => {});
     localStorage.removeItem("vagas_token");
+    sessionStorage.removeItem("vagas_legacy_token");
     state.token = null;
     state.user = null;
     state.jobs = [];

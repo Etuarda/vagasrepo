@@ -172,6 +172,9 @@ function wireEvents() {
   document.querySelectorAll("[data-open-auth]").forEach((el) => {
     el.addEventListener("click", () => ui.openAuthModal(el.dataset.openAuth));
   });
+  document.querySelectorAll("[data-switch-auth]").forEach((el) => {
+    el.addEventListener("click", () => ui.switchAuth(el.dataset.switchAuth));
+  });
 
   const resetToken = new URLSearchParams(window.location.search).get("resetToken");
   if (resetToken) {

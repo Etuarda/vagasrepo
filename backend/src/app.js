@@ -5,9 +5,11 @@ const express = require("express");
 const cors = require("cors");
 
 const env = require("./config/env");
+const { prisma } = require("./lib/prisma");
+const redis = require("./lib/redis");
 const { HOSTED_FRONTEND_ORIGINS, createOriginMatcher } = require("./config/cors");
 const { errorHandler } = require("./middlewares/errorHandler");
-const { securityHeaders, requestContext, rateLimit } = require("./middlewares/security");
+const { securityHeaders, requestContext, rateLimit, metricsEndpoint } = require("./middlewares/security");
 
 const authRoutes = require("./routes/auth.routes");
 const jobsRoutes = require("./routes/jobs.routes");
@@ -15,6 +17,7 @@ const profileRoutes = require("./routes/profile.routes");
 const resumeFilesRoutes = require("./routes/resume-files.routes");
 
 const app = express();
+app.set("trust proxy", 1);
 
 /**
  * =========================
@@ -56,10 +59,11 @@ const corsOptions = {
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: false, // true apenas se usar cookies
+  credentials: true,
 };
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, keyPrefix: "auth" });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, keyPrefix: "auth" });
+const passwordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, keyPrefix: "password" });
 const heavyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, keyPrefix: "heavy" });
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500, keyPrefix: "api" });
 
@@ -80,6 +84,18 @@ app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/metrics", metricsEndpoint);
+
+app.get("/ready", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    const cache = env.REDIS_URL ? (await redis.ping() ? "ready" : "degraded") : "not_configured";
+    return res.json({ ok: true, database: "ready", cache });
+  } catch (err) {
+    return res.status(503).json({ ok: false, database: "unavailable" });
+  }
+});
+
 /**
  * =========================
  * MIDDLEWARES
@@ -96,8 +112,8 @@ app.use(express.json({ limit: "1mb" }));
  */
 app.use("/auth/login", authLimiter);
 app.use("/auth/register", authLimiter);
-app.use("/auth/forgot-password", authLimiter);
-app.use("/auth/reset-password", authLimiter);
+app.use("/auth/forgot-password", passwordLimiter);
+app.use("/auth/reset-password", passwordLimiter);
 app.use("/auth", authRoutes);
 app.use("/jobs", jobsRoutes);
 app.use("/resume-files", heavyLimiter, resumeFilesRoutes);

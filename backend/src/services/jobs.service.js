@@ -20,12 +20,12 @@ function parseYMD(ymd) {
   return new Date(y, m - 1, d);
 }
 
-async function listJobs(userId, { q, status, period, dateFrom, dateTo, page = 1, limit = 50 }) {
-  const variant = JSON.stringify({ q: q || "", status: status || "", period: period || "", dateFrom: dateFrom || "", dateTo: dateTo || "", page, limit });
-  return cache.remember("jobs", userId, variant, () => loadJobs(userId, { q, status, period, dateFrom, dateTo, page, limit }));
+async function listJobs(userId, { q, status, period, dateFrom, dateTo, limit = 50, cursor }) {
+  const variant = JSON.stringify({ q: q || "", status: status || "", period: period || "", dateFrom: dateFrom || "", dateTo: dateTo || "", limit, cursor: cursor || "" });
+  return cache.remember("jobs", userId, variant, () => loadJobs(userId, { q, status, period, dateFrom, dateTo, limit, cursor }));
 }
 
-async function loadJobs(userId, { q, status, period, dateFrom, dateTo, page = 1, limit = 50 }) {
+async function loadJobs(userId, { q, status, period, dateFrom, dateTo, limit = 50, cursor }) {
   const and = [];
 
   // A) Busca textual (case-insensitive)
@@ -60,9 +60,9 @@ async function loadJobs(userId, { q, status, period, dateFrom, dateTo, page = 1,
       userId,
       AND: and,
     },
-    orderBy: { data: "desc" },
+    orderBy: [{ data: "desc" }, { id: "desc" }],
     take: limit,
-    skip: (page - 1) * limit,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: linkedJobInclude,
   });
 }

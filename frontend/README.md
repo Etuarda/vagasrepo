@@ -21,13 +21,15 @@ Acesse: `http://localhost:5500`
 
 ## Configuracao da API
 
-O frontend chama diretamente a API publicada no Render, tanto localmente quanto na Vercel:
+Na Vercel, o frontend chama `/api`, que e encaminhado para a API da Render pelo `vercel.json`. Isso permite sessao em cookie `HttpOnly`.
 
 ```text
-https://gerenciadorpessoaldevagas.onrender.com
+/api -> https://gerenciadorpessoaldevagas.onrender.com
 ```
 
-Se o endereco do backend mudar, atualize `src/js/config.js`.
+Em desenvolvimento servido diretamente por `localhost`, `src/js/config.js` usa a API publicada. Para testar o comportamento de cookie de producao e os headers CSP, execute pelo ambiente da Vercel.
+
+Durante a promocao do backend, tokens devolvidos por uma API antiga sao aceitos somente na aba atual (`sessionStorage`) para nao interromper usuarios conectados; o novo backend nao devolve token ao JavaScript e opera apenas com cookie `HttpOnly`.
 
 ## Deploy na Vercel
 
@@ -38,6 +40,7 @@ Se o endereco do backend mudar, atualize `src/js/config.js`.
 5. O `vercel.json` ja define o output directory como `.`.
 6. Confirme o healthcheck do backend em `https://gerenciadorpessoaldevagas.onrender.com/health`.
 7. O backend ja permite o dominio `gestaodevagas.vercel.app` e previews deste projeto na equipe Vercel configurada.
+8. O `vercel.json` configura proxy `/api`, CSP, HSTS e demais headers de seguranca.
 
 Como o navegador chama o Render diretamente, use `CORS_ORIGIN` no backend apenas para origens adicionais, como o preview local:
 

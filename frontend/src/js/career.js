@@ -943,7 +943,8 @@ export const career = {
   async downloadResumeFile(id) {
     const { API_URL } = await import("./config.js");
     const response = await fetch(`${API_URL}/resume-files/${id}/download`, {
-      headers: { Authorization: `Bearer ${state.token}` },
+      credentials: "include",
+      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
     });
 
     if (!response.ok) {
@@ -966,7 +967,8 @@ export const career = {
     const { API_URL } = await import("./config.js");
     const previewWindow = window.open("", "_blank");
     const response = await fetch(`${API_URL}/resume-files/${id}/view`, {
-      headers: { Authorization: `Bearer ${state.token}` },
+      credentials: "include",
+      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
     });
     if (!response.ok) {
       previewWindow?.close();
@@ -982,7 +984,8 @@ export const career = {
   async downloadOptimizedResume(id) {
     const { API_URL } = await import("./config.js");
     const response = await fetch(`${API_URL}/optimized-resumes/${id}/download`, {
-      headers: { Authorization: `Bearer ${state.token}` },
+      credentials: "include",
+      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
     });
 
     if (!response.ok) {

@@ -72,8 +72,9 @@ const jobListQuerySchema = z.object({
   q: z.preprocess(emptyToUndefined, z.string().trim().max(200).optional()),
   status: z.preprocess(emptyToUndefined, StatusEnum.optional()),
   period: z.preprocess(emptyToUndefined, PeriodEnum.optional()),
-  page: z.preprocess((v) => emptyToUndefined(v) ?? 1, z.coerce.number().int().min(1).max(1000)),
+  page: z.preprocess((v) => emptyToUndefined(v) ?? 1, z.coerce.number().int().min(1).max(1, "Use cursor para carregar a proxima pagina")),
   limit: z.preprocess((v) => emptyToUndefined(v) ?? 50, z.coerce.number().int().min(1).max(100)),
+  cursor: z.preprocess(emptyToUndefined, z.string().uuid("cursor invalido").optional()),
   dateFrom: z.preprocess(
     emptyToUndefined,
     z
