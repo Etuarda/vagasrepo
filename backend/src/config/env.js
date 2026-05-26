@@ -10,6 +10,7 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url().default("https://gestaodevagas.vercel.app"),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
+  RESEND_TEST_RECIPIENT: z.string().trim().toLowerCase().email().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -73,9 +73,24 @@ describe("password reset e-mail delivery", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
-  it("bloqueia o remetente de teste em producao para nao falhar com usuarios reais", async () => {
+  it("envia com remetente de teste somente para o destinatario autorizado", async () => {
+    sendMock.mockResolvedValue({ data: { id: "email-id" }, error: null });
     const { sendPasswordResetEmail } = loadService({
       EMAIL_FROM: "Vagas.io <onboarding@resend.dev>",
+      RESEND_TEST_RECIPIENT: "pessoa@example.com",
+    });
+
+    await expect(sendPasswordResetEmail(
+      { name: "Pessoa", email: "PESSOA@example.com" },
+      "raw-token"
+    )).resolves.toEqual({});
+    expect(sendMock).toHaveBeenCalled();
+  });
+
+  it("bloqueia remetente de teste para outros usuarios em producao", async () => {
+    const { sendPasswordResetEmail } = loadService({
+      EMAIL_FROM: "Vagas.io <onboarding@resend.dev>",
+      RESEND_TEST_RECIPIENT: "destinatario-autorizado@example.com",
     });
 
     await expect(sendPasswordResetEmail(
@@ -83,7 +98,7 @@ describe("password reset e-mail delivery", () => {
       "raw-token"
     )).rejects.toMatchObject({
       statusCode: 503,
-      message: expect.stringContaining("dominio verificado"),
+      message: expect.stringContaining("destinatario de teste"),
     });
     expect(sendMock).not.toHaveBeenCalled();
   });

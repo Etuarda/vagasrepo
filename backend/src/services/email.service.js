@@ -33,6 +33,11 @@ function isTestingSender() {
   return /<[^>]*@resend\.dev>|@resend\.dev\b/i.test(env.EMAIL_FROM || "");
 }
 
+function canSendWithTestingSender(recipient) {
+  return Boolean(env.RESEND_TEST_RECIPIENT)
+    && String(recipient || "").trim().toLowerCase() === env.RESEND_TEST_RECIPIENT;
+}
+
 async function sendPasswordResetEmail(user, token) {
   const link = resetUrl(token);
   const safeName = escapeHtml(user.name);
@@ -44,8 +49,8 @@ async function sendPasswordResetEmail(user, token) {
     err.statusCode = 503;
     throw err;
   }
-  if (env.NODE_ENV === "production" && isTestingSender()) {
-    const err = new Error("Recuperacao de senha indisponivel. Configure EMAIL_FROM com um dominio verificado no Resend.");
+  if (env.NODE_ENV === "production" && isTestingSender() && !canSendWithTestingSender(user.email)) {
+    const err = new Error("Recuperacao de senha disponivel apenas para o destinatario de teste ate configurar um dominio verificado.");
     err.statusCode = 503;
     throw err;
   }
@@ -70,4 +75,4 @@ async function sendPasswordResetEmail(user, token) {
   return {};
 }
 
-module.exports = { sendPasswordResetEmail, resetUrl, resetEmailIdempotencyKey, isTestingSender };
+module.exports = { sendPasswordResetEmail, resetUrl, resetEmailIdempotencyKey, isTestingSender, canSendWithTestingSender };

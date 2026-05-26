@@ -21,7 +21,8 @@ npm install
 - `REDIS_URL`: conexao Redis TLS (`rediss://...`) usada para sessoes, rate limiting e cache das telas de perfil, historico e candidaturas.
 - `FRONTEND_URL`: URL publica da Vercel usada no link de recuperacao de senha.
 - `RESEND_API_KEY`: chave da API Resend usada para enviar a recuperacao de senha.
-- `EMAIL_FROM`: remetente de dominio verificado no Resend, por exemplo `Vagas.io <recuperacao@seudominio-verificado.com>`. O backend rejeita remetentes `@resend.dev` em producao porque eles nao entregam para usuarios reais.
+- `EMAIL_FROM`: remetente de dominio verificado no Resend, por exemplo `Vagas.io <recuperacao@seudominio-verificado.com>`.
+- `RESEND_TEST_RECIPIENT`: opcional. Enquanto nao houver dominio, permite usar `Vagas.io <onboarding@resend.dev>` somente para o proprio e-mail autorizado na conta Resend; demais usuarios continuam bloqueados.
 - `SLOW_QUERY_MS`: limiar para log estruturado de consultas Prisma lentas; padrao `500`.
 
 3. Rode migrations e gere o client:
@@ -52,7 +53,7 @@ API: `http://localhost:3000`
 
 O frontend publicado encaminha `/api/*` para a Render. Assim, o navegador recebe a sessao em cookie `HttpOnly`, sem armazenar JWT em `localStorage`. O backend ainda aceita Bearer token durante a transicao de clientes antigos.
 
-O envio de recuperacao usa o SDK oficial `resend`. Para atender usuarios reais, valide um dominio no Resend, configure os registros DNS solicitados pelo provedor e use esse dominio em `EMAIL_FROM`. O dominio de teste `resend.dev` e bloqueado pela API em producao.
+O envio de recuperacao usa o SDK oficial `resend`. Para atender todos os usuarios reais, valide um dominio no Resend, configure os registros DNS solicitados pelo provedor e use esse dominio em `EMAIL_FROM`. Sem dominio, configure `EMAIL_FROM` com `onboarding@resend.dev` e `RESEND_TEST_RECIPIENT` para validar a troca de senha apenas com a conta autorizada pelo Resend.
 
 Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` nos logs da Render. Encaminhe esses logs e `/metrics` para sua ferramenta de monitoramento para alertas e historico operacional.
 
