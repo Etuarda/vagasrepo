@@ -108,8 +108,7 @@ function wireEvents() {
       if (action === "logout") auth.logout();
       if (action === "open-login") ui.openAuthModal("login");
       if (action === "open-billing") {
-        career.setTab("profile");
-        document.getElementById("billing-settings")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        career.setTab("billing");
       }
     });
   }
@@ -348,8 +347,7 @@ function wireEvents() {
 
   document.querySelectorAll("[data-open-billing]").forEach((button) => {
     button.addEventListener("click", () => {
-      career.setTab("profile");
-      document.getElementById("billing-settings")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      career.setTab("billing");
     });
   });
 

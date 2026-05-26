@@ -75,6 +75,9 @@
         <button type="button" data-dashboard-tab="shared-jobs" class="dashboard-tab shrink-0 px-4 sm:px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
           Vagas compartilhadas
         </button>
+        <button type="button" data-dashboard-tab="billing" class="dashboard-tab shrink-0 px-4 sm:px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
+          Plano
+        </button>
       </div>
 
       <div id="panel-jobs" data-dashboard-panel="jobs" class="space-y-8 sm:space-y-12 lg:space-y-16">
@@ -156,23 +159,6 @@
             <form id="form-create-profile" class="flex flex-col sm:flex-row gap-3 max-w-xl">
               <input type="text" id="new-profile-name" placeholder="Ex: Frontend, Dados..." class="editorial-input text-sm" />
               <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Criar subperfil</button>
-            </form>
-          </section>
-
-          <section id="billing-settings" class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-label="Configuracao de assinatura">
-            <div>
-              <p class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone mb-3">Assinatura</p>
-              <h3 id="billing-current-plan" class="font-serif text-3xl">Plano atual.</h3>
-              <p id="billing-usage" class="text-sm text-taupe mt-2">Carregando uso do plano...</p>
-            </div>
-            <form id="form-billing-plan" class="flex flex-col sm:flex-row gap-3 max-w-xl">
-              <select id="billing-plan" class="editorial-input text-sm bg-white" aria-label="Selecionar plano">
-                <option value="free">Free - R$ 0</option>
-                <option value="basic">Basic - R$ 9,90/mes</option>
-                <option value="pro">Pro - R$ 19,90/mes</option>
-                <option value="premium">Premium - R$ 29,90/mes</option>
-              </select>
-              <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Alterar plano</button>
             </form>
           </section>
 
@@ -352,6 +338,31 @@
               <button type="button" data-cancel-edit="language" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
             </form>
             <div id="languages-list" class="flex flex-wrap gap-2"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="panel-billing" data-dashboard-panel="billing" class="hidden space-y-8" aria-labelledby="billing-title">
+        <div id="billing-settings" class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 lg:p-10 space-y-8">
+          <header class="max-w-4xl">
+            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Assinatura</p>
+            <h2 id="billing-title" class="font-serif text-4xl sm:text-5xl tracking-tight mt-3">Plano e limites.</h2>
+            <p class="text-sm text-taupe leading-relaxed mt-4">Escolha seu plano e acompanhe o uso de analises e vagas cadastradas.</p>
+          </header>
+          <section class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-label="Configuracao de assinatura">
+            <div>
+              <h3 id="billing-current-plan" class="font-serif text-3xl">Plano atual.</h3>
+              <p id="billing-usage" class="text-sm text-taupe mt-2">Carregando uso do plano...</p>
+            </div>
+            <form id="form-billing-plan" class="flex flex-col sm:flex-row gap-3 max-w-xl">
+              <select id="billing-plan" class="editorial-input text-sm bg-white" aria-label="Selecionar plano">
+                <option value="free">Free - R$ 0</option>
+                <option value="basic">Basic - R$ 9,90/mes</option>
+                <option value="pro">Pro - R$ 19,90/mes</option>
+                <option value="premium">Premium - R$ 29,90/mes</option>
+              </select>
+              <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Alterar plano</button>
+            </form>
           </section>
         </div>
       </section>
