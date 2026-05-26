@@ -3,6 +3,7 @@ import { ui } from "./ui.js";
 import { auth } from "./auth.js";
 import { jobs } from "./jobs.js";
 import { career } from "./career.js";
+import { billing } from "./billing.js";
 
 function debounce(fn, wait = 300) {
   let t = null;
@@ -58,7 +59,7 @@ function activeProfileName() {
 let __vlibrasStarted = false;
 
 async function loadDashboardData() {
-  await jobs.load();
+  await Promise.all([jobs.load(), billing.load()]);
 }
 
 function forceVlibrasZIndex() {
@@ -106,6 +107,10 @@ function wireEvents() {
       const action = btn.dataset.action;
       if (action === "logout") auth.logout();
       if (action === "open-login") ui.openAuthModal("login");
+      if (action === "open-billing") {
+        career.setTab("profile");
+        document.getElementById("billing-settings")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     });
   }
 
@@ -137,7 +142,8 @@ function wireEvents() {
           const email = document.getElementById("reg-email")?.value || "";
           const phone = document.getElementById("reg-phone")?.value || "";
           const password = document.getElementById("reg-password")?.value || "";
-          await auth.register(name, email, phone, password);
+          const plan = document.getElementById("reg-plan")?.value || "free";
+          await auth.register(name, email, phone, password, plan);
         }
       );
     });
@@ -174,7 +180,13 @@ function wireEvents() {
   }
 
   document.querySelectorAll("[data-open-auth]").forEach((el) => {
-    el.addEventListener("click", () => ui.openAuthModal(el.dataset.openAuth));
+    el.addEventListener("click", () => {
+      if (el.dataset.plan) {
+        const selectedPlan = document.getElementById("reg-plan");
+        if (selectedPlan) selectedPlan.value = el.dataset.plan;
+      }
+      ui.openAuthModal(el.dataset.openAuth);
+    });
   });
   document.querySelectorAll("[data-switch-auth]").forEach((el) => {
     el.addEventListener("click", () => ui.switchAuth(el.dataset.switchAuth));
@@ -333,6 +345,25 @@ function wireEvents() {
   document.querySelectorAll("[data-dashboard-tab]").forEach((button) => {
     button.addEventListener("click", () => career.setTab(button.dataset.dashboardTab));
   });
+
+  document.querySelectorAll("[data-open-billing]").forEach((button) => {
+    button.addEventListener("click", () => {
+      career.setTab("profile");
+      document.getElementById("billing-settings")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+
+  const billingForm = document.getElementById("form-billing-plan");
+  if (billingForm) {
+    billingForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await runWithFeedback(
+        getSubmitButton(e, billingForm),
+        { busyText: "Alterando...", notice: "Atualizando plano..." },
+        () => billing.updatePlan(document.getElementById("billing-plan")?.value || "free")
+      );
+    });
+  }
 
   document.querySelectorAll("[data-cancel-edit]").forEach((button) => {
     button.addEventListener("click", () => career.cancelEdit(button.dataset.cancelEdit));

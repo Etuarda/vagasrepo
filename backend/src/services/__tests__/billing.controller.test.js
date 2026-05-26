@@ -1,9 +1,10 @@
 jest.mock("../subscription.service", () => ({
   getPlanContext: jest.fn(),
+  updatePlan: jest.fn(),
 }));
 
 const subscriptionService = require("../subscription.service");
-const { me } = require("../../controllers/billing.controller");
+const { me, update } = require("../../controllers/billing.controller");
 
 describe("billing controller", () => {
   beforeEach(() => {
@@ -24,5 +25,15 @@ describe("billing controller", () => {
 
     expect(subscriptionService.getPlanContext).toHaveBeenCalledWith("user");
     expect(res.json).toHaveBeenCalledWith(context);
+  });
+
+  it("altera o plano solicitado pelo usuario autenticado", async () => {
+    subscriptionService.updatePlan.mockResolvedValue({ plan: "premium" });
+    const res = { json: jest.fn() };
+
+    await update({ userId: "user", body: { plan: "premium" } }, res, jest.fn());
+
+    expect(subscriptionService.updatePlan).toHaveBeenCalledWith("user", "premium");
+    expect(res.json).toHaveBeenCalledWith({ plan: "premium" });
   });
 });

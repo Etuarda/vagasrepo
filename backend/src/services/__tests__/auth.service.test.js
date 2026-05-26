@@ -54,6 +54,7 @@ describe("auth service registration and password reset", () => {
       email: "pessoa@example.com",
       phone: "(85) 99999-0000",
       password: "senha-segura-123",
+      plan: "pro",
     });
 
     expect(prisma.user.create).toHaveBeenCalledWith({
@@ -63,6 +64,9 @@ describe("auth service registration and password reset", () => {
         phone: "(85) 99999-0000",
         emailContact: "pessoa@example.com",
         password: "hashed-password",
+        subscription: {
+          create: { plan: "pro", status: "active" },
+        },
       },
     });
   });

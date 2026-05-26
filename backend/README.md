@@ -62,7 +62,8 @@ Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` 
 - `GET /ready`; verifica conexao com o banco e informa se o cache esta em `redis_ready`, `local_only` ou `degraded_local`.
 - `GET /metrics`; metricas HTTP basicas em formato Prometheus.
 - `GET /billing/me` autenticado; retorna plano efetivo, funcionalidades e consumo/limites atuais.
-- `POST /auth/register`
+- `PATCH /billing/me` autenticado; altera o plano ativo com body `{ "plan": "free|basic|pro|premium" }`.
+- `POST /auth/register`; aceita `plan` opcional (`free`, `basic`, `pro` ou `premium`) e cria `free` por padrao.
 - `POST /auth/login`
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`

@@ -3,6 +3,7 @@ localStorage.removeItem("vagas_token");
 
 export const state = {
   user: null,
+  billing: null,
   token: transitionalToken,
   jobs: [],
   profile: null,

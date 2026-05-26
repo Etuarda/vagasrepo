@@ -3,6 +3,7 @@ jest.mock("../../lib/prisma", () => ({ prisma: {} }));
 const { FEATURES, PLAN_KEYS, PLAN_RULES } = require("../../constants/subscription-plans");
 const {
   getPlanContext,
+  updatePlan,
   assertFeatureAccess,
   consumeMatchingQuota,
   assertSubprofileLimit,
@@ -92,6 +93,15 @@ describe("subscription plans and quotas", () => {
       .rejects.toMatchObject({ statusCode: 402, code: "APPLICATION_TRACKING_LIMIT_REACHED" });
   });
 
+  it.each([PLAN_KEYS.BASIC, PLAN_KEYS.PRO, PLAN_KEYS.PREMIUM])(
+    "nao aplica limite visivel de acompanhamento no plano %s",
+    async (plan) => {
+      const db = dbFor(plan, { applicationsUsed: 10000 });
+      await expect(assertApplicationTrackingLimit("user", db)).resolves.toMatchObject({ plan, limit: null });
+      expect(db.job.count).not.toHaveBeenCalled();
+    }
+  );
+
   it("serializa a validacao de limite quando executada dentro de transacao", async () => {
     const db = dbFor(PLAN_KEYS.FREE, { applicationsUsed: 0 });
     db.$executeRaw = jest.fn().mockResolvedValue(undefined);
@@ -115,5 +125,17 @@ describe("subscription plans and quotas", () => {
         subprofiles: expect.objectContaining({ used: 2, limit: 5, remaining: 3 }),
       }),
     }));
+  });
+
+  it("persiste troca de plano e retorna o novo contexto", async () => {
+    const db = dbFor(PLAN_KEYS.FREE);
+    db.subscription.upsert.mockResolvedValue({ userId: "user", plan: PLAN_KEYS.PRO, status: "active" });
+
+    await expect(updatePlan("user", PLAN_KEYS.PRO, db)).resolves.toMatchObject({ plan: PLAN_KEYS.PRO });
+    expect(db.subscription.upsert).toHaveBeenCalledWith({
+      where: { userId: "user" },
+      update: { plan: PLAN_KEYS.PRO, status: "active" },
+      create: { userId: "user", plan: PLAN_KEYS.PRO, status: "active" },
+    });
   });
 });

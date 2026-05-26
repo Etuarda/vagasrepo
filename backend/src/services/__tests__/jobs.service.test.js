@@ -54,6 +54,16 @@ describe("job list pagination", () => {
     expect(prisma.job.create).toHaveBeenCalled();
   });
 
+  it("bloqueia a decima primeira vaga manual do Free antes da criacao", async () => {
+    const err = Object.assign(new Error("Limite atingido"), { statusCode: 402 });
+    subscriptionService.assertApplicationTrackingLimit.mockRejectedValueOnce(err);
+    prisma.$transaction.mockImplementation((work) => work(prisma));
+
+    await expect(createJob("user", { titulo: "Backend" })).rejects.toMatchObject({ statusCode: 402 });
+
+    expect(prisma.job.create).not.toHaveBeenCalled();
+  });
+
   it("nao invalida historico ao editar candidatura sem analise vinculada", async () => {
     prisma.job.updateMany.mockResolvedValue({ count: 1 });
     prisma.job.findFirst.mockResolvedValue({ id: "job", jobAnalysisId: null });

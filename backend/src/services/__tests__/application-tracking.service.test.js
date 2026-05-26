@@ -76,6 +76,19 @@ describe("application tracking from analysis", () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it("bloqueia a decima primeira vaga derivada de analise no Free", async () => {
+    prisma.jobAnalysis.findFirst.mockResolvedValue(analysis);
+    prisma.job.findFirst.mockResolvedValue(null);
+    const tx = { job: { create: jest.fn() }, jobAnalysis: { update: jest.fn() } };
+    const err = Object.assign(new Error("Limite atingido"), { statusCode: 402 });
+    subscriptionService.assertApplicationTrackingLimit.mockRejectedValueOnce(err);
+    prisma.$transaction.mockImplementation((work) => work(tx));
+
+    await expect(createFromAnalysis("user", "analysis", payload)).rejects.toMatchObject({ statusCode: 402 });
+
+    expect(tx.job.create).not.toHaveBeenCalled();
+  });
+
   it("marca analise aplicada apenas quando a fase foi escolhida pelo usuario", async () => {
     prisma.jobAnalysis.findFirst.mockResolvedValue(analysis);
     prisma.job.findFirst.mockResolvedValue(null);

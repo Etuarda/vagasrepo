@@ -47,6 +47,9 @@ export const ui = {
         <span class="text-[10px] font-bold uppercase tracking-[0.2em]">
           voce so precisa de um SIM${greetingName ? `, ${escapeHtml(greetingName)}` : ""}
         </span>
+        <button data-action="open-billing" class="text-[10px] font-bold uppercase tracking-[0.2em] underline">
+          Plano
+        </button>
         <button data-action="logout" class="text-[10px] font-bold uppercase tracking-[0.2em] underline">
           Sair
         </button>

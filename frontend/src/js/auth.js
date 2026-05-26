@@ -37,10 +37,10 @@ export const auth = {
     onLoggedIn?.();
   },
 
-  async register(name, email, phone, password) {
+  async register(name, email, phone, password, plan) {
     await api(
       "/auth/register",
-      { method: "POST", body: JSON.stringify({ name, email, phone, password }) },
+      { method: "POST", body: JSON.stringify({ name, email, phone, password, plan }) },
       null
     );
     ui.notify("Conta criada. Por favor, acesse.");
@@ -77,6 +77,7 @@ export const auth = {
     sessionStorage.removeItem("vagas_legacy_token");
     state.token = null;
     state.user = null;
+    state.billing = null;
     state.jobs = [];
     state.profile = null;
     state.profiles = [];

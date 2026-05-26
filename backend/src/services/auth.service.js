@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const { prisma } = require("../lib/prisma");
+const { PLAN_KEYS } = require("../constants/subscription-plans");
 const sessionService = require("./session.service");
 const emailService = require("./email.service");
 
@@ -10,7 +11,7 @@ const ACCESS_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 const PASSWORD_RESET_TTL_MINUTES = 30;
 const PASSWORD_RESET_RESPONSE = "Se o e-mail estiver cadastrado, enviaremos um link de recuperacao.";
 
-async function registerUser({ name, email, phone, password }) {
+async function registerUser({ name, email, phone, password, plan = PLAN_KEYS.FREE }) {
   const userExists = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
   if (userExists) {
     const err = new Error("E-mail já cadastrado");
@@ -20,7 +21,16 @@ async function registerUser({ name, email, phone, password }) {
 
   const hashedPassword = await bcrypt.hash(password, 10);
   await prisma.user.create({
-    data: { name, email, phone, emailContact: email, password: hashedPassword },
+    data: {
+      name,
+      email,
+      phone,
+      emailContact: email,
+      password: hashedPassword,
+      subscription: {
+        create: { plan, status: "active" },
+      },
+    },
   });
 
   return { message: "Usuário criado" };

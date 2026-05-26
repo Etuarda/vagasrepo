@@ -101,6 +101,19 @@ async function getPlanContext(userId, db = prisma) {
   };
 }
 
+async function updatePlan(userId, plan, db = prisma) {
+  if (db === prisma) {
+    return prisma.$transaction((tx) => updatePlan(userId, plan, tx));
+  }
+
+  await db.subscription.upsert({
+    where: { userId },
+    update: { plan, status: "active" },
+    create: { userId, plan, status: "active" },
+  });
+  return getPlanContext(userId, db);
+}
+
 async function assertFeatureAccess(userId, feature, db = prisma) {
   const subscription = await getOrCreateSubscription(userId, db);
   const plan = effectivePlan(subscription);
@@ -177,6 +190,7 @@ async function assertApplicationTrackingLimit(userId, db = prisma) {
 module.exports = {
   getOrCreateSubscription,
   getPlanContext,
+  updatePlan,
   assertFeatureAccess,
   consumeMatchingQuota,
   assertSubprofileLimit,

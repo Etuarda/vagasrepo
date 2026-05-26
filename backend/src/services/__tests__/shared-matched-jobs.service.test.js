@@ -16,6 +16,7 @@ jest.mock("../../services/subscription.service", () => ({
 }));
 
 const { prisma } = require("../../lib/prisma");
+const subscriptionService = require("../../services/subscription.service");
 const {
   createSharedMatchedJob,
   dedupeLatestJobs,
@@ -52,6 +53,7 @@ describe("shared matched jobs", () => {
   it("consulta o periodo solicitado sem filtrar por usuario", async () => {
     await listSharedMatchedJobs("user", "week");
 
+    expect(subscriptionService.assertFeatureAccess).toHaveBeenCalledWith("user", "shared_matched_jobs");
     expect(prisma.sharedMatchedJob.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { createdAt: { gte: expect.any(Date) } },
       orderBy: { createdAt: "desc" },
