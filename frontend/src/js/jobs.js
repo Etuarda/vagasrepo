@@ -262,9 +262,10 @@ export const jobs = {
 
   async remove(id) {
     const ok = confirm("Remover este registro?");
-    if (!ok) return;
+    if (!ok) return false;
 
     await api(`/jobs/${id}`, { method: "DELETE" }, state.token);
     await jobs.load();
+    return true;
   },
 };

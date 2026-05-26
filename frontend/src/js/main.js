@@ -55,6 +55,7 @@ async function loadDashboardData() {
   const independentLoads = jobs.load();
   await career.loadProfiles();
   await Promise.all([independentLoads, career.loadActiveProfileData({ announce: true })]);
+  career.preloadProfileData().catch(() => {});
 }
 
 function forceVlibrasZIndex() {
@@ -213,6 +214,8 @@ function wireEvents() {
           };
 
           await jobs.save(payload);
+          const linkedAnalysis = payload.id && (state.jobs || []).find((job) => job.id === payload.id)?.jobAnalysis;
+          if (linkedAnalysis) await career.refreshHistoryAfterTrackingChange();
         }
       );
     });
@@ -863,7 +866,11 @@ function wireEvents() {
         return runWithFeedback(
           btn,
           { busyText: "Removendo...", notice: "Removendo candidatura..." },
-          () => jobs.remove(id)
+          async () => {
+            const linkedAnalysis = (state.jobs || []).find((job) => job.id === id)?.jobAnalysis;
+            const removed = await jobs.remove(id);
+            if (removed && linkedAnalysis) await career.refreshHistoryAfterTrackingChange();
+          }
         );
       }
       if (action === "edit") {

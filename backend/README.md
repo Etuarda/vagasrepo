@@ -94,4 +94,6 @@ O historico de matching (`JobAnalysis` e PDFs otimizados associados) fica dispon
 
 Leituras repetidas de perfis e catalogo global, historico de matching, acompanhamento de vagas, arquivos PDF e vagas compartilhadas usam cache local com expiracao e invalidacao automatica apos alteracoes. Com `REDIS_URL` configurado, esse cache tambem e compartilhado entre instancias da API.
 
+O frontend pre-carrega perfis, subperfis, historicos e referencias de curriculo em segundo plano apos o acesso. O historico continua persistido no banco por 30 dias; a pre-carga e o cache apenas evitam novas esperas ao navegar, sendo invalidados apos alteracoes.
+
 Uploads PDF sao limitados a 3 MB e validados por extensao, MIME e assinatura/trailer do arquivo antes da persistencia. Para escala acima do volume atual, arquivos e PDFs gerados devem migrar do PostgreSQL para object storage e geracao assíncrona em fila.

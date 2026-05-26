@@ -23,10 +23,14 @@ const PROFILE_CLIENT_CACHE_MS = 5 * 60 * 1000;
 const profileCache = new Map();
 const profileRequests = new Map();
 let profileRevision = 0;
-const HISTORY_CLIENT_CACHE_MS = 60 * 1000;
+const HISTORY_CLIENT_CACHE_MS = 2 * 60 * 1000;
 const historyCache = new Map();
 const historyRequests = new Map();
 let historyRevision = 0;
+const RESUME_FILES_CLIENT_CACHE_MS = 5 * 60 * 1000;
+const resumeFilesCache = new Map();
+const resumeFilesRequests = new Map();
+let resumeFilesRevision = 0;
 
 function profileLabel(profileId) {
   return (state.profiles || []).find((profile) => profile.id === profileId)?.profileName || "perfil selecionado";
@@ -46,8 +50,10 @@ function showProfile(profile) {
 function replaceEditedProfile(profile) {
   profileRevision += 1;
   profileCache.clear();
+  profileRequests.clear();
   profileCache.set(profileCacheKey(profile.id), { profile, savedAt: Date.now() });
   showProfile(profile);
+  window.setTimeout(() => career.preloadProfileData().catch(() => {}), 0);
 }
 
 function historyCacheKey(profileId) {
@@ -57,6 +63,30 @@ function historyCacheKey(profileId) {
 function invalidateHistoryCache() {
   historyRevision += 1;
   historyCache.clear();
+}
+
+function resumeFilesCacheKey(profileId) {
+  return `${state.user?.id || "guest"}:${profileId || "default"}`;
+}
+
+function invalidateResumeFilesCache() {
+  resumeFilesRevision += 1;
+  resumeFilesCache.clear();
+}
+
+async function prefetchWithLimit(items, worker, limit = 2) {
+  const queue = [...items];
+  const runners = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    while (queue.length) {
+      const item = queue.shift();
+      try {
+        await worker(item);
+      } catch (err) {
+        // Navigation remains available even when a background preload fails.
+      }
+    }
+  });
+  await Promise.all(runners);
 }
 
 function setLoadStatus(id, message, status, hideAfter = 0) {
@@ -603,6 +633,37 @@ export const career = {
     renderMatchProfileOptions();
   },
 
+  async prefetchProfile(profileId) {
+    const cacheKey = profileCacheKey(profileId);
+    const revision = profileRevision;
+    const snapshot = profileCache.get(cacheKey);
+    if (snapshot && Date.now() - snapshot.savedAt < PROFILE_CLIENT_CACHE_MS) return snapshot.profile;
+    if (profileRequests.has(cacheKey)) return profileRequests.get(cacheKey);
+    let request = null;
+    request = api(`/profile?profileId=${encodeURIComponent(profileId)}`, { silent: true }, state.token)
+      .then((profile) => {
+        if (revision !== profileRevision) return null;
+        profileCache.set(cacheKey, { profile, savedAt: Date.now() });
+        return profile;
+      })
+      .finally(() => {
+        if (profileRequests.get(cacheKey) === request) profileRequests.delete(cacheKey);
+      });
+    profileRequests.set(cacheKey, request);
+    return request;
+  },
+
+  async preloadProfileData() {
+    const profiles = state.profiles || [];
+    await prefetchWithLimit(profiles, async (profile) => {
+      await Promise.all([
+        career.prefetchProfile(profile.id),
+        career.prefetchHistory(profile.id),
+        career.prefetchResumeFiles(profile.id),
+      ]);
+    });
+  },
+
   async loadProfile({ requestId = null, announce = false, force = false } = {}) {
     const selectedProfileId = state.activeProfileId;
     const label = profileLabel(selectedProfileId);
@@ -697,6 +758,27 @@ export const career = {
       }
       throw err;
     }
+  },
+
+  async prefetchHistory(profileId) {
+    const cacheKey = historyCacheKey(profileId);
+    const revision = historyRevision;
+    const snapshot = historyCache.get(cacheKey);
+    if (snapshot && Date.now() - snapshot.savedAt < HISTORY_CLIENT_CACHE_MS) return snapshot.rows;
+    if (historyRequests.has(cacheKey)) return historyRequests.get(cacheKey);
+    let request = null;
+    request = api(`/optimized-resumes?profileId=${encodeURIComponent(profileId)}`, { silent: true }, state.token)
+      .then((rows) => {
+        if (revision !== historyRevision) return null;
+        const history = Array.isArray(rows) ? rows : [];
+        historyCache.set(cacheKey, { rows: history, savedAt: Date.now() });
+        return history;
+      })
+      .finally(() => {
+        if (historyRequests.get(cacheKey) === request) historyRequests.delete(cacheKey);
+      });
+    historyRequests.set(cacheKey, request);
+    return request;
   },
 
   async loadSharedMatchedJobs() {
@@ -921,6 +1003,13 @@ export const career = {
     return out;
   },
 
+  async refreshHistoryAfterTrackingChange() {
+    invalidateHistoryCache();
+    if (!document.getElementById("panel-matching")?.classList.contains("hidden")) {
+      await career.loadHistory({ force: true, successMessage: "Histórico atualizado." });
+    }
+  },
+
   beginEdit(type, id) {
     const collections = {
       education: state.profile?.educations,
@@ -972,12 +1061,52 @@ export const career = {
     clearEditMode(type);
   },
 
-  async loadResumeFiles({ requestId = null } = {}) {
+  async prefetchResumeFiles(profileId) {
+    const cacheKey = resumeFilesCacheKey(profileId);
+    const revision = resumeFilesRevision;
+    const snapshot = resumeFilesCache.get(cacheKey);
+    if (snapshot && Date.now() - snapshot.savedAt < RESUME_FILES_CLIENT_CACHE_MS) return snapshot.files;
+    if (resumeFilesRequests.has(cacheKey)) return resumeFilesRequests.get(cacheKey);
+    let request = null;
+    request = api(`/resume-files?profileId=${encodeURIComponent(profileId)}`, { silent: true }, state.token)
+      .then((rows) => {
+        if (revision !== resumeFilesRevision) return null;
+        const files = Array.isArray(rows) ? rows : [];
+        resumeFilesCache.set(cacheKey, { files, savedAt: Date.now() });
+        return files;
+      })
+      .finally(() => {
+        if (resumeFilesRequests.get(cacheKey) === request) resumeFilesRequests.delete(cacheKey);
+      });
+    resumeFilesRequests.set(cacheKey, request);
+    return request;
+  },
+
+  async loadResumeFiles({ requestId = null, force = false } = {}) {
     const selectedProfileId = state.activeProfileId;
+    const cacheKey = resumeFilesCacheKey(selectedProfileId);
+    const revision = resumeFilesRevision;
     const query = selectedProfileId ? `?profileId=${encodeURIComponent(selectedProfileId)}` : "";
-    const files = await api(`/resume-files${query}`, {}, state.token);
+    const snapshot = resumeFilesCache.get(cacheKey);
+    if (!force && snapshot && Date.now() - snapshot.savedAt < RESUME_FILES_CLIENT_CACHE_MS) {
+      if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
+      state.resumeFiles = snapshot.files;
+      renderResumeFiles();
+      return state.resumeFiles;
+    }
+    let request = !force ? resumeFilesRequests.get(cacheKey) : null;
+    if (!request) {
+      request = api(`/resume-files${query}`, {}, state.token)
+        .finally(() => {
+          if (resumeFilesRequests.get(cacheKey) === request) resumeFilesRequests.delete(cacheKey);
+        });
+      resumeFilesRequests.set(cacheKey, request);
+    }
+    const files = await request;
+    if (revision !== resumeFilesRevision) return null;
     if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
     state.resumeFiles = Array.isArray(files) ? files : [];
+    resumeFilesCache.set(cacheKey, { files: state.resumeFiles, savedAt: Date.now() });
     renderResumeFiles();
     return state.resumeFiles;
   },
@@ -996,13 +1125,16 @@ export const career = {
       state.token
     );
     state.resumeFiles = [out, ...(state.resumeFiles || [])];
+    resumeFilesRevision += 1;
+    resumeFilesCache.set(resumeFilesCacheKey(state.activeProfileId), { files: state.resumeFiles, savedAt: Date.now() });
     renderResumeFiles();
     ui.notify("Currículo PDF anexado somente como referência.");
   },
 
   async removeResumeFile(id) {
     await api(`/resume-files/${id}`, { method: "DELETE" }, state.token);
-    await career.loadResumeFiles();
+    invalidateResumeFilesCache();
+    await career.loadResumeFiles({ force: true });
   },
 
   async downloadResumeFile(id) {
@@ -1074,6 +1206,7 @@ export const career = {
     state.activeProfileId = profile.id;
     await career.loadProfiles();
     await career.loadActiveProfileData({ announce: true });
+    career.preloadProfileData().catch(() => {});
     ui.notify("Perfil criado.");
   },
 
@@ -1083,10 +1216,16 @@ export const career = {
       state.activeProfileId = "";
     }
     await career.loadProfiles();
+    profileRevision += 1;
+    profileCache.clear();
+    profileRequests.clear();
+    invalidateHistoryCache();
+    invalidateResumeFilesCache();
     if (!state.profiles.some((profile) => profile.id === state.activeProfileId)) {
       state.activeProfileId = state.profiles.find((profile) => profile.isGlobal)?.id || state.profiles[0]?.id || "";
     }
     await career.loadActiveProfileData({ announce: true });
+    career.preloadProfileData().catch(() => {});
     ui.notify("Subperfil removido.");
   },
 

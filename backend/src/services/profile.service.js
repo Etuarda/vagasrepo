@@ -234,6 +234,7 @@ async function invalidateProfileCache(userId) {
   await Promise.all([
     cache.invalidate("profiles", userId),
     cache.invalidate("profile", userId),
+    cache.invalidate("profile-catalog", userId),
   ]);
 }
 
@@ -335,6 +336,16 @@ async function loadProfile(userId, profileId = null) {
   }
   const full = profile;
   if (!full.isGlobal) {
+    const globalCatalog = await getGlobalCatalog(userId);
+    const serialized = serializeProfile(full);
+    serialized.globalCatalog = buildGlobalCatalog(globalCatalog, full);
+    return serialized;
+  }
+  return serializeProfile(full);
+}
+
+async function getGlobalCatalog(userId) {
+  return cache.remember("profile-catalog", userId, "global", async () => {
     let globalCatalog = await prisma.careerProfile.findFirst({
       where: { userId, isGlobal: true },
       orderBy: { createdAt: "asc" },
@@ -347,11 +358,8 @@ async function loadProfile(userId, profileId = null) {
         include: globalCatalogInclude,
       });
     }
-    const serialized = serializeProfile(full);
-    serialized.globalCatalog = buildGlobalCatalog(globalCatalog, full);
-    return serialized;
-  }
-  return serializeProfile(full);
+    return globalCatalog;
+  });
 }
 
 async function getProfile(userId, profileId = null) {

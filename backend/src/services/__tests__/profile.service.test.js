@@ -45,6 +45,7 @@ describe("subprofile deletion", () => {
     });
     expect(prisma.careerProfile.delete).toHaveBeenCalledWith({ where: { id: "subprofile" } });
     expect(cache.invalidate).toHaveBeenCalledWith("profile", "user");
+    expect(cache.invalidate).toHaveBeenCalledWith("profile-catalog", "user");
     expect(cache.invalidate).toHaveBeenCalledWith("resume-files", "user");
     expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
   });
