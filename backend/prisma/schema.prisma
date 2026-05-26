@@ -22,20 +22,53 @@ model User {
   lattes       String @default("")
   summary      String @default("")
 
-  jobs             Job[]
-  careerProfiles   CareerProfile[]
-  skills           Skill[]
-  projects         Project[]
-  experiences      Experience[]
-  courses          Course[]
-  certifications   Certification[]
-  languages        Language[]
-  educations       Education[]
-  jobAnalyses      JobAnalysis[]
-  optimizedResumes OptimizedResume[]
-  resumeFiles      ResumeFile[]
-  authSessions     AuthSession[]
+  jobs                Job[]
+  careerProfiles      CareerProfile[]
+  skills              Skill[]
+  projects            Project[]
+  experiences         Experience[]
+  courses             Course[]
+  certifications      Certification[]
+  languages           Language[]
+  educations          Education[]
+  jobAnalyses         JobAnalysis[]
+  optimizedResumes    OptimizedResume[]
+  resumeFiles         ResumeFile[]
+  authSessions        AuthSession[]
   passwordResetTokens PasswordResetToken[]
+  subscription        Subscription?
+  usageCounters       UsageCounter[]
+}
+
+model Subscription {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  plan               String    @default("free")
+  status             String    @default("active")
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([plan])
+  @@index([status])
+}
+
+model UsageCounter {
+  id        String   @id @default(uuid())
+  userId    String
+  feature   String
+  periodKey String
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature, periodKey])
+  @@index([userId])
 }
 
 model CareerProfile {
@@ -58,38 +91,38 @@ model CareerProfile {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skills           Skill[]
-  projects         Project[]
-  experiences      Experience[]
-  courses          Course[]
-  certifications   Certification[]
-  languages        Language[]
-  educations       Education[]
-  subprofileSkills SubprofileSkill[]
-  subprofileProjects SubprofileProject[]
-  subprofileExperiences SubprofileExperience[]
-  subprofileCourses SubprofileCourse[]
+  user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills                   Skill[]
+  projects                 Project[]
+  experiences              Experience[]
+  courses                  Course[]
+  certifications           Certification[]
+  languages                Language[]
+  educations               Education[]
+  subprofileSkills         SubprofileSkill[]
+  subprofileProjects       SubprofileProject[]
+  subprofileExperiences    SubprofileExperience[]
+  subprofileCourses        SubprofileCourse[]
   subprofileCertifications SubprofileCertification[]
-  subprofileEducations SubprofileEducation[]
-  subprofileLanguages SubprofileLanguage[]
-  selectedJobAnalyses JobAnalysis[]
-  optimizedResumes OptimizedResume[]
-  resumeFiles      ResumeFile[]
+  subprofileEducations     SubprofileEducation[]
+  subprofileLanguages      SubprofileLanguage[]
+  selectedJobAnalyses      JobAnalysis[]
+  optimizedResumes         OptimizedResume[]
+  resumeFiles              ResumeFile[]
 
   @@index([userId])
 }
 
 model Job {
-  id                  String @id @default(uuid())
-  titulo              String
-  empresa             String
-  linkVaga            String
-  linkCV              String
-  jobDescription      String @default("")
-  notes               String @default("")
-  jobAnalysisId       String?
-  optimizedResumeId   String?
+  id                String  @id @default(uuid())
+  titulo            String
+  empresa           String
+  linkVaga          String
+  linkCV            String
+  jobDescription    String  @default("")
+  notes             String  @default("")
+  jobAnalysisId     String?
+  optimizedResumeId String?
 
   data   DateTime
   status String
@@ -116,12 +149,12 @@ model Job {
 }
 
 model AuthSession {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -130,12 +163,12 @@ model AuthSession {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -144,16 +177,16 @@ model PasswordResetToken {
 }
 
 model Skill {
-  id        String   @id @default(uuid())
-  name      String
-  normalizedName String @default("")
-  category  String @default("other")
-  userId    String
-  profileId String?
-  createdAt DateTime @default(now())
+  id             String   @id @default(uuid())
+  name           String
+  normalizedName String   @default("")
+  category       String   @default("other")
+  userId         String
+  profileId      String?
+  createdAt      DateTime @default(now())
 
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile     CareerProfile?    @relation(fields: [profileId], references: [id], onDelete: Cascade)
   subprofiles SubprofileSkill[]
 
   @@unique([profileId, name])
@@ -162,21 +195,21 @@ model Skill {
 }
 
 model Project {
-  id            String   @id @default(uuid())
-  title         String
-  description   String
-  category      String   @default("other")
-  shortDescription String @default("")
-  businessProblem String @default("")
-  technicalSolution String @default("")
-  architecture  String   @default("")
-  stack         String   @default("")
-  repositoryUrl String   @default("")
-  deployUrl     String   @default("")
-  userId        String
-  profileId     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(uuid())
+  title             String
+  description       String
+  category          String   @default("other")
+  shortDescription  String   @default("")
+  businessProblem   String   @default("")
+  technicalSolution String   @default("")
+  architecture      String   @default("")
+  stack             String   @default("")
+  repositoryUrl     String   @default("")
+  deployUrl         String   @default("")
+  userId            String
+  profileId         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile      CareerProfile?      @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -189,11 +222,11 @@ model Project {
 }
 
 model ProjectTechnology {
-  id        String @id @default(uuid())
-  name      String
+  id             String @id @default(uuid())
+  name           String
   normalizedName String @default("")
-  category  String @default("other")
-  projectId String
+  category       String @default("other")
+  projectId      String
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -228,8 +261,8 @@ model Experience {
   profileId   String?
   createdAt   DateTime @default(now())
 
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile     CareerProfile?         @relation(fields: [profileId], references: [id], onDelete: Cascade)
   subprofiles SubprofileExperience[]
 
   @@index([userId])
@@ -247,8 +280,8 @@ model Course {
   profileId   String?
   createdAt   DateTime @default(now())
 
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile     CareerProfile?     @relation(fields: [profileId], references: [id], onDelete: Cascade)
   subprofiles SubprofileCourse[]
 
   @@index([userId])
@@ -266,8 +299,8 @@ model Certification {
   profileId     String?
   createdAt     DateTime @default(now())
 
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile     CareerProfile?            @relation(fields: [profileId], references: [id], onDelete: Cascade)
   subprofiles SubprofileCertification[]
 
   @@index([userId])
@@ -282,8 +315,8 @@ model Language {
   profileId String?
   createdAt DateTime @default(now())
 
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile     CareerProfile?       @relation(fields: [profileId], references: [id], onDelete: Cascade)
   subprofiles SubprofileLanguage[]
 
   @@index([userId])
@@ -299,8 +332,8 @@ model Education {
   profileId   String?
   createdAt   DateTime @default(now())
 
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile CareerProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile     CareerProfile?        @relation(fields: [profileId], references: [id], onDelete: Cascade)
   subprofiles SubprofileEducation[]
 
   @@index([userId])
@@ -308,10 +341,10 @@ model Education {
 }
 
 model SubprofileSkill {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   subprofileId    String
   skillId         String
-  relevanceWeight Int    @default(50)
+  relevanceWeight Int     @default(50)
   isVisible       Boolean @default(true)
 
   subprofile CareerProfile @relation(fields: [subprofileId], references: [id], onDelete: Cascade)
@@ -322,13 +355,13 @@ model SubprofileSkill {
 }
 
 model SubprofileProject {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   subprofileId    String
   projectId       String
-  customTitle     String @default("")
-  customSummary   String @default("")
+  customTitle     String  @default("")
+  customSummary   String  @default("")
   customBullets   Json?
-  relevanceWeight Int    @default(50)
+  relevanceWeight Int     @default(50)
   isVisible       Boolean @default(true)
 
   subprofile CareerProfile @relation(fields: [subprofileId], references: [id], onDelete: Cascade)
@@ -339,11 +372,11 @@ model SubprofileProject {
 }
 
 model SubprofileExperience {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   subprofileId    String
   experienceId    String
   customBullets   Json?
-  relevanceWeight Int    @default(50)
+  relevanceWeight Int     @default(50)
   isVisible       Boolean @default(true)
 
   subprofile CareerProfile @relation(fields: [subprofileId], references: [id], onDelete: Cascade)
@@ -354,10 +387,10 @@ model SubprofileExperience {
 }
 
 model SubprofileCourse {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   subprofileId    String
   courseId        String
-  relevanceWeight Int    @default(50)
+  relevanceWeight Int     @default(50)
   isVisible       Boolean @default(true)
 
   subprofile CareerProfile @relation(fields: [subprofileId], references: [id], onDelete: Cascade)
@@ -368,10 +401,10 @@ model SubprofileCourse {
 }
 
 model SubprofileCertification {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   subprofileId    String
   certificationId String
-  relevanceWeight Int    @default(50)
+  relevanceWeight Int     @default(50)
   isVisible       Boolean @default(true)
 
   subprofile    CareerProfile @relation(fields: [subprofileId], references: [id], onDelete: Cascade)
@@ -382,7 +415,7 @@ model SubprofileCertification {
 }
 
 model SubprofileEducation {
-  id           String @id @default(uuid())
+  id           String  @id @default(uuid())
   subprofileId String
   educationId  String
   isVisible    Boolean @default(true)
@@ -395,7 +428,7 @@ model SubprofileEducation {
 }
 
 model SubprofileLanguage {
-  id           String @id @default(uuid())
+  id           String  @id @default(uuid())
   subprofileId String
   languageId   String
   isVisible    Boolean @default(true)
@@ -425,12 +458,12 @@ model OptimizedResume {
   generatedFileName   String?
   createdAt           DateTime @default(now())
 
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile    CareerProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
-  resumeFile ResumeFile?    @relation(fields: [resumeFileId], references: [id], onDelete: SetNull)
-  generatedForAnalyses JobAnalysis[] @relation("GeneratedAnalysisResume")
-  googleDocsExports GoogleDocsExport[]
-  applications Job[] @relation("ApplicationResume")
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile              CareerProfile?     @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  resumeFile           ResumeFile?        @relation(fields: [resumeFileId], references: [id], onDelete: SetNull)
+  generatedForAnalyses JobAnalysis[]      @relation("GeneratedAnalysisResume")
+  googleDocsExports    GoogleDocsExport[]
+  applications         Job[]              @relation("ApplicationResume")
 
   @@index([userId])
   @@index([profileId])
@@ -439,32 +472,32 @@ model OptimizedResume {
 }
 
 model JobAnalysis {
-  id                   String   @id @default(uuid())
+  id                   String    @id @default(uuid())
   userId               String
   jobTitle             String
-  company              String   @default("")
-  jobUrl               String   @default("")
+  company              String    @default("")
+  jobUrl               String    @default("")
   jobDescription       String
   selectedSubprofileId String?
   matchScore           Int
-  jobCategory          String   @default("unknown")
-  matchedSkills        String[] @default([])
-  missingSkills        String[] @default([])
-  selectedProjectIds   String[] @default([])
+  jobCategory          String    @default("unknown")
+  matchedSkills        String[]  @default([])
+  missingSkills        String[]  @default([])
+  selectedProjectIds   String[]  @default([])
   generatedResumeId    String?
-  status               String   @default("draft")
+  status               String    @default("draft")
   appliedAt            DateTime?
-  notes                String   @default("")
-  version              Int      @default(1)
+  notes                String    @default("")
+  version              Int       @default(1)
   parentAnalysisId     String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  selectedSubprofile CareerProfile? @relation(fields: [selectedSubprofileId], references: [id], onDelete: SetNull)
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selectedSubprofile CareerProfile?   @relation(fields: [selectedSubprofileId], references: [id], onDelete: SetNull)
   generatedResume    OptimizedResume? @relation("GeneratedAnalysisResume", fields: [generatedResumeId], references: [id], onDelete: SetNull)
-  parentAnalysis     JobAnalysis?   @relation("AnalysisVersions", fields: [parentAnalysisId], references: [id], onDelete: SetNull)
-  versions           JobAnalysis[]  @relation("AnalysisVersions")
+  parentAnalysis     JobAnalysis?     @relation("AnalysisVersions", fields: [parentAnalysisId], references: [id], onDelete: SetNull)
+  versions           JobAnalysis[]    @relation("AnalysisVersions")
   applications       Job[]
 
   @@index([userId, createdAt])

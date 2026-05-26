@@ -295,7 +295,7 @@ async function match(req, res, next) {
 async function listSharedMatchedJobs(req, res, next) {
   try {
     const { period } = sharedMatchedJobsQuerySchema.parse(req.query);
-    const jobs = await sharedMatchedJobsService.listSharedMatchedJobs(period);
+    const jobs = await sharedMatchedJobsService.listSharedMatchedJobs(req.userId, period);
     return res.json(jobs);
   } catch (err) {
     return next(err);

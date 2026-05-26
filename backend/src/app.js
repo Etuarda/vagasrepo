@@ -15,6 +15,7 @@ const authRoutes = require("./routes/auth.routes");
 const jobsRoutes = require("./routes/jobs.routes");
 const profileRoutes = require("./routes/profile.routes");
 const resumeFilesRoutes = require("./routes/resume-files.routes");
+const billingRoutes = require("./routes/billing.routes");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -115,6 +116,7 @@ app.use("/auth/register", authLimiter);
 app.use("/auth/forgot-password", passwordLimiter);
 app.use("/auth/reset-password", passwordLimiter);
 app.use("/auth", authRoutes);
+app.use("/billing", billingRoutes);
 app.use("/jobs", jobsRoutes);
 app.use("/resume-files", heavyLimiter, resumeFilesRoutes);
 app.use("/match", heavyLimiter);

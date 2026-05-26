@@ -11,6 +11,9 @@ jest.mock("../../lib/prisma", () => ({
 jest.mock("../../lib/cache", () => ({
   remember: jest.fn((namespace, owner, variant, loader) => loader()),
 }));
+jest.mock("../../services/subscription.service", () => ({
+  assertFeatureAccess: jest.fn().mockResolvedValue(undefined),
+}));
 
 const { prisma } = require("../../lib/prisma");
 const {
@@ -47,7 +50,7 @@ describe("shared matched jobs", () => {
   });
 
   it("consulta o periodo solicitado sem filtrar por usuario", async () => {
-    await listSharedMatchedJobs("week");
+    await listSharedMatchedJobs("user", "week");
 
     expect(prisma.sharedMatchedJob.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { createdAt: { gte: expect.any(Date) } },
@@ -69,7 +72,7 @@ describe("shared matched jobs", () => {
       data: new Date(),
     }]);
 
-    const rows = await listSharedMatchedJobs("month");
+    const rows = await listSharedMatchedJobs("user", "month");
 
     expect(rows).toEqual([expect.objectContaining({
       jobTitle: "Frontend Developer",

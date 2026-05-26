@@ -13,9 +13,13 @@ jest.mock("../../lib/cache", () => ({
   remember: jest.fn((namespace, owner, variant, loader) => loader()),
   invalidate: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../subscription.service", () => ({
+  assertSubprofileLimit: jest.fn().mockResolvedValue(undefined),
+}));
 
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
+const subscriptionService = require("../subscription.service");
 const { createProfile, deleteProfile, updateExperience, getProfile, profileInclude } = require("../profile.service");
 
 describe("subprofile deletion", () => {
@@ -32,6 +36,7 @@ describe("subprofile deletion", () => {
       where: { userId: "user", profileName: { equals: "Backend", mode: "insensitive" } },
       select: { id: true },
     });
+    expect(subscriptionService.assertSubprofileLimit).not.toHaveBeenCalled();
   });
 
   it("remove somente subperfil pertencente ao usuario", async () => {

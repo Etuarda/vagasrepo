@@ -1,5 +1,7 @@
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
+const subscriptionService = require("../../services/subscription.service");
+const { FEATURES } = require("../../constants/subscription-plans");
 
 const PERIOD_DAYS = Object.freeze({
   day: 1,
@@ -38,7 +40,8 @@ async function createSharedMatchedJob(db, data) {
   });
 }
 
-async function listSharedMatchedJobs(period = "month") {
+async function listSharedMatchedJobs(userId, period = "month") {
+  await subscriptionService.assertFeatureAccess(userId, FEATURES.SHARED_MATCHED_JOBS);
   const cutoff = periodCutoff(period);
   const jobs = await cache.remember("shared-jobs-board", "global", period, async () => {
     const [matchedJobs, trackedJobs] = await Promise.all([

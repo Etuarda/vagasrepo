@@ -1,6 +1,7 @@
 const { prisma } = require("../lib/prisma");
 const cache = require("../lib/cache");
 const { normalizeTerm } = require("../modules/matching/keyword-normalizer");
+const subscriptionService = require("./subscription.service");
 
 const skillSelect = { id: true, name: true, normalizedName: true, category: true };
 const projectSelect = {
@@ -165,26 +166,26 @@ function dedupeById(items) {
   return [...map.values()];
 }
 
-async function ensureDefaultProfile(userId) {
-  const existing = await prisma.careerProfile.findFirst({
+async function ensureDefaultProfile(userId, db = prisma) {
+  const existing = await db.careerProfile.findFirst({
     where: { userId, isGlobal: true },
     orderBy: { createdAt: "asc" },
   });
   if (existing) return existing;
 
-  const fallback = await prisma.careerProfile.findFirst({
+  const fallback = await db.careerProfile.findFirst({
     where: { userId },
     orderBy: { createdAt: "asc" },
   });
   if (fallback) {
-    return prisma.careerProfile.update({
+    return db.careerProfile.update({
       where: { id: fallback.id },
       data: { isGlobal: true, profileName: "Perfil Global" },
     });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  return prisma.careerProfile.create({
+  const user = await db.user.findUnique({ where: { id: userId } });
+  return db.careerProfile.create({
     data: {
       userId,
       profileName: "Perfil Global",
@@ -257,27 +258,31 @@ async function createProfile(userId, { profileName }) {
     throw err;
   }
 
-  const base = await ensureDefaultProfile(userId);
-  const profile = await prisma.careerProfile.create({
-    data: {
-      userId,
-      profileName,
-      name: base.name,
-      title: base.title,
-      emailContact: base.emailContact,
-      phone: base.phone,
-      location: base.location,
-      cep: base.cep,
-      linkedin: base.linkedin,
-      github: base.github,
-      lattes: base.lattes,
-      summary: base.summary,
-      category: normalizeTerm(profileName),
-    },
-    include: profileInclude,
-  });
+  const profile = await prisma.$transaction(async (tx) => {
+    await subscriptionService.assertSubprofileLimit(userId, tx);
+    const base = await ensureDefaultProfile(userId, tx);
+    const created = await tx.careerProfile.create({
+      data: {
+        userId,
+        profileName,
+        name: base.name,
+        title: base.title,
+        emailContact: base.emailContact,
+        phone: base.phone,
+        location: base.location,
+        cep: base.cep,
+        linkedin: base.linkedin,
+        github: base.github,
+        lattes: base.lattes,
+        summary: base.summary,
+        category: normalizeTerm(profileName),
+      },
+      include: profileInclude,
+    });
 
-  await inheritGlobalCollections(profile.id, base.id);
+    await inheritGlobalCollections(created.id, base.id, tx);
+    return created;
+  });
   return refreshedProfile(userId, profile.id);
 }
 
@@ -306,19 +311,19 @@ async function deleteProfile(userId, profileId) {
   return { message: "Subperfil removido." };
 }
 
-async function inheritGlobalCollections(subprofileId, globalProfileId) {
-  const global = await prisma.careerProfile.findUnique({
+async function inheritGlobalCollections(subprofileId, globalProfileId, db = prisma) {
+  const global = await db.careerProfile.findUnique({
     where: { id: globalProfileId },
     include: { skills: true, projects: true, experiences: true, courses: true, certifications: true, educations: true, languages: true },
   });
-  await prisma.$transaction([
-    prisma.subprofileSkill.createMany({ data: global.skills.map((item) => ({ subprofileId, skillId: item.id })), skipDuplicates: true }),
-    prisma.subprofileProject.createMany({ data: global.projects.map((item) => ({ subprofileId, projectId: item.id })), skipDuplicates: true }),
-    prisma.subprofileExperience.createMany({ data: global.experiences.map((item) => ({ subprofileId, experienceId: item.id })), skipDuplicates: true }),
-    prisma.subprofileCourse.createMany({ data: global.courses.map((item) => ({ subprofileId, courseId: item.id })), skipDuplicates: true }),
-    prisma.subprofileCertification.createMany({ data: global.certifications.map((item) => ({ subprofileId, certificationId: item.id })), skipDuplicates: true }),
-    prisma.subprofileEducation.createMany({ data: global.educations.map((item) => ({ subprofileId, educationId: item.id })), skipDuplicates: true }),
-    prisma.subprofileLanguage.createMany({ data: global.languages.map((item) => ({ subprofileId, languageId: item.id })), skipDuplicates: true }),
+  await Promise.all([
+    db.subprofileSkill.createMany({ data: global.skills.map((item) => ({ subprofileId, skillId: item.id })), skipDuplicates: true }),
+    db.subprofileProject.createMany({ data: global.projects.map((item) => ({ subprofileId, projectId: item.id })), skipDuplicates: true }),
+    db.subprofileExperience.createMany({ data: global.experiences.map((item) => ({ subprofileId, experienceId: item.id })), skipDuplicates: true }),
+    db.subprofileCourse.createMany({ data: global.courses.map((item) => ({ subprofileId, courseId: item.id })), skipDuplicates: true }),
+    db.subprofileCertification.createMany({ data: global.certifications.map((item) => ({ subprofileId, certificationId: item.id })), skipDuplicates: true }),
+    db.subprofileEducation.createMany({ data: global.educations.map((item) => ({ subprofileId, educationId: item.id })), skipDuplicates: true }),
+    db.subprofileLanguage.createMany({ data: global.languages.map((item) => ({ subprofileId, languageId: item.id })), skipDuplicates: true }),
   ]);
 }
 

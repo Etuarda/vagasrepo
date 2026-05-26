@@ -732,7 +732,7 @@ export const career = {
       if (announce) {
         setLoadStatus(
           "match-history-status",
-          state.matchHistory.length ? successMessage : "Nenhuma análise encontrada nos últimos 30 dias.",
+          state.matchHistory.length ? successMessage : "Nenhuma analise encontrada no historico.",
           "loaded",
           5000
         );
@@ -759,7 +759,7 @@ export const career = {
       if (announce) {
         setLoadStatus(
           "match-history-status",
-          state.matchHistory.length ? successMessage : "Nenhuma análise encontrada nos últimos 30 dias.",
+          state.matchHistory.length ? successMessage : "Nenhuma analise encontrada no historico.",
           "loaded",
           5000
         );

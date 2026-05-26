@@ -8,9 +8,13 @@ jest.mock("../../lib/prisma", () => ({
 jest.mock("../../lib/cache", () => ({
   invalidate: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../services/subscription.service", () => ({
+  assertApplicationTrackingLimit: jest.fn().mockResolvedValue(undefined),
+}));
 
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
+const subscriptionService = require("../../services/subscription.service");
 const { createFromAnalysis } = require("../../modules/application-tracking/application-tracking.service");
 
 describe("application tracking from analysis", () => {
@@ -56,6 +60,7 @@ describe("application tracking from analysis", () => {
         optimizedResumeId: "resume",
       }),
     }));
+    expect(subscriptionService.assertApplicationTrackingLimit).toHaveBeenCalledWith("user", tx);
     expect(tx.jobAnalysis.update).not.toHaveBeenCalled();
     expect(cache.invalidate).toHaveBeenCalledWith("jobs", "user");
     expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");

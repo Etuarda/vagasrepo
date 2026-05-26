@@ -61,6 +61,7 @@ Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` 
 - `GET /health`
 - `GET /ready`; verifica conexao com o banco e informa se o cache esta em `redis_ready`, `local_only` ou `degraded_local`.
 - `GET /metrics`; metricas HTTP basicas em formato Prometheus.
+- `GET /billing/me` autenticado; retorna plano efetivo, funcionalidades e consumo/limites atuais.
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/forgot-password`
@@ -92,10 +93,19 @@ Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` 
 - `GET /resume-files/:id/download` com Bearer token
 - `DELETE /resume-files/:id` com Bearer token
 
-O historico de matching (`JobAnalysis` e PDFs otimizados associados) fica disponivel por 30 dias. Registros expirados nao sao retornados; a limpeza fisica e iniciada em segundo plano para nao atrasar a tela. Candidaturas ja registradas permanecem salvas.
+O historico de matching (`JobAnalysis` e PDFs otimizados associados) e permanente em todos os planos. Atingir uma quota impede somente novas acoes; consultas e downloads historicos continuam disponiveis.
 
 Leituras repetidas de perfis e catalogo global, historico de matching, acompanhamento de vagas, arquivos PDF e vagas compartilhadas usam cache local com expiracao e invalidacao automatica apos alteracoes. Com `REDIS_URL` configurado, esse cache tambem e compartilhado entre instancias da API.
 
-O frontend pre-carrega perfis, subperfis, historicos e referencias de curriculo em segundo plano apos o acesso. O historico continua persistido no banco por 30 dias; a pre-carga e o cache apenas evitam novas esperas ao navegar, sendo invalidados apos alteracoes.
+O frontend carrega dados das abas conforme a navegacao e utiliza cache temporario apenas para evitar novas esperas. Esse cache nao limita nem expira o historico persistido.
+
+## Planos e limites
+
+- `free`: 3 analises vitalicias, nenhum subperfil, sem acesso a vagas compartilhadas e ate 10 vagas acompanhadas.
+- `basic`: 30 analises mensais e ate 2 subperfis.
+- `pro`: 100 analises mensais e ate 5 subperfis.
+- `premium`: 500 analises mensais e ate 10 subperfis.
+
+As regras de autorizacao ficam centralizadas em `src/services/subscription.service.js`; limites sao aplicados no backend antes de persistir novas acoes. Perfil Global nao e contabilizado como subperfil.
 
 Uploads PDF sao limitados a 3 MB e validados por extensao, MIME e assinatura/trailer do arquivo antes da persistencia. Para escala acima do volume atual, arquivos e PDFs gerados devem migrar do PostgreSQL para object storage e geracao assíncrona em fila.

@@ -1,6 +1,7 @@
 const { prisma } = require("../lib/prisma");
 const cache = require("../lib/cache");
 const { linkedJobInclude } = require("../modules/application-tracking/application-tracking.service");
+const subscriptionService = require("./subscription.service");
 
 function startOfDay(d) {
   const out = new Date(d);
@@ -68,8 +69,11 @@ async function loadJobs(userId, { q, status, period, dateFrom, dateTo, limit = 5
 }
 
 async function createJob(userId, data) {
-  const job = await prisma.job.create({
-    data: { ...data, userId },
+  const job = await prisma.$transaction(async (tx) => {
+    await subscriptionService.assertApplicationTrackingLimit(userId, tx);
+    return tx.job.create({
+      data: { ...data, userId },
+    });
   });
   await Promise.all([
     cache.invalidate("jobs", userId),

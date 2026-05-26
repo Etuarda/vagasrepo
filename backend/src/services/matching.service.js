@@ -6,39 +6,10 @@ const { classifyJob, normalizeTerm } = require("../modules/matching/keyword-norm
 const { rankProjects } = require("../modules/matching/project-ranking.service");
 const { compileResume } = require("../modules/resume/resume-compiler.service");
 const { createSharedMatchedJob } = require("../modules/matching/shared-matched-jobs.service");
-
-const MATCH_HISTORY_RETENTION_DAYS = 30;
-const MATCH_HISTORY_PURGE_INTERVAL_MS = 60 * 60 * 1000;
-const nextHistoryPurgeByUser = new Map();
+const subscriptionService = require("./subscription.service");
 
 function unique(values) {
   return [...new Set((values || []).filter(Boolean))];
-}
-
-function historyRetentionCutoff(now = new Date()) {
-  return new Date(now.getTime() - MATCH_HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000);
-}
-
-async function purgeExpiredHistory(userId, now = new Date()) {
-  const cutoff = historyRetentionCutoff(now);
-  await prisma.jobAnalysis.deleteMany({ where: { userId, createdAt: { lt: cutoff } } });
-  await prisma.optimizedResume.deleteMany({
-    where: {
-      userId,
-      createdAt: { lt: cutoff },
-      generatedForAnalyses: { none: {} },
-    },
-  });
-  return cutoff;
-}
-
-function scheduleExpiredHistoryPurge(userId, now = new Date()) {
-  if ((nextHistoryPurgeByUser.get(userId) || 0) > now.getTime()) return;
-  nextHistoryPurgeByUser.set(userId, now.getTime() + MATCH_HISTORY_PURGE_INTERVAL_MS);
-  purgeExpiredHistory(userId, now).catch((err) => {
-    nextHistoryPurgeByUser.delete(userId);
-    console.warn(JSON.stringify({ event: "matching_history_purge_failed", error: err.message }));
-  });
 }
 
 function inferTitle(text) {
@@ -147,6 +118,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
   const compiledResume = compileResume({ profile, matchResult: result });
   const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: result, compiledResume });
   const { saved, jobAnalysis } = await prisma.$transaction(async (tx) => {
+    await subscriptionService.consumeMatchingQuota(userId, tx);
     const savedResume = await tx.optimizedResume.create({
       data: {
         userId,
@@ -202,14 +174,11 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
 }
 
 async function listHistory(userId, profileId = null) {
-  const cutoff = historyRetentionCutoff();
-  scheduleExpiredHistoryPurge(userId);
   const history = await cache.remember("match-history", userId, profileId || "default", async () => {
     const selectedSubprofileId = profileId || (await profileService.resolveProfile(userId)).id;
     const rows = await prisma.jobAnalysis.findMany({
-      where: { userId, selectedSubprofileId, createdAt: { gte: cutoff } },
+      where: { userId, selectedSubprofileId },
       orderBy: { createdAt: "desc" },
-      take: 50,
       select: {
         id: true,
         jobTitle: true,
@@ -245,12 +214,12 @@ async function listHistory(userId, profileId = null) {
       createdAt: row.createdAt,
     }));
   }, 2 * 60);
-  return history.filter((row) => new Date(row.createdAt) >= cutoff);
+  return history;
 }
 
 async function updateAnalysis(userId, id, data) {
   const existing = await prisma.jobAnalysis.findFirst({
-    where: { id, userId, createdAt: { gte: historyRetentionCutoff() } },
+    where: { id, userId },
   });
   if (!existing) {
     const err = new Error("Analise nao encontrada");
@@ -295,7 +264,7 @@ async function updateAnalysis(userId, id, data) {
 
 async function getAnalysis(userId, id) {
   const row = await prisma.jobAnalysis.findFirst({
-    where: { id, userId, createdAt: { gte: historyRetentionCutoff() } },
+    where: { id, userId },
     include: {
       selectedSubprofile: { select: { id: true, profileName: true } },
       generatedResume: { select: { id: true, generatedFileName: true } },
@@ -316,7 +285,7 @@ async function getAnalysis(userId, id) {
 
 async function getGeneratedPdf(userId, id) {
   const row = await prisma.optimizedResume.findFirst({
-    where: { id, userId, createdAt: { gte: historyRetentionCutoff() } },
+    where: { id, userId },
     select: { generatedPdf: true, generatedFileName: true },
   });
   if (!row || !row.generatedPdf) {
@@ -349,8 +318,4 @@ module.exports = {
   analyzeProfile,
   getMissingResumeFields,
   assertProfileReadyForResume,
-  MATCH_HISTORY_RETENTION_DAYS,
-  historyRetentionCutoff,
-  purgeExpiredHistory,
-  scheduleExpiredHistoryPurge,
 };

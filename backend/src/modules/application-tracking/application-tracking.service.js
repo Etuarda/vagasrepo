@@ -1,5 +1,6 @@
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
+const subscriptionService = require("../../services/subscription.service");
 
 const linkedJobInclude = {
   jobAnalysis: {
@@ -49,6 +50,7 @@ async function createFromAnalysis(userId, analysisId, payload) {
   }
 
   const job = await prisma.$transaction(async (tx) => {
+    await subscriptionService.assertApplicationTrackingLimit(userId, tx);
     const created = await tx.job.create({
       data: {
         userId,

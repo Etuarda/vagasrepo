@@ -1,7 +1,9 @@
 jest.mock("../../lib/prisma", () => ({
   prisma: {
+    $transaction: jest.fn(),
     job: {
       findMany: jest.fn().mockResolvedValue([]),
+      create: jest.fn(),
       updateMany: jest.fn(),
       findFirst: jest.fn(),
     },
@@ -14,10 +16,14 @@ jest.mock("../../lib/cache", () => ({
 jest.mock("../../modules/application-tracking/application-tracking.service", () => ({
   linkedJobInclude: {},
 }));
+jest.mock("../subscription.service", () => ({
+  assertApplicationTrackingLimit: jest.fn().mockResolvedValue(undefined),
+}));
 
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
-const { listJobs, updateJob } = require("../jobs.service");
+const subscriptionService = require("../subscription.service");
+const { listJobs, createJob, updateJob } = require("../jobs.service");
 const { jobListQuerySchema } = require("../../schemas/job.schema");
 
 describe("job list pagination", () => {
@@ -36,6 +42,16 @@ describe("job list pagination", () => {
 
   it("recusa paginacao por offset alem da primeira pagina", () => {
     expect(() => jobListQuerySchema.parse({ page: "2" })).toThrow("Use cursor");
+  });
+
+  it("valida quota antes de cadastrar nova vaga acompanhada", async () => {
+    prisma.job.create.mockResolvedValue({ id: "job" });
+    prisma.$transaction.mockImplementation((work) => work(prisma));
+
+    await createJob("user", { titulo: "Backend" });
+
+    expect(subscriptionService.assertApplicationTrackingLimit).toHaveBeenCalledWith("user", prisma);
+    expect(prisma.job.create).toHaveBeenCalled();
   });
 
   it("nao invalida historico ao editar candidatura sem analise vinculada", async () => {
