@@ -16,7 +16,7 @@ jest.mock("../../lib/cache", () => ({
 
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
-const { createProfile, deleteProfile, updateExperience } = require("../profile.service");
+const { createProfile, deleteProfile, updateExperience, getProfile, profileInclude } = require("../profile.service");
 
 describe("subprofile deletion", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -76,5 +76,42 @@ describe("subprofile deletion", () => {
       where: { id: "experience", userId: "user" },
       data: expect.objectContaining({ workload: "40h" }),
     });
+  });
+
+  it("carrega subperfil global diretamente quando o id foi informado", async () => {
+    prisma.careerProfile.findFirst.mockResolvedValue({
+      id: "profile",
+      userId: "user",
+      profileName: "Perfil Global",
+      isGlobal: true,
+      skills: [],
+      projects: [],
+      experiences: [],
+      courses: [],
+      certifications: [],
+      languages: [],
+      educations: [],
+      subprofileSkills: [],
+      subprofileProjects: [],
+      subprofileExperiences: [],
+      subprofileCourses: [],
+      subprofileCertifications: [],
+      subprofileEducations: [],
+      subprofileLanguages: [],
+    });
+
+    await expect(getProfile("user", "profile")).resolves.toMatchObject({ id: "profile" });
+    expect(prisma.careerProfile.findFirst).toHaveBeenCalledTimes(1);
+    expect(prisma.careerProfile.findFirst).toHaveBeenCalledWith({
+      where: { id: "profile", userId: "user" },
+      include: profileInclude,
+    });
+  });
+
+  it("seleciona apenas campos utilizados das colecoes de perfil", () => {
+    expect(profileInclude.projects.select).toEqual(expect.objectContaining({ id: true, title: true, stack: true }));
+    expect(profileInclude.projects.select.description).toBeUndefined();
+    expect(profileInclude.projects.select.businessProblem).toBeUndefined();
+    expect(profileInclude.subprofileProjects.select.project.select).toEqual(profileInclude.projects.select);
   });
 });

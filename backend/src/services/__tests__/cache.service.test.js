@@ -58,4 +58,31 @@ describe("redis read cache", () => {
     expect(warning).toHaveBeenCalledWith(expect.stringContaining('"event":"cache_degraded"'));
     warning.mockRestore();
   });
+
+  it("reutiliza cache local quando Redis nao esta configurado", async () => {
+    redis.get.mockResolvedValue(null);
+    redis.set.mockResolvedValue(false);
+    const loader = jest.fn().mockResolvedValue({ id: "local-profile" });
+
+    await cache.remember("profile", "local-user", "subprofile", loader);
+    await cache.remember("profile", "local-user", "subprofile", loader);
+
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+
+  it("remove leitura local apos invalidacao", async () => {
+    redis.get.mockResolvedValue(null);
+    redis.set.mockResolvedValue(false);
+    redis.incr.mockResolvedValue(null);
+    const loader = jest.fn()
+      .mockResolvedValueOnce({ value: "old" })
+      .mockResolvedValueOnce({ value: "new" });
+
+    await cache.remember("profile", "edited-user", "subprofile", loader);
+    await cache.invalidate("profile", "edited-user");
+    await expect(cache.remember("profile", "edited-user", "subprofile", loader))
+      .resolves.toEqual({ value: "new" });
+
+    expect(loader).toHaveBeenCalledTimes(2);
+  });
 });

@@ -89,7 +89,7 @@ app.get("/metrics", metricsEndpoint);
 app.get("/ready", async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    const cache = env.REDIS_URL ? (await redis.ping() ? "ready" : "degraded") : "not_configured";
+    const cache = env.REDIS_URL ? (await redis.ping() ? "redis_ready" : "degraded_local") : "local_only";
     return res.json({ ok: true, database: "ready", cache });
   } catch (err) {
     return res.status(503).json({ ok: false, database: "unavailable" });

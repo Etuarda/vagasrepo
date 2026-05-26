@@ -19,6 +19,10 @@ function setValue(id, value) {
 
 let activeProfileRequestId = 0;
 const loadStatusTimers = new Map();
+const PROFILE_CLIENT_CACHE_MS = 5 * 60 * 1000;
+const profileCache = new Map();
+const profileRequests = new Map();
+let profileRevision = 0;
 const HISTORY_CLIENT_CACHE_MS = 60 * 1000;
 const historyCache = new Map();
 const historyRequests = new Map();
@@ -26,6 +30,24 @@ let historyRevision = 0;
 
 function profileLabel(profileId) {
   return (state.profiles || []).find((profile) => profile.id === profileId)?.profileName || "perfil selecionado";
+}
+
+function profileCacheKey(profileId) {
+  return `${state.user?.id || "guest"}:${profileId || "default"}`;
+}
+
+function showProfile(profile) {
+  state.profile = profile;
+  state.activeProfileId = profile.id;
+  renderProfileForm();
+  ui.renderNav();
+}
+
+function replaceEditedProfile(profile) {
+  profileRevision += 1;
+  profileCache.clear();
+  profileCache.set(profileCacheKey(profile.id), { profile, savedAt: Date.now() });
+  showProfile(profile);
 }
 
 function historyCacheKey(profileId) {
@@ -581,22 +603,39 @@ export const career = {
     renderMatchProfileOptions();
   },
 
-  async loadProfile({ requestId = null, announce = false } = {}) {
+  async loadProfile({ requestId = null, announce = false, force = false } = {}) {
     const selectedProfileId = state.activeProfileId;
     const label = profileLabel(selectedProfileId);
+    const cacheKey = profileCacheKey(selectedProfileId);
+    const revision = profileRevision;
     const query = selectedProfileId ? `?profileId=${encodeURIComponent(selectedProfileId)}` : "";
-    if (announce) setLoadStatus("profile-load-status", `Carregando informacoes de ${label}...`, "loading");
 
-    try {
-      const profile = await api(`/profile${query}`, {}, state.token);
+    const snapshot = profileCache.get(cacheKey);
+    if (!force && snapshot && Date.now() - snapshot.savedAt < PROFILE_CLIENT_CACHE_MS) {
       if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
-      state.profile = profile;
-      state.activeProfileId = profile.id;
-      renderProfileForm();
-      ui.renderNav();
+      showProfile(snapshot.profile);
+      if (announce) setLoadStatus("profile-load-status", `Informacoes de ${snapshot.profile.profileName || label} carregadas.`, "loaded", 5000);
+      return snapshot.profile;
+    }
+
+    if (announce) setLoadStatus("profile-load-status", `Carregando informacoes de ${label}...`, "loading");
+    let request = null;
+    try {
+      request = !force ? profileRequests.get(cacheKey) : null;
+      if (!request) {
+        request = api(`/profile${query}`, {}, state.token);
+        profileRequests.set(cacheKey, request);
+      }
+      const profile = await request;
+      if (profileRequests.get(cacheKey) === request) profileRequests.delete(cacheKey);
+      if (revision !== profileRevision) return null;
+      if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
+      profileCache.set(cacheKey, { profile, savedAt: Date.now() });
+      showProfile(profile);
       if (announce) setLoadStatus("profile-load-status", `Informacoes de ${profile.profileName || label} carregadas.`, "loaded", 5000);
       return profile;
     } catch (err) {
+      if (profileRequests.get(cacheKey) === request) profileRequests.delete(cacheKey);
       if (announce && isCurrentProfileRequest(requestId, selectedProfileId)) {
         setLoadStatus("profile-load-status", `Nao foi possivel carregar ${label}.`, "error");
       }
@@ -683,9 +722,8 @@ export const career = {
       summary: document.getElementById("profile-summary")?.value || "",
     };
     const out = await api("/profile", { method: "PUT", body: JSON.stringify(payload) }, state.token);
-    state.profile = out.user;
+    replaceEditedProfile(out.user);
     await career.loadProfiles();
-    renderProfileForm();
     ui.notify("Perfil profissional atualizado.");
   },
 
@@ -694,142 +732,121 @@ export const career = {
     const submitted = String(value || "").split(",").map((skill) => skill.trim()).filter(Boolean);
     const skills = [...new Map([...current, ...submitted].map((skill) => [skill.toLocaleLowerCase("pt-BR"), skill])).values()];
     const out = await api("/profile/skills", { method: "PUT", body: JSON.stringify({ profileId: state.activeProfileId, skills }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
   },
 
   async removeSkill(name) {
     const skills = (state.profile?.skills || []).filter((skill) => skill !== name);
     const out = await api("/profile/skills", { method: "PUT", body: JSON.stringify({ profileId: state.activeProfileId, skills }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
   },
 
   async addLanguage(payload) {
     const out = await api("/profile/languages", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Idioma cadastrado.");
   },
 
   async updateLanguage(id, payload) {
     const out = await api(`/profile/languages/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Idioma atualizado.");
   },
 
   async addEducation(payload) {
     const out = await api("/profile/educations", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Formação cadastrada no Perfil Global.");
   },
 
   async updateEducation(id, payload) {
     const out = await api(`/profile/educations/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Formacao atualizada.");
   },
 
   async removeEducation(id) {
     const out = await api(`/profile/educations/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
   },
 
   async removeLanguage(id) {
     const out = await api(`/profile/languages/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
   },
 
   async addProject(payload) {
     const out = await api("/profile/projects", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Projeto cadastrado.");
   },
 
   async saveAllocation(payload) {
     const out = await api("/profile/subprofile-allocation", { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Itens do Perfil Global alocados ao subperfil.");
   },
 
   async updateProject(id, payload) {
     const out = await api(`/profile/projects/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Projeto atualizado.");
   },
 
   async removeProject(id) {
     const out = await api(`/profile/projects/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
   },
 
   async addExperience(payload) {
     const out = await api("/profile/experiences", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Experiência cadastrada.");
   },
 
   async updateExperience(id, payload) {
     const out = await api(`/profile/experiences/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Experiencia atualizada.");
   },
 
   async removeExperience(id) {
     const out = await api(`/profile/experiences/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
   },
 
   async addCourse(payload) {
     const out = await api("/profile/courses", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Curso cadastrado.");
   },
 
   async updateCourse(id, payload) {
     const out = await api(`/profile/courses/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Curso atualizado.");
   },
 
   async removeCourse(id) {
     const out = await api(`/profile/courses/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
   },
 
   async addCertification(payload) {
     const out = await api("/profile/certifications", { method: "POST", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Certificação cadastrada.");
   },
 
   async updateCertification(id, payload) {
     const out = await api(`/profile/certifications/${id}`, { method: "PUT", body: JSON.stringify({ ...payload, profileId: state.activeProfileId }) }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
     ui.notify("Certificacao atualizada.");
   },
 
   async removeCertification(id) {
     const out = await api(`/profile/certifications/${id}?profileId=${encodeURIComponent(state.activeProfileId)}`, { method: "DELETE" }, state.token);
-    state.profile = out.user;
-    renderProfileForm();
+    replaceEditedProfile(out.user);
   },
 
   async match(jobDescription) {

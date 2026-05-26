@@ -2,27 +2,45 @@ const { prisma } = require("../lib/prisma");
 const cache = require("../lib/cache");
 const { normalizeTerm } = require("../modules/matching/keyword-normalizer");
 
+const skillSelect = { id: true, name: true, normalizedName: true, category: true };
+const projectSelect = {
+  id: true,
+  title: true,
+  category: true,
+  shortDescription: true,
+  stack: true,
+  repositoryUrl: true,
+  deployUrl: true,
+};
+const experienceSelect = { id: true, company: true, role: true, period: true, workload: true, description: true };
+const courseSelect = { id: true, title: true, institution: true, period: true, workload: true, description: true };
+const certificationSelect = { id: true, title: true, issuer: true, period: true, workload: true, credentialUrl: true };
+const languageSelect = { id: true, name: true, level: true };
+const educationSelect = { id: true, title: true, institution: true, period: true };
+
+const globalCatalogInclude = {
+  skills: { orderBy: { name: "asc" }, select: skillSelect },
+  projects: { orderBy: { createdAt: "desc" }, select: projectSelect },
+  experiences: { orderBy: { createdAt: "desc" }, select: experienceSelect },
+  courses: { orderBy: { createdAt: "desc" }, select: courseSelect },
+  certifications: { orderBy: { createdAt: "desc" }, select: certificationSelect },
+  languages: { orderBy: { createdAt: "desc" }, select: languageSelect },
+  educations: { orderBy: { createdAt: "desc" }, select: educationSelect },
+};
+
 const profileInclude = {
-  skills: { orderBy: { name: "asc" } },
-  projects: {
-    orderBy: { createdAt: "desc" },
-  },
-  experiences: { orderBy: { createdAt: "desc" } },
-  courses: { orderBy: { createdAt: "desc" } },
-  certifications: { orderBy: { createdAt: "desc" } },
-  languages: { orderBy: { createdAt: "desc" } },
-  educations: { orderBy: { createdAt: "desc" } },
-  subprofileSkills: { where: { isVisible: true }, include: { skill: true }, orderBy: { relevanceWeight: "desc" } },
+  ...globalCatalogInclude,
+  subprofileSkills: { where: { isVisible: true }, select: { skillId: true, relevanceWeight: true, skill: { select: skillSelect } }, orderBy: { relevanceWeight: "desc" } },
   subprofileProjects: {
     where: { isVisible: true },
-    include: { project: true },
+    select: { projectId: true, customTitle: true, customSummary: true, relevanceWeight: true, project: { select: projectSelect } },
     orderBy: { relevanceWeight: "desc" },
   },
-  subprofileExperiences: { where: { isVisible: true }, include: { experience: true }, orderBy: { relevanceWeight: "desc" } },
-  subprofileCourses: { where: { isVisible: true }, include: { course: true }, orderBy: { relevanceWeight: "desc" } },
-  subprofileCertifications: { where: { isVisible: true }, include: { certification: true }, orderBy: { relevanceWeight: "desc" } },
-  subprofileEducations: { where: { isVisible: true }, include: { education: true } },
-  subprofileLanguages: { where: { isVisible: true }, include: { language: true } },
+  subprofileExperiences: { where: { isVisible: true }, select: { experienceId: true, relevanceWeight: true, experience: { select: experienceSelect } }, orderBy: { relevanceWeight: "desc" } },
+  subprofileCourses: { where: { isVisible: true }, select: { courseId: true, relevanceWeight: true, course: { select: courseSelect } }, orderBy: { relevanceWeight: "desc" } },
+  subprofileCertifications: { where: { isVisible: true }, select: { certificationId: true, relevanceWeight: true, certification: { select: certificationSelect } }, orderBy: { relevanceWeight: "desc" } },
+  subprofileEducations: { where: { isVisible: true }, select: { educationId: true, education: { select: educationSelect } } },
+  subprofileLanguages: { where: { isVisible: true }, select: { languageId: true, language: { select: languageSelect } } },
 };
 
 function serializeProfile(profile) {
@@ -304,17 +322,31 @@ async function inheritGlobalCollections(subprofileId, globalProfileId) {
 }
 
 async function loadProfile(userId, profileId = null) {
-  const profile = await resolveProfile(userId, profileId);
-  const full = await prisma.careerProfile.findFirst({
-    where: { id: profile.id, userId },
-    include: profileInclude,
-  });
+  const profile = profileId
+    ? await prisma.careerProfile.findFirst({ where: { id: profileId, userId }, include: profileInclude })
+    : await (async () => {
+      const global = await ensureDefaultProfile(userId);
+      return prisma.careerProfile.findFirst({ where: { id: global.id, userId }, include: profileInclude });
+    })();
+  if (!profile) {
+    const err = new Error("Perfil profissional não encontrado");
+    err.statusCode = 404;
+    throw err;
+  }
+  const full = profile;
   if (!full.isGlobal) {
-    const global = await ensureDefaultProfile(userId);
-    const globalCatalog = await prisma.careerProfile.findFirst({
-      where: { id: global.id, userId },
-      include: { skills: true, projects: true, experiences: true, courses: true, certifications: true, languages: true, educations: true },
+    let globalCatalog = await prisma.careerProfile.findFirst({
+      where: { userId, isGlobal: true },
+      orderBy: { createdAt: "asc" },
+      include: globalCatalogInclude,
     });
+    if (!globalCatalog) {
+      const global = await ensureDefaultProfile(userId);
+      globalCatalog = await prisma.careerProfile.findFirst({
+        where: { id: global.id, userId },
+        include: globalCatalogInclude,
+      });
+    }
     const serialized = serializeProfile(full);
     serialized.globalCatalog = buildGlobalCatalog(globalCatalog, full);
     return serialized;

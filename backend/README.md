@@ -47,7 +47,7 @@ API: `http://localhost:3000`
 4. Use `npm install && npm run prisma:deploy` como build command.
 5. Use `npm start` como start command.
 6. Configure `CORS_ORIGIN` no Render somente para dominios adicionais ou preview local que precise acessar a API publicada.
-7. Crie um Redis gerenciado e configure `REDIS_URL` no Render; sem essa variavel a API funciona, mas as consultas voltam a acessar o Neon a cada carregamento.
+7. Crie um Redis gerenciado e configure `REDIS_URL` no Render; sem essa variavel a API usa somente cache local por instancia, sem compartilhar resultados entre replicas ou reinicios.
 8. Configure `FRONTEND_URL`, `RESEND_API_KEY` e `EMAIL_FROM` no Render para habilitar o envio de links de recuperacao.
 
 O frontend publicado encaminha `/api/*` para a Render. Assim, o navegador recebe a sessao em cookie `HttpOnly`, sem armazenar JWT em `localStorage`. O backend ainda aceita Bearer token durante a transicao de clientes antigos.
@@ -57,7 +57,7 @@ Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` 
 ## Endpoints
 
 - `GET /health`
-- `GET /ready`; verifica conexao com o banco e informa o estado do cache.
+- `GET /ready`; verifica conexao com o banco e informa se o cache esta em `redis_ready`, `local_only` ou `degraded_local`.
 - `GET /metrics`; metricas HTTP basicas em formato Prometheus.
 - `POST /auth/register`
 - `POST /auth/login`
@@ -92,6 +92,6 @@ Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` 
 
 O historico de matching (`JobAnalysis` e PDFs otimizados associados) fica disponivel por 30 dias. Registros expirados nao sao retornados; a limpeza fisica e iniciada em segundo plano para nao atrasar a tela. Candidaturas ja registradas permanecem salvas.
 
-Com `REDIS_URL` configurado, leituras repetidas de perfis e catalogo global, historico de matching, acompanhamento de vagas, arquivos PDF e vagas compartilhadas usam cache com expiracao e invalidacao automatica apos alteracoes.
+Leituras repetidas de perfis e catalogo global, historico de matching, acompanhamento de vagas, arquivos PDF e vagas compartilhadas usam cache local com expiracao e invalidacao automatica apos alteracoes. Com `REDIS_URL` configurado, esse cache tambem e compartilhado entre instancias da API.
 
 Uploads PDF sao limitados a 3 MB e validados por extensao, MIME e assinatura/trailer do arquivo antes da persistencia. Para escala acima do volume atual, arquivos e PDFs gerados devem migrar do PostgreSQL para object storage e geracao assíncrona em fila.

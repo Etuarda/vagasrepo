@@ -3,6 +3,9 @@ const redis = require("./redis");
 const DEFAULT_CACHE_TTL_SECONDS = 5 * 60;
 const DEGRADATION_LOG_INTERVAL_MS = 60 * 1000;
 const degradationLoggedAt = new Map();
+const localValues = new Map();
+const localVersions = new Map();
+const inFlight = new Map();
 
 function logDegradation(operation, err) {
   const now = Date.now();
@@ -27,6 +30,21 @@ function valueKey(namespace, owner, version, variant) {
   return `cache:${part(namespace)}:${part(owner)}:v${part(version)}:${part(variant)}`;
 }
 
+function deleteLocalOwnerValues(namespace, owner) {
+  const prefix = `cache:${part(namespace)}:${part(owner)}:`;
+  for (const key of localValues.keys()) {
+    if (key.startsWith(prefix)) localValues.delete(key);
+  }
+}
+
+function pruneExpiredLocalValues() {
+  if (localValues.size < 500) return;
+  const now = Date.now();
+  for (const [key, value] of localValues.entries()) {
+    if (value.expiresAt <= now) localValues.delete(key);
+  }
+}
+
 async function read(key) {
   try {
     return await redis.get(key);
@@ -45,7 +63,8 @@ async function write(key, value, ttlSeconds) {
 }
 
 async function remember(namespace, owner, variant, loader, ttlSeconds = DEFAULT_CACHE_TTL_SECONDS) {
-  const version = (await read(versionKey(namespace, owner))) || "0";
+  const versionName = versionKey(namespace, owner);
+  const version = (await read(versionName)) || String(localVersions.get(versionName) || 0);
   const key = valueKey(namespace, owner, version, variant);
   const cached = await read(key);
   if (cached !== null) {
@@ -61,16 +80,31 @@ async function remember(namespace, owner, variant, loader, ttlSeconds = DEFAULT_
     }
   }
 
-  const value = await loader();
-  await write(key, value, ttlSeconds);
-  return value;
+  const local = localValues.get(key);
+  if (local && local.expiresAt > Date.now()) return local.value;
+  if (local) localValues.delete(key);
+
+  if (inFlight.has(key)) return inFlight.get(key);
+  const pending = (async () => {
+    const value = await loader();
+    pruneExpiredLocalValues();
+    localValues.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
+    await write(key, value, ttlSeconds);
+    return value;
+  })().finally(() => inFlight.delete(key));
+  inFlight.set(key, pending);
+  return pending;
 }
 
 async function invalidate(namespace, owner) {
+  const key = versionKey(namespace, owner);
+  deleteLocalOwnerValues(namespace, owner);
   try {
-    await redis.incr(versionKey(namespace, owner));
+    const version = await redis.incr(key);
+    localVersions.set(key, version === null ? (localVersions.get(key) || 0) + 1 : Number(version));
   } catch (err) {
     logDegradation("invalidate", err);
+    localVersions.set(key, (localVersions.get(key) || 0) + 1);
   }
 }
 
