@@ -73,6 +73,21 @@ describe("password reset e-mail delivery", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
+  it("bloqueia o remetente de teste em producao para nao falhar com usuarios reais", async () => {
+    const { sendPasswordResetEmail } = loadService({
+      EMAIL_FROM: "Vagas.io <onboarding@resend.dev>",
+    });
+
+    await expect(sendPasswordResetEmail(
+      { name: "Pessoa", email: "pessoa@example.com" },
+      "raw-token"
+    )).rejects.toMatchObject({
+      statusCode: 503,
+      message: expect.stringContaining("dominio verificado"),
+    });
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
   it("converte rejeicao do provedor em indisponibilidade temporaria", async () => {
     sendMock.mockResolvedValue({ data: null, error: { message: "Forbidden" } });
     const { sendPasswordResetEmail } = loadService();
