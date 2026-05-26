@@ -58,7 +58,7 @@ export const jobs = {
 
   async exportPdf() {
     if (!window.jspdf || !window.jspdf.jsPDF) {
-      ui.notify("jsPDF não carregou. Verifique o script do CDN.", "error");
+      ui.notify("Não foi possível gerar o PDF das candidaturas.", "error");
       return;
     }
 

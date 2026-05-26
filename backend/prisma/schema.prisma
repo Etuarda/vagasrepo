@@ -468,6 +468,7 @@ model JobAnalysis {
   applications       Job[]
 
   @@index([userId, createdAt])
+  @@index([userId, selectedSubprofileId, createdAt(sort: Desc)], map: "JobAnalysis_user_profile_created_desc_idx")
   @@index([selectedSubprofileId])
   @@index([status])
 }

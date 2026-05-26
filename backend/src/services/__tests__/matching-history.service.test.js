@@ -70,6 +70,22 @@ describe("matching history retention", () => {
         createdAt: { gte: expect.any(Date) },
       },
     }));
+    expect(profileService.resolveProfile).not.toHaveBeenCalled();
+  });
+
+  it("retorna listagem leve sem descricao da vaga ou PDF gerado", async () => {
+    await listHistory("user", "profile");
+
+    const query = prisma.jobAnalysis.findMany.mock.calls[0][0];
+    expect(query.select).toEqual(expect.objectContaining({
+      id: true,
+      jobTitle: true,
+      company: true,
+      generatedResume: { select: { id: true, generatedFileName: true, resumeFileId: true } },
+    }));
+    expect(query.select.jobDescription).toBeUndefined();
+    expect(query.select.generatedResume.select.generatedPdf).toBeUndefined();
+    expect(query.select.generatedResume.select.jobDescription).toBeUndefined();
   });
 
   it("nao consulta o perfil novamente quando o historico esta em cache", async () => {

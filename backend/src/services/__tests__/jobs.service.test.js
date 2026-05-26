@@ -2,6 +2,8 @@ jest.mock("../../lib/prisma", () => ({
   prisma: {
     job: {
       findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn(),
+      findFirst: jest.fn(),
     },
   },
 }));
@@ -14,7 +16,8 @@ jest.mock("../../modules/application-tracking/application-tracking.service", () 
 }));
 
 const { prisma } = require("../../lib/prisma");
-const { listJobs } = require("../jobs.service");
+const cache = require("../../lib/cache");
+const { listJobs, updateJob } = require("../jobs.service");
 const { jobListQuerySchema } = require("../../schemas/job.schema");
 
 describe("job list pagination", () => {
@@ -33,5 +36,23 @@ describe("job list pagination", () => {
 
   it("recusa paginacao por offset alem da primeira pagina", () => {
     expect(() => jobListQuerySchema.parse({ page: "2" })).toThrow("Use cursor");
+  });
+
+  it("nao invalida historico ao editar candidatura sem analise vinculada", async () => {
+    prisma.job.updateMany.mockResolvedValue({ count: 1 });
+    prisma.job.findFirst.mockResolvedValue({ id: "job", jobAnalysisId: null });
+
+    await updateJob("user", "job", { fase: "Triagem" });
+
+    expect(cache.invalidate).not.toHaveBeenCalledWith("match-history", "user");
+  });
+
+  it("invalida historico ao editar candidatura associada a analise", async () => {
+    prisma.job.updateMany.mockResolvedValue({ count: 1 });
+    prisma.job.findFirst.mockResolvedValue({ id: "job", jobAnalysisId: "analysis" });
+
+    await updateJob("user", "job", { fase: "Triagem" });
+
+    expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
   });
 });

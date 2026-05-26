@@ -19,14 +19,22 @@ function setValue(id, value) {
 
 let activeProfileRequestId = 0;
 const loadStatusTimers = new Map();
+const HISTORY_CLIENT_CACHE_MS = 60 * 1000;
+const historyCache = new Map();
+const historyRequests = new Map();
+let historyRevision = 0;
 
 function profileLabel(profileId) {
   return (state.profiles || []).find((profile) => profile.id === profileId)?.profileName || "perfil selecionado";
 }
 
-function loadElapsed(startedAt) {
-  const elapsed = performance.now() - startedAt;
-  return elapsed < 1000 ? `${Math.round(elapsed)} ms` : `${(elapsed / 1000).toFixed(1)} s`;
+function historyCacheKey(profileId) {
+  return `${state.user?.id || "guest"}:${profileId || "default"}`;
+}
+
+function invalidateHistoryCache() {
+  historyRevision += 1;
+  historyCache.clear();
 }
 
 function setLoadStatus(id, message, status, hideAfter = 0) {
@@ -347,7 +355,7 @@ function renderHistory() {
 
   const rows = state.matchHistory || [];
   if (!rows.length) {
-    root.innerHTML = `<p class="text-sm text-taupe">Nenhuma análise salva ainda.</p>`;
+    root.innerHTML = "";
     return;
   }
 
@@ -576,7 +584,6 @@ export const career = {
   async loadProfile({ requestId = null, announce = false } = {}) {
     const selectedProfileId = state.activeProfileId;
     const label = profileLabel(selectedProfileId);
-    const startedAt = performance.now();
     const query = selectedProfileId ? `?profileId=${encodeURIComponent(selectedProfileId)}` : "";
     if (announce) setLoadStatus("profile-load-status", `Carregando informacoes de ${label}...`, "loading");
 
@@ -587,7 +594,7 @@ export const career = {
       state.activeProfileId = profile.id;
       renderProfileForm();
       ui.renderNav();
-      if (announce) setLoadStatus("profile-load-status", `Informacoes de ${profile.profileName || label} carregadas em ${loadElapsed(startedAt)}.`, "loaded", 5000);
+      if (announce) setLoadStatus("profile-load-status", `Informacoes de ${profile.profileName || label} carregadas.`, "loaded", 5000);
       return profile;
     } catch (err) {
       if (announce && isCurrentProfileRequest(requestId, selectedProfileId)) {
@@ -597,25 +604,57 @@ export const career = {
     }
   },
 
-  async loadHistory({ requestId = null, announce = true } = {}) {
+  async loadHistory({ requestId = null, announce = true, force = false, successMessage = "Histórico carregado." } = {}) {
     const selectedProfileId = state.activeProfileId;
-    const startedAt = performance.now();
+    const cacheKey = historyCacheKey(selectedProfileId);
+    const revision = historyRevision;
     const query = selectedProfileId ? `?profileId=${encodeURIComponent(selectedProfileId)}` : "";
-    if (announce) setLoadStatus("match-history-status", "Carregando historico de matching...", "loading");
+    const snapshot = historyCache.get(cacheKey);
 
-    try {
-      const history = await api(`/optimized-resumes${query}`, {}, state.token);
+    if (!force && snapshot && Date.now() - snapshot.savedAt < HISTORY_CLIENT_CACHE_MS) {
       if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
-      state.matchHistory = Array.isArray(history) ? history : [];
+      state.matchHistory = snapshot.rows;
       renderHistory();
       if (announce) {
-        const total = state.matchHistory.length;
-        setLoadStatus("match-history-status", `Historico carregado em ${loadElapsed(startedAt)}: ${total} registro${total === 1 ? "" : "s"}.`, "loaded", 5000);
+        setLoadStatus(
+          "match-history-status",
+          state.matchHistory.length ? successMessage : "Nenhuma análise encontrada nos últimos 30 dias.",
+          "loaded",
+          5000
+        );
+      }
+      return state.matchHistory;
+    }
+
+    if (announce) setLoadStatus("match-history-status", "Carregando histórico...", "loading");
+
+    let request = null;
+    try {
+      request = !force ? historyRequests.get(cacheKey) : null;
+      if (!request) {
+        request = api(`/optimized-resumes${query}`, {}, state.token);
+        historyRequests.set(cacheKey, request);
+      }
+      const history = await request;
+      if (historyRequests.get(cacheKey) === request) historyRequests.delete(cacheKey);
+      if (revision !== historyRevision) return null;
+      if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
+      state.matchHistory = Array.isArray(history) ? history : [];
+      historyCache.set(cacheKey, { rows: state.matchHistory, savedAt: Date.now() });
+      renderHistory();
+      if (announce) {
+        setLoadStatus(
+          "match-history-status",
+          state.matchHistory.length ? successMessage : "Nenhuma análise encontrada nos últimos 30 dias.",
+          "loaded",
+          5000
+        );
       }
       return state.matchHistory;
     } catch (err) {
+      if (historyRequests.get(cacheKey) === request) historyRequests.delete(cacheKey);
       if (announce && isCurrentProfileRequest(requestId, selectedProfileId)) {
-        setLoadStatus("match-history-status", "Nao foi possivel carregar o historico.", "error");
+        setLoadStatus("match-history-status", "Não foi possível carregar o histórico.", "error");
       }
       throw err;
     }
@@ -802,26 +841,33 @@ export const career = {
     const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId }) }, state.token);
     state.lastMatchResult = result;
     renderMatchResult(result);
+    invalidateHistoryCache();
     const reloads = [career.loadSharedMatchedJobs()];
     if (result.selectedSubprofileId && result.selectedSubprofileId !== state.activeProfileId) {
       state.activeProfileId = result.selectedSubprofileId;
       renderProfileCards();
-      reloads.push(career.loadActiveProfileData({ announce: true }));
+      reloads.push(career.loadActiveProfileData({
+        announce: true,
+        historyForce: true,
+        historySuccessMessage: "Histórico atualizado.",
+      }));
     } else {
-      reloads.push(career.loadHistory());
+      reloads.push(career.loadHistory({ force: true, successMessage: "Histórico atualizado." }));
     }
     await Promise.all(reloads);
   },
 
   async removeMatch(id) {
     await api(`/optimized-resumes/${id}`, { method: "DELETE" }, state.token);
-    await career.loadHistory();
+    invalidateHistoryCache();
+    await career.loadHistory({ force: true, successMessage: "Histórico atualizado." });
   },
 
   async markAnalysisApplied(id) {
     const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify({ status: "applied" }) }, state.token);
     ui.notify(out.message);
-    await career.loadHistory();
+    invalidateHistoryCache();
+    await career.loadHistory({ force: true, successMessage: "Histórico atualizado." });
   },
 
   async openAnalysis(id) {
@@ -839,7 +885,8 @@ export const career = {
   async saveAnalysisVersion(id, payload) {
     const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, state.token);
     ui.notify(out.message);
-    await Promise.all([career.loadHistory(), career.openAnalysis(out.analysis.id)]);
+    invalidateHistoryCache();
+    await Promise.all([career.loadHistory({ force: true, successMessage: "Histórico atualizado." }), career.openAnalysis(out.analysis.id)]);
   },
 
   async createApplication(analysisId, payload) {
@@ -851,7 +898,8 @@ export const career = {
       out = await api(`/job-analyses/${analysisId}/create-application`, { method: "POST", body: JSON.stringify({ ...payload, confirmDuplicate: true }) }, state.token);
     }
     ui.closeApplicationModal();
-    await Promise.all([jobs.load(), career.loadHistory()]);
+    invalidateHistoryCache();
+    await Promise.all([jobs.load(), career.loadHistory({ force: true, successMessage: "Histórico atualizado." })]);
     ui.notify("Candidatura registrada com sucesso. Você poderá acompanhar essa vaga no painel de candidaturas.");
     return out;
   },
@@ -1031,13 +1079,16 @@ export const career = {
     await career.loadActiveProfileData({ announce: true });
   },
 
-  async loadActiveProfileData({ announce = false } = {}) {
+  async loadActiveProfileData({ announce = false, historyForce = false, historySuccessMessage = "Histórico carregado." } = {}) {
     const requestId = ++activeProfileRequestId;
-    await Promise.all([
+    const loads = [
       career.loadProfile({ requestId, announce }),
       career.loadResumeFiles({ requestId }),
-      career.loadHistory({ requestId, announce }),
-    ]);
+    ];
+    if (!document.getElementById("panel-matching")?.classList.contains("hidden")) {
+      loads.push(career.loadHistory({ requestId, announce, force: historyForce, successMessage: historySuccessMessage }));
+    }
+    await Promise.all(loads);
   },
 
   setTab(tab) {
@@ -1051,7 +1102,7 @@ export const career = {
       career.loadSharedMatchedJobs().catch(() => {});
     }
     if (tab === "matching") {
-      career.loadHistory().catch(() => {});
+      career.loadHistory({ announce: true }).catch(() => {});
     }
   },
 };

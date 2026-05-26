@@ -109,13 +109,17 @@ async function updateJob(userId, id, data) {
   }
   await Promise.all([
     cache.invalidate("jobs", userId),
-    cache.invalidate("match-history", userId),
     cache.invalidate("shared-jobs-board", "global"),
+    ...(job.jobAnalysisId ? [cache.invalidate("match-history", userId)] : []),
   ]);
   return { message: "Atualizado", job };
 }
 
 async function deleteJob(userId, id) {
+  const linkedJob = await prisma.job.findFirst({
+    where: { id, userId },
+    select: { jobAnalysisId: true },
+  });
   const result = await prisma.job.deleteMany({
     where: { id, userId },
   });
@@ -128,8 +132,8 @@ async function deleteJob(userId, id) {
 
   await Promise.all([
     cache.invalidate("jobs", userId),
-    cache.invalidate("match-history", userId),
     cache.invalidate("shared-jobs-board", "global"),
+    ...(linkedJob?.jobAnalysisId ? [cache.invalidate("match-history", userId)] : []),
   ]);
   return { message: "Removido" };
 }

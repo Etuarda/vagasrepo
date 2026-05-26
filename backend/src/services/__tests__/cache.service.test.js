@@ -44,4 +44,18 @@ describe("redis read cache", () => {
 
     expect(redis.incr).toHaveBeenCalledWith("cache-version:match-history:user");
   });
+
+  it("continua carregando do banco e registra degradacao quando Redis falha", async () => {
+    const warning = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const loader = jest.fn().mockResolvedValue([{ id: "analysis" }]);
+    redis.get.mockRejectedValue(new Error("redis unavailable"));
+    redis.set.mockRejectedValue(new Error("redis unavailable"));
+
+    await expect(cache.remember("match-history", "user", "profile", loader, 120))
+      .resolves.toEqual([{ id: "analysis" }]);
+
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining('"event":"cache_degraded"'));
+    warning.mockRestore();
+  });
 });

@@ -205,12 +205,21 @@ async function listHistory(userId, profileId = null) {
   const cutoff = historyRetentionCutoff();
   scheduleExpiredHistoryPurge(userId);
   const history = await cache.remember("match-history", userId, profileId || "default", async () => {
-    const profile = await profileService.resolveProfile(userId, profileId);
+    const selectedSubprofileId = profileId || (await profileService.resolveProfile(userId)).id;
     const rows = await prisma.jobAnalysis.findMany({
-      where: { userId, selectedSubprofileId: profile.id, createdAt: { gte: cutoff } },
+      where: { userId, selectedSubprofileId, createdAt: { gte: cutoff } },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: {
+      select: {
+        id: true,
+        jobTitle: true,
+        company: true,
+        jobUrl: true,
+        matchScore: true,
+        status: true,
+        jobCategory: true,
+        appliedAt: true,
+        createdAt: true,
         generatedResume: { select: { id: true, generatedFileName: true, resumeFileId: true } },
         applications: {
           where: { userId },

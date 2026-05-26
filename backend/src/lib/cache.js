@@ -1,6 +1,19 @@
 const redis = require("./redis");
 
 const DEFAULT_CACHE_TTL_SECONDS = 5 * 60;
+const DEGRADATION_LOG_INTERVAL_MS = 60 * 1000;
+const degradationLoggedAt = new Map();
+
+function logDegradation(operation, err) {
+  const now = Date.now();
+  if (now - (degradationLoggedAt.get(operation) || 0) < DEGRADATION_LOG_INTERVAL_MS) return;
+  degradationLoggedAt.set(operation, now);
+  console.warn(JSON.stringify({
+    event: "cache_degraded",
+    operation,
+    error: err.message,
+  }));
+}
 
 function part(value) {
   return encodeURIComponent(String(value || "default"));
@@ -18,6 +31,7 @@ async function read(key) {
   try {
     return await redis.get(key);
   } catch (err) {
+    logDegradation("read", err);
     return null;
   }
 }
@@ -26,7 +40,7 @@ async function write(key, value, ttlSeconds) {
   try {
     await redis.set(key, JSON.stringify(value), ttlSeconds);
   } catch (err) {
-    // Cache failure must not fail the application request.
+    logDegradation("write", err);
   }
 }
 
@@ -41,6 +55,7 @@ async function remember(namespace, owner, variant, loader, ttlSeconds = DEFAULT_
       try {
         await redis.del(key);
       } catch (deleteErr) {
+        logDegradation("delete", deleteErr);
         // The database load below remains the authoritative fallback.
       }
     }
@@ -55,7 +70,7 @@ async function invalidate(namespace, owner) {
   try {
     await redis.incr(versionKey(namespace, owner));
   } catch (err) {
-    // With Redis unavailable there is no shared cached value to invalidate.
+    logDegradation("invalidate", err);
   }
 }
 

@@ -52,7 +52,7 @@ function getSubmitButton(event, form) {
 let __vlibrasStarted = false;
 
 async function loadDashboardData() {
-  const independentLoads = Promise.all([jobs.load(), career.loadSharedMatchedJobs()]);
+  const independentLoads = jobs.load();
   await career.loadProfiles();
   await Promise.all([independentLoads, career.loadActiveProfileData({ announce: true })]);
 }
