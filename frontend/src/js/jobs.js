@@ -31,7 +31,7 @@ function buildListParams(filters) {
   if (filters && filters.q) params.set("q", filters.q);
   if (filters && filters.status) params.set("status", filters.status);
 
-  if (filters && (filters.period === "last7" || filters.period === "last30")) {
+  if (filters && (filters.period === "currentMonth" || filters.period === "last7" || filters.period === "last30")) {
     params.set("period", filters.period);
   } else if (filters && filters.period === "custom") {
     if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
@@ -57,6 +57,7 @@ function formatPtBRDateTime(value) {
 
 function periodLabelFromFilters(filters) {
   const f = filters || {};
+  if (f.period === "currentMonth") return "Periodo: mes atual";
   if (f.period === "last7") return "Período: última semana";
   if (f.period === "last30") return "Período: último mês";
   if (f.period === "custom") {

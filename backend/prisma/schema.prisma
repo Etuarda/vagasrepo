@@ -15,6 +15,7 @@ model User {
   title        String @default("")
   emailContact String @default("")
   phone        String @default("")
+  cpfCnpj      String @default("")
   location     String @default("")
   cep          String @default("")
   linkedin     String @default("")
@@ -38,22 +39,41 @@ model User {
   passwordResetTokens PasswordResetToken[]
   subscription        Subscription?
   usageCounters       UsageCounter[]
+  billingEvents       BillingEvent[]
+  couponRedemptions   CouponRedemption[]
 }
 
 model Subscription {
-  id                 String    @id @default(uuid())
-  userId             String    @unique
-  plan               String    @default("free")
-  status             String    @default("active")
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                     String    @id @default(uuid())
+  userId                 String    @unique
+  plan                   String    @default("free")
+  status                 String    @default("active")
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  provider               String?
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  providerPaymentId      String?
+  checkoutUrl            String?
+  lastPaymentStatus      String?
+  pendingPlan            String?
+  couponId               String?
+  originalPriceCents     Int?
+  finalPriceCents        Int?
+  discountCents          Int?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon            Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  couponRedemptions CouponRedemption[]
 
   @@index([plan])
   @@index([status])
+  @@index([providerCustomerId])
+  @@index([providerSubscriptionId])
+  @@index([providerPaymentId])
+  @@index([couponId])
 }
 
 model UsageCounter {
@@ -69,6 +89,70 @@ model UsageCounter {
 
   @@unique([userId, feature, periodKey])
   @@index([userId])
+}
+
+model BillingEvent {
+  id          String    @id @default(uuid())
+  provider    String
+  eventId     String
+  eventType   String
+  userId      String?
+  payload     Json
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, eventId])
+  @@index([userId])
+  @@index([eventType])
+}
+
+model Coupon {
+  id                    String    @id @default(uuid())
+  code                  String    @unique
+  description           String?
+  type                  String
+  value                 Int
+  maxDiscountCents      Int?
+  appliesToPlans        String[]  @default([])
+  duration              String    @default("once")
+  maxRedemptions        Int?
+  redeemedCount         Int       @default(0)
+  maxRedemptionsPerUser Int?      @default(1)
+  startsAt              DateTime?
+  expiresAt             DateTime?
+  active                Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  subscriptions Subscription[]
+  redemptions   CouponRedemption[]
+
+  @@index([active])
+  @@index([expiresAt])
+}
+
+model CouponRedemption {
+  id                 String   @id @default(uuid())
+  couponId           String
+  userId             String
+  subscriptionId     String?
+  plan               String
+  originalPriceCents Int
+  discountCents      Int
+  finalPriceCents    Int
+  redeemedAt         DateTime @default(now())
+
+  coupon       Coupon        @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@unique([couponId, subscriptionId])
+  @@index([couponId])
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([couponId, userId])
 }
 
 model CareerProfile {

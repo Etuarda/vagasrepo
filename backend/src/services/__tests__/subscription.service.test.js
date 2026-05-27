@@ -3,7 +3,6 @@ jest.mock("../../lib/prisma", () => ({ prisma: {} }));
 const { FEATURES, PLAN_KEYS, PLAN_RULES } = require("../../constants/subscription-plans");
 const {
   getPlanContext,
-  updatePlan,
   assertFeatureAccess,
   consumeMatchingQuota,
   assertSubprofileLimit,
@@ -127,15 +126,10 @@ describe("subscription plans and quotas", () => {
     }));
   });
 
-  it("persiste troca de plano e retorna o novo contexto", async () => {
-    const db = dbFor(PLAN_KEYS.FREE);
-    db.subscription.upsert.mockResolvedValue({ userId: "user", plan: PLAN_KEYS.PRO, status: "active" });
+  it("mantem regras Free enquanto o pagamento do plano pago esta pendente", async () => {
+    const context = await getPlanContext("user", dbFor(PLAN_KEYS.PRO, { status: "pending" }));
 
-    await expect(updatePlan("user", PLAN_KEYS.PRO, db)).resolves.toMatchObject({ plan: PLAN_KEYS.PRO });
-    expect(db.subscription.upsert).toHaveBeenCalledWith({
-      where: { userId: "user" },
-      update: { plan: PLAN_KEYS.PRO, status: "active" },
-      create: { userId: "user", plan: PLAN_KEYS.PRO, status: "active" },
-    });
+    expect(context.plan).toBe(PLAN_KEYS.FREE);
+    expect(context.rules.matchingLimit).toBe(3);
   });
 });

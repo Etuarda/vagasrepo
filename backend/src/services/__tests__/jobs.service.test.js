@@ -44,6 +44,23 @@ describe("job list pagination", () => {
     expect(() => jobListQuerySchema.parse({ page: "2" })).toThrow("Use cursor");
   });
 
+  it("filtra vagas pelo mes vigente do calendario", async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 4, 27, 12, 0, 0));
+    try {
+      await listJobs("user", { period: "currentMonth" });
+
+      expect(jobListQuerySchema.parse({ period: "currentMonth" }).period).toBe("currentMonth");
+      expect(prisma.job.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: {
+          userId: "user",
+          AND: [{ data: { gte: new Date(2026, 4, 1), lt: new Date(2026, 5, 1) } }],
+        },
+      }));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("valida quota antes de cadastrar nova vaga acompanhada", async () => {
     prisma.job.create.mockResolvedValue({ id: "job" });
     prisma.$transaction.mockImplementation((work) => work(prisma));

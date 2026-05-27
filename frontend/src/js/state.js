@@ -18,7 +18,7 @@ export const state = {
   filters: {
     q: "",
     status: "",
-    period: "all", // all | last7 | last30 | custom
+    period: "currentMonth", // currentMonth | all | last7 | last30 | custom
     dateFrom: "",
     dateTo: "",
   },

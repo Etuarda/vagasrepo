@@ -11,9 +11,8 @@ describe("auth inputs", () => {
 
     expect(payload.email).toBe("pessoa@example.com");
     expect(payload.phone).toBe("(85) 99999-0000");
-    expect(payload.plan).toBe("free");
-    expect(registerSchema.parse({ ...payload, plan: "pro" }).plan).toBe("pro");
-    expect(() => registerSchema.parse({ ...payload, plan: "enterprise" })).toThrow();
+    expect(payload.plan).toBeUndefined();
+    expect(registerSchema.parse({ ...payload, plan: "pro" }).plan).toBeUndefined();
     expect(() => registerSchema.parse({ ...payload, phone: "" })).toThrow();
     expect(() => registerSchema.parse({ ...payload, password: "curta" })).toThrow();
   });

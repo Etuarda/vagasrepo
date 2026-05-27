@@ -39,10 +39,10 @@
         <button data-open-auth="register" class="w-full sm:w-auto border border-borderLight px-8 sm:px-12 py-4 sm:py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-white transition-all">Criar Conta</button>
       </div>
       <section class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 text-left" aria-label="Planos disponiveis">
-        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Free</h2><p class="text-sm text-taupe">3 analises vitalicias e ate 10 acompanhamentos.</p><button data-open-auth="register" data-plan="free" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Escolher Free</button></article>
-        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Basic</h2><p class="text-sm text-taupe">R$ 9,90/mes | 30 analises mensais.</p><button data-open-auth="register" data-plan="basic" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Escolher Basic</button></article>
-        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Pro</h2><p class="text-sm text-taupe">R$ 19,90/mes | 100 analises mensais.</p><button data-open-auth="register" data-plan="pro" class="bg-ink text-paper px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Escolher Pro</button></article>
-        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Premium</h2><p class="text-sm text-taupe">R$ 29,90/mes | 500 analises mensais.</p><button data-open-auth="register" data-plan="premium" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Escolher Premium</button></article>
+        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Free</h2><p class="text-sm text-taupe">3 analises vitalicias e ate 10 acompanhamentos.</p><button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta Free</button></article>
+        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Basic</h2><p class="text-sm text-taupe">R$ 9,90/mes | 30 analises mensais.</p><button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button></article>
+        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Pro</h2><p class="text-sm text-taupe">R$ 19,90/mes | 100 analises mensais.</p><button data-open-auth="register" class="bg-ink text-paper px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button></article>
+        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Premium</h2><p class="text-sm text-taupe">R$ 29,90/mes | 500 analises mensais.</p><button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button></article>
       </section>
     </section>
 
@@ -53,9 +53,6 @@
           <p class="text-taupe uppercase tracking-[0.4em] text-[10px] font-bold">Arquivo de Candidaturas Ativas</p>
         </div>
         <div class="flex flex-wrap gap-4">
-          <button data-open-billing class="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 border border-borderLight text-[10px] font-bold uppercase tracking-[0.3em] rounded-full hover:bg-white transition-all">
-            Meu plano
-          </button>
           <button data-open-job class="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-ink text-paper text-[10px] font-bold uppercase tracking-[0.3em] rounded-full hover:bg-taupe transition-all editorial-shadow">
             + Registrar Vaga
           </button>
@@ -74,9 +71,6 @@
         </button>
         <button type="button" data-dashboard-tab="shared-jobs" class="dashboard-tab shrink-0 px-4 sm:px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
           Vagas compartilhadas
-        </button>
-        <button type="button" data-dashboard-tab="billing" class="dashboard-tab shrink-0 px-4 sm:px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
-          Plano
         </button>
       </div>
 
@@ -100,6 +94,7 @@
         <div class="space-y-3">
           <label for="periodFilter" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Período</label>
           <select id="periodFilter" class="editorial-input text-sm bg-white">
+            <option value="currentMonth" selected>Mês atual</option>
             <option value="all">Tudo</option>
             <option value="last7">Última semana</option>
             <option value="last30">Último mês</option>
@@ -353,15 +348,20 @@
             <div>
               <h3 id="billing-current-plan" class="font-serif text-3xl">Plano atual.</h3>
               <p id="billing-usage" class="text-sm text-taupe mt-2">Carregando uso do plano...</p>
+              <p id="billing-status" class="text-sm text-taupe mt-2">Carregando status da assinatura...</p>
             </div>
-            <form id="form-billing-plan" class="flex flex-col sm:flex-row gap-3 max-w-xl">
+            <form id="form-billing-customer" class="flex flex-col sm:flex-row gap-3 max-w-xl">
+              <input id="billing-cpf-cnpj" class="editorial-input text-sm" placeholder="CPF ou CNPJ para cobranca" required />
+              <button type="submit" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Salvar CPF/CNPJ</button>
+            </form>
+            <form id="form-billing-checkout" class="flex flex-col sm:flex-row gap-3 max-w-3xl">
               <select id="billing-plan" class="editorial-input text-sm bg-white" aria-label="Selecionar plano">
-                <option value="free">Free - R$ 0</option>
                 <option value="basic">Basic - R$ 9,90/mes</option>
                 <option value="pro">Pro - R$ 19,90/mes</option>
                 <option value="premium">Premium - R$ 29,90/mes</option>
               </select>
-              <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Alterar plano</button>
+              <input id="billing-coupon" class="editorial-input text-sm" placeholder="Cupom (opcional)" maxlength="80" />
+              <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Assinar plano</button>
             </form>
           </section>
         </div>
@@ -449,12 +449,6 @@
         <input type="email" id="reg-email" placeholder="E-mail" required class="editorial-input" />
         <input type="tel" id="reg-phone" placeholder="Telefone com DDD" required class="editorial-input" minlength="10" maxlength="25" />
         <input type="password" id="reg-password" placeholder="Senha (min. 10 caracteres)" required class="editorial-input" minlength="10" />
-        <select id="reg-plan" required class="editorial-input bg-white" aria-label="Plano inicial">
-          <option value="free">Free - R$ 0</option>
-          <option value="basic">Basic - R$ 9,90/mes</option>
-          <option value="pro">Pro - R$ 19,90/mes</option>
-          <option value="premium">Premium - R$ 29,90/mes</option>
-        </select>
         <button type="submit" class="w-full bg-ink text-paper py-5 rounded-full font-bold uppercase tracking-widest text-xs">Registrar Profissional</button>
         <button type="button" data-switch-auth="login" class="w-full text-[10px] uppercase tracking-widest text-stone font-bold underline">Já possuo cadastro</button>
       </form>

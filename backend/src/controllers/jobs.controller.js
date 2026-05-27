@@ -6,7 +6,7 @@ async function list(req, res, next) {
     const { q, status, period, dateFrom, dateTo, limit, cursor } = jobListQuerySchema.parse(req.query);
 
     // Regras de precedência:
-    // - Se period for last7/last30, ignora dateFrom/dateTo
+    // - Se period for currentMonth/last7/last30, ignora dateFrom/dateTo
     // - Se period for ausente, usa dateFrom/dateTo se existirem
     const filters = {
       q,

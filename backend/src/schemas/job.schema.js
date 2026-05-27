@@ -1,7 +1,7 @@
 const { z } = require("zod");
 
 const StatusEnum = z.enum(["Ativa", "Pausada", "Encerrada"]);
-const PeriodEnum = z.enum(["last7", "last30"]);
+const PeriodEnum = z.enum(["currentMonth", "last7", "last30"]);
 const ApplicationPhaseEnum = z.enum(["Currículo gerado", "Aplicada", "Entrevista", "Teste técnico", "Feedback", "Encerrada"]);
 
 const emptyToUndefined = (v) => (v === "" || v === null ? undefined : v);

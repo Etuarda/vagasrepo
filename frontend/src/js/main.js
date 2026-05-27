@@ -141,8 +141,7 @@ function wireEvents() {
           const email = document.getElementById("reg-email")?.value || "";
           const phone = document.getElementById("reg-phone")?.value || "";
           const password = document.getElementById("reg-password")?.value || "";
-          const plan = document.getElementById("reg-plan")?.value || "free";
-          await auth.register(name, email, phone, password, plan);
+          await auth.register(name, email, phone, password);
         }
       );
     });
@@ -180,10 +179,6 @@ function wireEvents() {
 
   document.querySelectorAll("[data-open-auth]").forEach((el) => {
     el.addEventListener("click", () => {
-      if (el.dataset.plan) {
-        const selectedPlan = document.getElementById("reg-plan");
-        if (selectedPlan) selectedPlan.value = el.dataset.plan;
-      }
       ui.openAuthModal(el.dataset.openAuth);
     });
   });
@@ -345,20 +340,29 @@ function wireEvents() {
     button.addEventListener("click", () => career.setTab(button.dataset.dashboardTab));
   });
 
-  document.querySelectorAll("[data-open-billing]").forEach((button) => {
-    button.addEventListener("click", () => {
-      career.setTab("billing");
-    });
-  });
-
-  const billingForm = document.getElementById("form-billing-plan");
-  if (billingForm) {
-    billingForm.addEventListener("submit", async (e) => {
+  const billingCustomerForm = document.getElementById("form-billing-customer");
+  if (billingCustomerForm) {
+    billingCustomerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       await runWithFeedback(
-        getSubmitButton(e, billingForm),
-        { busyText: "Alterando...", notice: "Atualizando plano..." },
-        () => billing.updatePlan(document.getElementById("billing-plan")?.value || "free")
+        getSubmitButton(e, billingCustomerForm),
+        { busyText: "Salvando...", notice: "Salvando dados de cobranca..." },
+        () => billing.saveCustomer(document.getElementById("billing-cpf-cnpj")?.value || "")
+      );
+    });
+  }
+
+  const billingCheckoutForm = document.getElementById("form-billing-checkout");
+  if (billingCheckoutForm) {
+    billingCheckoutForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await runWithFeedback(
+        getSubmitButton(e, billingCheckoutForm),
+        { busyText: "Aguarde...", notice: "Iniciando pagamento seguro..." },
+        () => billing.checkout(
+          document.getElementById("billing-plan")?.value || "basic",
+          document.getElementById("billing-coupon")?.value || ""
+        )
       );
     });
   }
@@ -742,6 +746,11 @@ function wireEvents() {
       );
     });
     matchResult.addEventListener("click", async (e) => {
+      const newMatchingBtn = e.target.closest("[data-new-matching]");
+      if (newMatchingBtn) {
+        career.newMatching();
+        return;
+      }
       const registrationBtn = e.target.closest("[data-register-application]");
       if (registrationBtn) {
         ui.openApplicationForm(state.lastMatchResult || {

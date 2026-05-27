@@ -23,6 +23,10 @@ npm install
 - `RESEND_API_KEY`: chave da API Resend usada para enviar a recuperacao de senha.
 - `EMAIL_FROM`: remetente de dominio verificado no Resend, por exemplo `Vagas.io <recuperacao@seudominio-verificado.com>`.
 - `RESEND_TEST_RECIPIENT`: opcional. Enquanto nao houver dominio, permite usar `Vagas.io <onboarding@resend.dev>` somente para o proprio e-mail autorizado na conta Resend; demais usuarios continuam bloqueados.
+- `ASAAS_ENV`: `sandbox` para testes ou `production` para cobrancas reais.
+- `ASAAS_API_KEY`: chave privada Asaas, configurada somente no backend/Render.
+- `ASAAS_WEBHOOK_TOKEN`: token forte usado para autenticar eventos de pagamento.
+- `ASAAS_SUCCESS_URL` e `ASAAS_FAILURE_URL`: URLs do frontend apos pagamento.
 - `SLOW_QUERY_MS`: limiar para log estruturado de consultas Prisma lentas; padrao `500`.
 
 3. Rode migrations e gere o client:
@@ -50,6 +54,8 @@ API: `http://localhost:3000`
 6. Configure `CORS_ORIGIN` no Render somente para dominios adicionais ou preview local que precise acessar a API publicada.
 7. Crie um Redis gerenciado e configure `REDIS_URL` no Render; sem essa variavel a API usa somente cache local por instancia, sem compartilhar resultados entre replicas ou reinicios.
 8. Configure `FRONTEND_URL`, `RESEND_API_KEY` e `EMAIL_FROM` no Render para habilitar o envio de links de recuperacao.
+9. Configure `ASAAS_ENV`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `ASAAS_SUCCESS_URL` e `ASAAS_FAILURE_URL` somente no servico backend do Render.
+10. No painel Asaas, cadastre o webhook `https://gerenciadorpessoaldevagas.onrender.com/billing/webhooks/asaas?token=SEU_TOKEN_FORTE` para os eventos de pagamento suportados.
 
 O frontend publicado encaminha `/api/*` para a Render. Assim, o navegador recebe a sessao em cookie `HttpOnly`, sem armazenar JWT em `localStorage`. O backend ainda aceita Bearer token durante a transicao de clientes antigos.
 
@@ -63,8 +69,10 @@ Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` 
 - `GET /ready`; verifica conexao com o banco e informa se o cache esta em `redis_ready`, `local_only` ou `degraded_local`.
 - `GET /metrics`; metricas HTTP basicas em formato Prometheus.
 - `GET /billing/me` autenticado; retorna plano efetivo, funcionalidades e consumo/limites atuais.
-- `PATCH /billing/me` autenticado; altera o plano ativo com body `{ "plan": "free|basic|pro|premium" }`.
-- `POST /auth/register`; aceita `plan` opcional (`free`, `basic`, `pro` ou `premium`) e cria `free` por padrao.
+- `PUT /billing/customer` autenticado; salva o CPF/CNPJ necessario para cobranca.
+- `POST /billing/checkout` autenticado; inicia assinatura paga com `{ "plan": "basic|pro|premium", "couponCode": "OPCIONAL" }`.
+- `POST /billing/webhooks/asaas?token=...` publico; recebe eventos validados do Asaas e ativa o plano apenas apos pagamento.
+- `POST /auth/register`; cria sempre uma conta `free`; plano pago nunca e aceito no cadastro publico.
 - `POST /auth/login`
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`

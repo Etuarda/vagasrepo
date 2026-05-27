@@ -543,6 +543,7 @@ function renderMatchResult(result) {
                <button type="button" data-register-application="${result.analysisId}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Cadastrar acompanhamento</button>`
             : `<p class="text-sm text-taupe">Complete os dados estruturados do perfil para gerar o currículo otimizado.</p>`
         }
+        <button type="button" data-new-matching class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Novo matching</button>
       </div>
     </section>
     <section class="editorial-card rounded-2xl sm:rounded-3xl p-4 sm:p-8">
@@ -626,6 +627,19 @@ function renderMatchLoading() {
 }
 
 export const career = {
+  newMatching() {
+    const form = document.getElementById("form-match");
+    form?.reset();
+    state.lastMatchResult = null;
+    renderMatchProfileOptions();
+    const root = document.getElementById("match-result");
+    if (root) {
+      root.className = "lg:col-span-7 min-h-[240px] sm:min-h-[420px] rounded-2xl sm:rounded-3xl border border-dashed border-borderLight p-5 sm:p-10 flex items-center justify-center text-center text-taupe";
+      root.textContent = "Cole uma vaga para ver score, lacunas e projetos mais aderentes.";
+    }
+    document.getElementById("match-job-title")?.focus();
+  },
+
   async loadProfiles() {
     const profiles = await api("/profiles", {}, state.token);
     state.profiles = Array.isArray(profiles) ? profiles : [];

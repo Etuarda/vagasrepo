@@ -48,13 +48,12 @@ describe("auth service registration and password reset", () => {
     }));
   });
 
-  it("persiste telefone e email de contato obrigatorios no cadastro", async () => {
+  it("persiste telefone e cria sempre uma assinatura Free no cadastro", async () => {
     await registerUser({
       name: "Pessoa Teste",
       email: "pessoa@example.com",
       phone: "(85) 99999-0000",
       password: "senha-segura-123",
-      plan: "pro",
     });
 
     expect(prisma.user.create).toHaveBeenCalledWith({
@@ -65,7 +64,7 @@ describe("auth service registration and password reset", () => {
         emailContact: "pessoa@example.com",
         password: "hashed-password",
         subscription: {
-          create: { plan: "pro", status: "active" },
+          create: { plan: "free", status: "active" },
         },
       },
     });

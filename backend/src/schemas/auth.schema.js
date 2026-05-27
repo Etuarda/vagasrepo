@@ -1,6 +1,4 @@
 const { z } = require("zod");
-const { PLAN_KEYS } = require("../constants/subscription-plans");
-const { planSchema } = require("./billing.schema");
 
 const emailSchema = z.string().trim().toLowerCase().email("E-mail invalido");
 const passwordSchema = z.string().min(10, "Senha deve ter pelo menos 10 caracteres").max(128);
@@ -15,7 +13,6 @@ const registerSchema = z.object({
   email: emailSchema,
   phone: phoneSchema,
   password: passwordSchema,
-  plan: planSchema.default(PLAN_KEYS.FREE),
 });
 
 const loginSchema = z.object({

@@ -44,7 +44,12 @@ async function loadJobs(userId, { q, status, period, dateFrom, dateTo, limit = 5
 
   // B) Filtro por período
   // Observação: o modelo atual não possui createdAt; usamos o campo "data" (DateTime) como referência temporal.
-  if (period === "last7" || period === "last30") {
+  if (period === "currentMonth") {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    and.push({ data: { gte: from, lt: to } });
+  } else if (period === "last7" || period === "last30") {
     const days = period === "last7" ? 7 : 30;
     const now = new Date();
     const from = startOfDay(new Date(now.getTime() - days * 24 * 60 * 60 * 1000));

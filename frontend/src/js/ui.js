@@ -184,6 +184,9 @@ export const ui = {
       if (feedbackTxt) feedbackTxt.value = job.feedbackTxt || "";
       const notes = document.getElementById("job-notes");
       if (notes) notes.value = job.notes || "";
+    } else {
+      const date = document.getElementById("job-date");
+      if (date) date.value = ui.localToday();
     }
 
     ui.syncConditionalFields();
@@ -275,6 +278,7 @@ export const ui = {
         <td data-label="Registro" class="py-5 sm:py-10 px-4 sm:px-6">
           <div class="font-bold text-lg sm:text-xl">${escapeHtml(job.titulo)}</div>
           <div class="text-[9px] uppercase tracking-[0.4em] text-stone mt-2 font-bold">${escapeHtml(job.empresa)}</div>
+          <div class="text-xs text-taupe mt-3">Data cadastrada: ${escapeHtml(ui.formatDate(job.data))}</div>
           ${job.jobAnalysis ? `<div class="text-xs text-taupe mt-3">Aderência: ${job.jobAnalysis.matchScore}% | Perfil: ${escapeHtml(job.jobAnalysis.selectedSubprofile?.profileName || "—")}</div>` : ""}
           ${job.jobAnalysis?.matchedSkills?.length ? `<div class="text-xs text-taupe mt-1">Skills: ${escapeHtml(job.jobAnalysis.matchedSkills.join(", "))}</div>` : ""}
           ${job.jobAnalysis?.missingSkills?.length ? `<div class="text-xs text-taupe mt-1">Ausentes: ${escapeHtml(job.jobAnalysis.missingSkills.join(", "))}</div>` : ""}
@@ -312,6 +316,20 @@ export const ui = {
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
+  },
+
+  localToday() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  },
+
+  formatDate(value) {
+    if (!value) return "-";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("pt-BR");
   },
 
   notify(message, type = "success") {

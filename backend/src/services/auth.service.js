@@ -11,7 +11,7 @@ const ACCESS_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 const PASSWORD_RESET_TTL_MINUTES = 30;
 const PASSWORD_RESET_RESPONSE = "Se o e-mail estiver cadastrado, enviaremos um link de recuperacao.";
 
-async function registerUser({ name, email, phone, password, plan = PLAN_KEYS.FREE }) {
+async function registerUser({ name, email, phone, password }) {
   const userExists = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
   if (userExists) {
     const err = new Error("E-mail já cadastrado");
@@ -28,7 +28,7 @@ async function registerUser({ name, email, phone, password, plan = PLAN_KEYS.FRE
       emailContact: email,
       password: hashedPassword,
       subscription: {
-        create: { plan, status: "active" },
+        create: { plan: PLAN_KEYS.FREE, status: "active" },
       },
     },
   });

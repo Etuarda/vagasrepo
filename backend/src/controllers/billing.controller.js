@@ -1,5 +1,6 @@
 const subscriptionService = require("../services/subscription.service");
-const { updatePlanSchema } = require("../schemas/billing.schema");
+const billingService = require("../services/billing.service");
+const { checkoutSchema, billingCustomerSchema } = require("../schemas/billing.schema");
 
 async function me(req, res, next) {
   try {
@@ -10,14 +11,34 @@ async function me(req, res, next) {
   }
 }
 
-async function update(req, res, next) {
+async function checkout(req, res, next) {
   try {
-    const { plan } = updatePlanSchema.parse(req.body);
-    const context = await subscriptionService.updatePlan(req.userId, plan);
-    return res.json(context);
+    const payload = checkoutSchema.parse(req.body);
+    const result = await billingService.createCheckout(req.userId, payload);
+    return res.status(result.status === "active" ? 200 : 201).json(result);
   } catch (err) {
     return next(err);
   }
 }
 
-module.exports = { me, update };
+async function saveCustomer(req, res, next) {
+  try {
+    const { cpfCnpj } = billingCustomerSchema.parse(req.body);
+    const result = await billingService.saveCustomerDocument(req.userId, cpfCnpj);
+    return res.json(result);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function asaasWebhook(req, res, next) {
+  try {
+    const token = req.query.token || req.headers["asaas-access-token"];
+    const result = await billingService.processAsaasWebhook(req.body, token);
+    return res.json(result);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { me, checkout, saveCustomer, asaasWebhook };

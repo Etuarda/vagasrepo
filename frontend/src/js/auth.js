@@ -37,10 +37,10 @@ export const auth = {
     onLoggedIn?.();
   },
 
-  async register(name, email, phone, password, plan) {
+  async register(name, email, phone, password) {
     await api(
       "/auth/register",
-      { method: "POST", body: JSON.stringify({ name, email, phone, password, plan }) },
+      { method: "POST", body: JSON.stringify({ name, email, phone, password }) },
       null
     );
     ui.notify("Conta criada. Por favor, acesse.");
