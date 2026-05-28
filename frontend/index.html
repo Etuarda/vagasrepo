@@ -197,6 +197,7 @@
                 <input type="text" id="profile-name" required placeholder="Nome completo" class="editorial-input" />
                 <input type="text" id="profile-profile-name" required placeholder="Nome do perfil (ex: Frontend)" class="editorial-input" />
                 <input type="text" id="profile-title-field" placeholder="Título profissional" class="editorial-input md:col-span-2" />
+                <input type="text" id="profile-objective" maxlength="500" placeholder="Objetivo no curriculo (ex: Desenvolvedora Backend)" class="editorial-input md:col-span-2" />
                 <input type="email" id="profile-email-contact" placeholder="E-mail de contato" class="editorial-input" />
                 <input type="text" id="profile-phone" placeholder="Telefone" class="editorial-input" />
                 <input type="text" id="profile-location" placeholder="Cidade / Estado" class="editorial-input" />
@@ -208,7 +209,7 @@
             </section>
             <section class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-labelledby="summary-title">
               <h3 id="summary-title" class="font-serif text-3xl">Resumo profissional.</h3>
-              <textarea id="profile-summary" rows="5" placeholder="Resumo profissional / objetivo" class="editorial-input"></textarea>
+              <textarea id="profile-summary" rows="5" maxlength="2600" placeholder="Resumo profissional (max. 2.600 caracteres)" class="editorial-input"></textarea>
               <div class="flex justify-end">
                 <button type="submit" class="bg-ink text-paper px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
                   Salvar perfil
@@ -229,6 +230,45 @@
               <button type="button" data-cancel-edit="education" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
             </form>
             <div id="educations-list" class="space-y-3"></div>
+          </section>
+
+          <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-6" aria-labelledby="projects-title">
+            <h3 id="projects-title" class="font-serif text-3xl">Projetos.</h3>
+            <form id="form-project" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm" />
+              <select id="project-category" class="editorial-input text-sm bg-white">
+                <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="fullstack">Fullstack</option><option value="data">Dados</option><option value="devops">DevOps</option><option value="ai">IA</option>
+              </select>
+              <textarea id="project-short-description" required minlength="10" maxlength="500" rows="3" placeholder="Resumo curto para currículo" class="editorial-input text-sm md:col-span-2"></textarea>
+              <input type="text" id="project-stack" placeholder="Stack para matching, nao exibida no curriculo (ex: Node.js, TypeScript, PostgreSQL)" class="editorial-input text-sm md:col-span-2" />
+              <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
+              <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
+              <div class="md:col-span-2 flex justify-end">
+                <button type="submit" data-submit-label="Cadastrar projeto" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  Cadastrar projeto
+                </button>
+                <button type="button" data-cancel-edit="project" class="hidden ml-4 text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
+              </div>
+            </form>
+            <div id="projects-list" class="grid grid-cols-1 gap-4"></div>
+          </section>
+
+          <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-6" aria-labelledby="experiences-title">
+            <h3 id="experiences-title" class="font-serif text-3xl">Experiências profissionais.</h3>
+            <form id="form-experience" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" id="experience-company" required placeholder="Empresa" class="editorial-input text-sm" />
+              <input type="text" id="experience-role" required placeholder="Cargo" class="editorial-input text-sm" />
+              <input type="text" id="experience-period" required placeholder="Ano ou período" class="editorial-input text-sm" />
+              <input type="text" id="experience-workload" placeholder="Carga horária (ex: 40h/semana)" class="editorial-input text-sm" />
+              <textarea id="experience-description" required rows="3" placeholder="Atividades reais e resultados" class="editorial-input text-sm md:col-span-2"></textarea>
+              <div class="md:col-span-2 flex justify-end">
+                <button type="submit" data-submit-label="Salvar experiência" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  Salvar experiência
+                </button>
+                <button type="button" data-cancel-edit="experience" class="hidden ml-4 text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
+              </div>
+            </form>
+            <div id="experiences-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </section>
 
           <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-6" aria-labelledby="skills-title">
@@ -253,45 +293,6 @@
               </div>
             </div>
             <div id="skills-list" class="flex flex-wrap gap-2"></div>
-          </section>
-
-          <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-6" aria-labelledby="experiences-title">
-            <h3 id="experiences-title" class="font-serif text-3xl">Experiências profissionais.</h3>
-            <form id="form-experience" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="text" id="experience-company" required placeholder="Empresa" class="editorial-input text-sm" />
-              <input type="text" id="experience-role" required placeholder="Cargo" class="editorial-input text-sm" />
-              <input type="text" id="experience-period" required placeholder="Ano ou período" class="editorial-input text-sm" />
-              <input type="text" id="experience-workload" placeholder="Carga horária (ex: 40h/semana)" class="editorial-input text-sm" />
-              <textarea id="experience-description" required rows="3" placeholder="Atividades reais e resultados" class="editorial-input text-sm md:col-span-2"></textarea>
-              <div class="md:col-span-2 flex justify-end">
-                <button type="submit" data-submit-label="Salvar experiência" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                  Salvar experiência
-                </button>
-                <button type="button" data-cancel-edit="experience" class="hidden ml-4 text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
-              </div>
-            </form>
-            <div id="experiences-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-          </section>
-
-          <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-6" aria-labelledby="projects-title">
-            <h3 id="projects-title" class="font-serif text-3xl">Projetos.</h3>
-            <form id="form-project" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm" />
-              <select id="project-category" class="editorial-input text-sm bg-white">
-                <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="fullstack">Fullstack</option><option value="data">Dados</option><option value="devops">DevOps</option><option value="ai">IA</option>
-              </select>
-              <textarea id="project-short-description" required minlength="10" maxlength="500" rows="3" placeholder="Resumo curto para currículo" class="editorial-input text-sm md:col-span-2"></textarea>
-              <input type="text" id="project-stack" placeholder="Stack para matching, nao exibida no curriculo (ex: Node.js, TypeScript, PostgreSQL)" class="editorial-input text-sm md:col-span-2" />
-              <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
-              <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
-              <div class="md:col-span-2 flex justify-end">
-                <button type="submit" data-submit-label="Cadastrar projeto" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                  Cadastrar projeto
-                </button>
-                <button type="button" data-cancel-edit="project" class="hidden ml-4 text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
-              </div>
-            </form>
-            <div id="projects-list" class="grid grid-cols-1 gap-4"></div>
           </section>
 
           <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-6" aria-labelledby="courses-title">

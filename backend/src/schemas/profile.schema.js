@@ -15,7 +15,7 @@ const profileSchema = z.object({
   linkedin: cleanString(300),
   github: cleanString(300),
   lattes: cleanString(300),
-  summary: cleanString(3000),
+  summary: cleanString(2600),
   objective: z.string().trim().max(500).optional(),
   category: z.string().trim().max(40).optional(),
 });

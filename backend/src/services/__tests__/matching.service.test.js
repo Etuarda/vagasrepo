@@ -25,9 +25,9 @@ describe("deterministic matching", () => {
       skillsMatchScore: expect.any(Number),
       projectsMatchScore: 0,
     }));
-    expect(result.scoreDetails).not.toHaveProperty("coursesAndCertificationsMatchScore");
+    expect(result.scoreDetails).toHaveProperty("coursesAndCertificationsMatchScore", 0);
     expect(result.scoreDetails).not.toHaveProperty("experiencesMatchScore");
-    expect(result).not.toHaveProperty("selectedCourses");
+    expect(result.selectedCourses).toEqual([]);
     expect(result).not.toHaveProperty("selectedExperiences");
   });
 

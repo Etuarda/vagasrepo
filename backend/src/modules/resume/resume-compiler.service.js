@@ -1,5 +1,5 @@
-const { SKILL_GROUPS, CATEGORY_KEYWORDS, TRANSVERSAL_SKILLS } = require("../../shared/constants/tech-dictionary");
-const { normalizeTerm } = require("../matching/keyword-normalizer");
+const { TRANSVERSAL_SKILLS } = require("../../shared/constants/tech-dictionary");
+const { normalizeTerm, normalizeText } = require("../matching/keyword-normalizer");
 const { compressResume, RESUME_LAYOUT_RULES } = require("./resume-layout.service");
 
 function uniqueByNormalized(values) {
@@ -16,32 +16,52 @@ function compileSkills(profile, matchResult, rules) {
   const catalog = new Map((profile.skillItems || (profile.skills || []).map((name) => ({ name, category: "other" })))
     .map((skill) => [normalizeTerm(skill.name), skill]));
   const matched = (matchResult.matchedSkills || []).map((name) => catalog.get(normalizeTerm(name))).filter(Boolean);
-  const transversal = [...catalog.values()].filter((skill) => TRANSVERSAL_SKILLS.includes(normalizeTerm(skill.name)));
-  const targeted = matched.length || (matchResult.jobKeywords || []).length ? matched : [...catalog.values()].slice(0, 12);
+  const transversal = [...catalog.values()].filter((skill) =>
+    TRANSVERSAL_SKILLS.includes(normalizeTerm(skill.name)) &&
+    (matchResult.jobKeywords || []).map(normalizeTerm).includes(normalizeTerm(skill.name))
+  );
+  const targeted = matched.length || (matchResult.jobKeywords || []).length ? matched : [...catalog.values()];
   const ordered = uniqueByNormalized([...targeted, ...transversal]);
-  const groups = new Map();
-  ordered.forEach((skill) => {
-    if (TRANSVERSAL_SKILLS.includes(normalizeTerm(skill.name))) {
-      if (!groups.has("Praticas/Versionamento")) groups.set("Praticas/Versionamento", []);
-      groups.get("Praticas/Versionamento").push(skill.name);
-      return;
-    }
-    const inferredCategory = Object.entries(CATEGORY_KEYWORDS).find(([, terms]) =>
-      terms.map(normalizeTerm).includes(normalizeTerm(skill.name))
-    )?.[0];
-    const group = SKILL_GROUPS[skill.category !== "other" ? skill.category : inferredCategory] || SKILL_GROUPS.other;
-    if (!groups.has(group)) groups.set(group, []);
-    groups.get(group).push(skill.name);
-  });
-  const transversalGroup = groups.has("Praticas/Versionamento")
-    ? [["Praticas/Versionamento", groups.get("Praticas/Versionamento")]]
-    : [];
-  const selectedGroups = [...groups.entries()]
-    .filter(([label]) => label !== "Praticas/Versionamento")
-    .slice(0, rules.maxSkillGroups - transversalGroup.length)
-    .concat(transversalGroup);
-  return selectedGroups
-    .map(([label, items]) => `${label}: ${items.join(", ")}`).join(" | ");
+  return ordered.map((skill) => skill.name).join(", ");
+}
+
+function parseHours(value) {
+  const matches = String(value || "").match(/\d+/g);
+  return matches ? Math.max(...matches.map(Number)) : 0;
+}
+
+function parseMostRecentYear(value) {
+  const years = String(value || "").match(/\b(19|20)\d{2}\b/g);
+  return years ? Math.max(...years.map(Number)) : 0;
+}
+
+function evidenceMatches(item, keywords) {
+  const source = [item.title, item.issuer, item.institution, item.description].join(" ");
+  const normalizedSource = ` ${normalizeText(source)} `;
+  return uniqueByNormalized((keywords || []).filter((keyword) => normalizedSource.includes(` ${normalizeTerm(keyword)} `)));
+}
+
+function rankLearningItems({ courses = [], certifications = [] }, matchResult, limit = 5) {
+  const keywords = matchResult.jobKeywords || [];
+  return [
+    ...certifications.map((item) => ({ ...item, itemType: "certification" })),
+    ...courses.map((item) => ({ ...item, itemType: "course" })),
+  ].map((item) => {
+    const matchedKeywords = evidenceMatches(item, keywords);
+    const hours = parseHours(item.workload);
+    const year = parseMostRecentYear(item.period);
+    const certificationBonus = item.itemType === "certification" ? 28 : 0;
+    const shortCoursePenalty = item.itemType === "course" && hours > 0 && hours < 100 ? -14 : 0;
+    const score = matchedKeywords.length * 40 +
+      Math.min(hours, 400) / 10 +
+      (year ? Math.min(20, Math.max(0, year - 2018) * 2) : 0) +
+      certificationBonus +
+      shortCoursePenalty;
+    return { ...item, matchedKeywords, score };
+  })
+    .filter((item) => item.matchedKeywords.length)
+    .sort((a, b) => b.matchedKeywords.length - a.matchedKeywords.length || b.score - a.score)
+    .slice(0, limit);
 }
 
 function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
@@ -58,6 +78,7 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
     header: {
       name: profile.name,
       title: profile.title || "",
+      objective: profile.objective || "",
       location: profile.location || "",
       cep: profile.cep || "",
       email: profile.emailContact || "",
@@ -76,10 +97,10 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
       description: experience.description || "",
     })),
     projects,
-    courses: profile.courses || [],
-    certifications: profile.certifications || [],
+    courses: rankLearningItems(profile, matchResult).filter((item) => item.itemType === "course"),
+    certifications: rankLearningItems(profile, matchResult).filter((item) => item.itemType === "certification"),
     languagesInline: (profile.languages || []).map((item) => [item.name, item.level].filter(Boolean).join(" - ")).join("; "),
   }, rules);
 }
 
-module.exports = { compileResume, compileSkills, uniqueByNormalized };
+module.exports = { compileResume, compileSkills, uniqueByNormalized, rankLearningItems, parseHours, parseMostRecentYear };

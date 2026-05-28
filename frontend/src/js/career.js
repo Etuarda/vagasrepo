@@ -357,6 +357,7 @@ function renderProfileForm() {
   setValue("profile-linkedin", profile.linkedin);
   setValue("profile-github", profile.github);
   setValue("profile-lattes", profile.lattes);
+  setValue("profile-objective", profile.objective);
   setValue("profile-summary", profile.summary);
 
   renderSkills();
@@ -829,6 +830,7 @@ export const career = {
       linkedin: document.getElementById("profile-linkedin")?.value || "",
       github: document.getElementById("profile-github")?.value || "",
       lattes: document.getElementById("profile-lattes")?.value || "",
+      objective: document.getElementById("profile-objective")?.value || "",
       summary: document.getElementById("profile-summary")?.value || "",
     };
     const out = await api("/profile", { method: "PUT", body: JSON.stringify(payload) }, state.token);

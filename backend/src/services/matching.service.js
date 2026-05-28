@@ -4,7 +4,7 @@ const profileService = require("./profile.service");
 const { generateOptimizedResumePdf } = require("./pdf-output.service");
 const { classifyJob, normalizeTerm } = require("../modules/matching/keyword-normalizer");
 const { rankProjects } = require("../modules/matching/project-ranking.service");
-const { compileResume } = require("../modules/resume/resume-compiler.service");
+const { compileResume, rankLearningItems } = require("../modules/resume/resume-compiler.service");
 const { createSharedMatchedJob } = require("../modules/matching/shared-matched-jobs.service");
 const subscriptionService = require("./subscription.service");
 
@@ -62,10 +62,14 @@ function analyzeProfile(profile, jobDescription) {
   const missingSkills = required.filter((keyword) => !skillMap.has(normalizeTerm(keyword)));
   const validProjects = (profile.projects || []).filter(validStructuredProject);
   const selectedProjects = rankProjects(validProjects, required, 2);
+  const selectedLearningItems = rankLearningItems(profile, { jobKeywords: required }, 5);
+  const selectedCertifications = selectedLearningItems.filter((item) => item.itemType === "certification");
+  const selectedCourses = selectedLearningItems.filter((item) => item.itemType === "course");
 
   const skillsScore = scoreRatio(matchedSkills.length, required.length);
   const projectsScore = selectedProjects.length ? Math.round(selectedProjects.reduce((sum, item) => sum + item.score, 0) / selectedProjects.length) : 0;
-  const totalScore = Math.round(skillsScore * 0.60 + projectsScore * 0.40);
+  const learningScore = required.length ? scoreRatio(unique(selectedLearningItems.flatMap((item) => item.matchedKeywords)).length, required.length) : 0;
+  const totalScore = Math.round(skillsScore * 0.50 + projectsScore * 0.35 + learningScore * 0.15);
   const warnings = [];
   if (!required.length) warnings.push("Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.");
   if (missingSkills.length) warnings.push("Skills ausentes sao requisitos identificados na vaga e nao serao exibidas como habilidades do candidato.");
@@ -79,6 +83,7 @@ function analyzeProfile(profile, jobDescription) {
     scoreDetails: {
       skillsMatchScore: skillsScore,
       projectsMatchScore: projectsScore,
+      coursesAndCertificationsMatchScore: learningScore,
       totalScore,
     },
     matchedSkills: unique(matchedSkills),
@@ -86,6 +91,8 @@ function analyzeProfile(profile, jobDescription) {
     matchedTechnologies: unique(matchedSkills),
     missingTechnologies: missingSkills,
     selectedProjects,
+    selectedCourses,
+    selectedCertifications,
     projectScores: selectedProjects.map((project) => ({ project, score: project.score, reason: project.reason })),
     warnings,
   };
@@ -113,7 +120,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
     selectedSubprofileName: profile.profileName,
     linkVaga: metadata.linkVaga || "",
     suggestedSummary: profile.summary,
-    semanticFeedback: `Matching deterministico: skills 60% e projetos 40%. Resumo, formacao, experiencias, cursos, certificacoes e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
+    semanticFeedback: `Matching deterministico: skills 50%, projetos 35% e certificacoes/cursos 15%. Resumo, formacao, experiencias e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
   };
   const compiledResume = compileResume({ profile, matchResult: result });
   const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: result, compiledResume });

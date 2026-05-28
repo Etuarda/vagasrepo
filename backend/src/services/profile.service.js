@@ -149,6 +149,7 @@ function buildGlobalCatalog(global, subprofile) {
       github: global.github,
       lattes: global.lattes,
       summary: global.summary,
+      objective: global.objective,
     },
     skills: withSelection(global.skills, "skills"),
     projects: withSelection(global.projects, "projects"),
@@ -200,6 +201,7 @@ async function ensureDefaultProfile(userId, db = prisma) {
       github: user.github || "",
       lattes: user.lattes || "",
       summary: user.summary || "",
+      objective: "",
     },
   });
 }
@@ -275,6 +277,7 @@ async function createProfile(userId, { profileName }) {
         github: base.github,
         lattes: base.lattes,
         summary: base.summary,
+        objective: base.objective,
         category: normalizeTerm(profileName),
       },
       include: profileInclude,
@@ -430,6 +433,7 @@ async function updateSubprofileAllocation(userId, data) {
         github: catalog.github,
         lattes: catalog.lattes,
         summary: catalog.summary,
+        objective: catalog.objective,
       },
     }));
   }

@@ -194,6 +194,7 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
   newPage(ctx);
 
   write(ctx, resume.header.name, { size: 23, font: bold, lineHeight: 29 });
+  if (resume.header.objective) write(ctx, resume.header.objective, { size: 12, font: bold, lineHeight: 17 });
   if (resume.header.title) write(ctx, resume.header.title, { size: 11, font: bold, lineHeight: 16 });
   writeSegments(ctx, [
     { label: resume.header.location },
@@ -219,24 +220,24 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
       ctx.y -= 4;
     });
   }
+  if (resume.projects.length) {
+    section(ctx, "Projetos");
+    resume.projects.forEach((item) => {
+      write(ctx, item.title, { font: bold });
+      writeSegments(ctx, [
+        { label: item.repositoryUrl, uri: toUrl(item.repositoryUrl) },
+        { label: item.deployUrl, uri: toUrl(item.deployUrl) },
+      ], { size: 10.5 });
+      write(ctx, item.summary);
+      ctx.y -= 4;
+    });
+  }
   if (resume.experiences.length) {
     section(ctx, "Experiencia profissional");
     resume.experiences.forEach((item) => {
       write(ctx, item.title, { font: bold });
       write(ctx, [item.period, item.workload].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
       bullet(ctx, item.description);
-      ctx.y -= 4;
-    });
-  }
-  if (resume.projects.length) {
-    section(ctx, "Projetos");
-    resume.projects.forEach((item) => {
-      write(ctx, [item.title, item.category].filter(Boolean).join(" - "), { font: bold });
-      writeSegments(ctx, [
-        { label: item.repositoryUrl, uri: toUrl(item.repositoryUrl) },
-        { label: item.deployUrl, uri: toUrl(item.deployUrl) },
-      ], { size: 10.5 });
-      write(ctx, item.summary);
       ctx.y -= 4;
     });
   }
