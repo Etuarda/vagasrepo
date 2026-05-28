@@ -289,6 +289,7 @@ model Project {
   technicalSolution String   @default("")
   architecture      String   @default("")
   stack             String   @default("")
+  learnedSkills     String[] @default([])
   repositoryUrl     String   @default("")
   deployUrl         String   @default("")
   userId            String
@@ -361,6 +362,7 @@ model Course {
   period      String   @default("")
   workload    String   @default("")
   description String   @default("")
+  learnedSkills String[] @default([])
   userId      String
   profileId   String?
   createdAt   DateTime @default(now())
@@ -380,6 +382,7 @@ model Certification {
   period        String   @default("")
   workload      String   @default("")
   credentialUrl String   @default("")
+  learnedSkills String[] @default([])
   userId        String
   profileId     String?
   createdAt     DateTime @default(now())
@@ -413,6 +416,7 @@ model Education {
   title       String
   institution String
   period      String   @default("")
+  learnedSkills String[] @default([])
   userId      String
   profileId   String?
   createdAt   DateTime @default(now())

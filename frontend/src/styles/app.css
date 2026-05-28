@@ -76,6 +76,11 @@ a.text-\[\#0563C1\] {
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+textarea.editorial-input {
+  overflow: hidden;
+  resize: vertical;
+}
+
 .editorial-input:focus {
   border-color: var(--ink);
   box-shadow: 0 0 0 3px rgba(18, 16, 14, 0.2);

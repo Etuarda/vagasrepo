@@ -201,6 +201,7 @@ function renderProjects() {
               <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(project.category || "other")}</p>
               <p class="text-sm text-taupe mt-2 leading-relaxed">${escapeHtml(project.shortDescription)}</p>
               ${project.stack ? `<p class="text-xs text-stone mt-2">Stack: ${escapeHtml(project.stack)}</p>` : ""}
+              ${project.learnedSkills?.length ? `<p class="text-xs text-stone mt-2">Habilidades aprendidas: ${escapeHtml(project.learnedSkills.join(", "))}</p>` : ""}
               <div class="flex flex-wrap gap-4 mt-3">
                 ${project.repositoryUrl ? `<a href="${escapeHtml(project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(project.repositoryUrl)}</a>` : ""}
                 ${project.deployUrl ? `<a href="${escapeHtml(project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(project.deployUrl)}</a>` : ""}
@@ -258,7 +259,7 @@ function renderEducations() {
   const items = state.profile?.educations || [];
   root.innerHTML = items.length ? items.map((item) => `
     <article class="contrast-surface border border-borderLight rounded-2xl p-4 flex justify-between gap-3">
-      <p class="text-sm"><strong>${escapeHtml(item.title)}</strong> | ${escapeHtml(item.institution)}${item.period ? ` | ${escapeHtml(item.period)}` : ""}</p>
+      <p class="text-sm"><strong>${escapeHtml(item.title)}</strong> | ${escapeHtml(item.institution)}${item.period ? ` | ${escapeHtml(item.period)}` : ""}${item.learnedSkills?.length ? ` | Skills: ${escapeHtml(item.learnedSkills.join(", "))}` : ""}</p>
       ${state.profile?.isGlobal ? `<div class="flex gap-3"><button type="button" data-edit-education="${item.id}" class="text-[10px] font-bold uppercase">Editar</button><button type="button" data-remove-education="${item.id}" class="text-[10px] font-bold uppercase text-red-700">Remover</button></div>` : ""}
     </article>`).join("") : `<p class="text-sm text-taupe">Nenhuma formação cadastrada.</p>`;
 }
@@ -309,6 +310,7 @@ function renderCoursesAndCertifications() {
                   <div>
                     <h4 class="font-bold">${escapeHtml(course.title)}</h4>
                     <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(course.institution || "Instituição não informada")} ${course.period ? ` | ${escapeHtml(course.period)}` : ""}${course.workload ? ` | Duração: ${escapeHtml(course.workload)}` : ""}</p>
+                    ${course.learnedSkills?.length ? `<p class="text-xs text-stone mt-2">Habilidades aprendidas: ${escapeHtml(course.learnedSkills.join(", "))}</p>` : ""}
                     ${course.description ? `<p class="text-sm text-taupe mt-3">${escapeHtml(course.description)}</p>` : ""}
                   </div>
                   <div class="flex gap-3"><button type="button" data-edit-course="${course.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button><button type="button" data-remove-course="${course.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button></div>
@@ -331,6 +333,7 @@ function renderCoursesAndCertifications() {
                   <div>
                     <h4 class="font-bold">${escapeHtml(certification.title)}</h4>
                     <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(certification.issuer || "Emissor não informado")} ${certification.period ? ` | ${escapeHtml(certification.period)}` : ""}${certification.workload ? ` | Duração: ${escapeHtml(certification.workload)}` : ""}</p>
+                    ${certification.learnedSkills?.length ? `<p class="text-xs text-stone mt-2">Habilidades aprendidas: ${escapeHtml(certification.learnedSkills.join(", "))}</p>` : ""}
                     ${certification.credentialUrl ? `<a href="${escapeHtml(certification.credentialUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-xs text-[#0563C1] underline break-all">${escapeHtml(certification.credentialUrl)}</a>` : ""}
                   </div>
                   <div class="flex gap-3"><button type="button" data-edit-certification="${certification.id}" class="text-[10px] font-bold uppercase tracking-widest">Editar</button><button type="button" data-remove-certification="${certification.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button></div>
@@ -991,14 +994,14 @@ export const career = {
   async removeMatch(id) {
     await api(`/optimized-resumes/${id}`, { method: "DELETE" }, state.token);
     invalidateHistoryCache();
-    await career.loadHistory({ force: true, successMessage: "Histórico atualizado." });
+    await Promise.all([jobs.load(), career.loadHistory({ force: true, successMessage: "Histórico atualizado." })]);
   },
 
   async markAnalysisApplied(id) {
     const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify({ status: "applied" }) }, state.token);
     ui.notify(out.message);
     invalidateHistoryCache();
-    await career.loadHistory({ force: true, successMessage: "Histórico atualizado." });
+    await Promise.all([jobs.load(), career.loadHistory({ force: true, successMessage: "Histórico atualizado." })]);
   },
 
   async openAnalysis(id) {
@@ -1017,7 +1020,7 @@ export const career = {
     const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, state.token);
     ui.notify(out.message);
     invalidateHistoryCache();
-    await Promise.all([career.loadHistory({ force: true, successMessage: "Histórico atualizado." }), career.openAnalysis(out.analysis.id)]);
+    await Promise.all([jobs.load(), career.loadHistory({ force: true, successMessage: "Histórico atualizado." }), career.openAnalysis(out.analysis.id)]);
   },
 
   async createApplication(analysisId, payload) {
@@ -1038,7 +1041,7 @@ export const career = {
   async refreshHistoryAfterTrackingChange() {
     invalidateHistoryCache();
     if (!document.getElementById("panel-matching")?.classList.contains("hidden")) {
-      await career.loadHistory({ force: true, successMessage: "Histórico atualizado." });
+      await Promise.all([jobs.load(), career.loadHistory({ force: true, successMessage: "Histórico atualizado." })]);
     }
   },
 
@@ -1057,6 +1060,7 @@ export const career = {
       setValue("education-title-field", item.title);
       setValue("education-institution", item.institution);
       setValue("education-period", item.period);
+      setValue("education-learned-skills", (item.learnedSkills || []).join(", "));
     } else if (type === "experience") {
       setValue("experience-company", item.company);
       setValue("experience-role", item.role);
@@ -1068,6 +1072,7 @@ export const career = {
       setValue("project-category", item.category);
       setValue("project-short-description", item.shortDescription);
       setValue("project-stack", item.stack);
+      setValue("project-learned-skills", (item.learnedSkills || []).join(", "));
       setValue("project-repository-url", item.repositoryUrl);
       setValue("project-deploy-url", item.deployUrl);
     } else if (type === "course") {
@@ -1076,12 +1081,14 @@ export const career = {
       setValue("course-period", item.period);
       setValue("course-workload", item.workload);
       setValue("course-description", item.description);
+      setValue("course-learned-skills", (item.learnedSkills || []).join(", "));
     } else if (type === "certification") {
       setValue("certification-title", item.title);
       setValue("certification-issuer", item.issuer);
       setValue("certification-period", item.period);
       setValue("certification-workload", item.workload);
       setValue("certification-url", item.credentialUrl);
+      setValue("certification-learned-skills", (item.learnedSkills || []).join(", "));
     } else if (type === "language") {
       setValue("language-name", item.name);
       setValue("language-level", item.level);

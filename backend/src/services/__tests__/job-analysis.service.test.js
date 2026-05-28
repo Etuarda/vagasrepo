@@ -5,6 +5,9 @@ jest.mock("../../lib/prisma", () => ({
       update: jest.fn(),
       create: jest.fn(),
     },
+    job: {
+      updateMany: jest.fn(),
+    },
   },
 }));
 jest.mock("../../lib/cache", () => ({
@@ -32,7 +35,12 @@ describe("job analysis status", () => {
       where: { id: "analysis" },
       data: expect.objectContaining({ status: "applied", appliedAt: expect.any(Date) }),
     }));
+    expect(prisma.job.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user", jobAnalysisId: "analysis" },
+      data: { fase: "Aplicada", status: "Ativa" },
+    });
     expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
+    expect(cache.invalidate).toHaveBeenCalledWith("jobs", "user");
   });
 
   it("cria nova versao ao editar conteudo da analise", async () => {

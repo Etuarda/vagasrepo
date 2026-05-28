@@ -3,9 +3,15 @@ const { z } = require("zod");
 const cleanString = (max = 500) => z.string().trim().max(max).default("");
 const emptyToUndefined = (value) => (value === "" || value === null ? undefined : value);
 const optionalUuid = (message) => z.preprocess(emptyToUndefined, z.string().uuid(message).optional());
-const senioritySchema = z.enum(["junior", "pleno", "senior", "lead", "specialist"], {
+const senioritySchema = z.enum(["estagiario", "junior", "pleno", "senior", "lead", "specialist"], {
   errorMap: () => ({ message: "Senioridade e obrigatoria" }),
 });
+const learnedSkillsSchema = z
+  .array(z.string().trim().min(1).max(2000))
+  .or(z.string().trim().max(2000).transform((value) => [value]))
+  .transform((items) => items.flatMap((item) => item.split(",").map((skill) => skill.trim()).filter(Boolean)))
+  .pipe(z.array(z.string().min(1).max(80)).max(80, "Informe no maximo 80 habilidades aprendidas"))
+  .default([]);
 
 const profileSchema = z.object({
   profileName: z.string().trim().min(2, "Nome do perfil deve ter pelo menos 2 caracteres").max(80),
@@ -51,6 +57,7 @@ const projectSchema = z.object({
   category: cleanString(40),
   shortDescription: z.string().trim().min(10, "Resumo curto deve ter pelo menos 10 caracteres").max(500),
   stack: cleanString(500),
+  learnedSkills: learnedSkillsSchema,
   repositoryUrl: z.string().trim().url("Link do repositorio invalido").or(z.literal("")).default(""),
   deployUrl: z.string().trim().url("Link do deploy invalido").or(z.literal("")).default(""),
 });
@@ -71,6 +78,7 @@ const courseSchema = z.object({
   period: cleanString(120),
   workload: cleanString(80),
   description: cleanString(1000),
+  learnedSkills: learnedSkillsSchema,
 });
 
 const certificationSchema = z.object({
@@ -80,6 +88,7 @@ const certificationSchema = z.object({
   period: cleanString(120),
   workload: cleanString(80),
   credentialUrl: z.string().trim().url("Link da credencial invalido").or(z.literal("")).default(""),
+  learnedSkills: learnedSkillsSchema,
 });
 
 const languageSchema = z.object({
@@ -93,6 +102,7 @@ const educationSchema = z.object({
   title: z.string().trim().min(2, "Curso e obrigatorio").max(180),
   institution: z.string().trim().min(2, "Instituicao e obrigatoria").max(180),
   period: cleanString(120),
+  learnedSkills: learnedSkillsSchema,
 });
 
 const subprofileAllocationSchema = z.object({

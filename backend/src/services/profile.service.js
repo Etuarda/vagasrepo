@@ -10,14 +10,15 @@ const projectSelect = {
   category: true,
   shortDescription: true,
   stack: true,
+  learnedSkills: true,
   repositoryUrl: true,
   deployUrl: true,
 };
 const experienceSelect = { id: true, company: true, role: true, period: true, workload: true, description: true };
-const courseSelect = { id: true, title: true, institution: true, period: true, workload: true, description: true };
-const certificationSelect = { id: true, title: true, issuer: true, period: true, workload: true, credentialUrl: true };
+const courseSelect = { id: true, title: true, institution: true, period: true, workload: true, description: true, learnedSkills: true };
+const certificationSelect = { id: true, title: true, issuer: true, period: true, workload: true, credentialUrl: true, learnedSkills: true };
 const languageSelect = { id: true, name: true, level: true };
-const educationSelect = { id: true, title: true, institution: true, period: true };
+const educationSelect = { id: true, title: true, institution: true, period: true, learnedSkills: true };
 
 const globalCatalogInclude = {
   skills: { orderBy: { name: "asc" }, select: skillSelect },
@@ -85,6 +86,7 @@ function serializeProfile(profile) {
       category: project.category || "other",
       shortDescription: project.customSummary || project.shortDescription || "",
       stack: project.stack || "",
+      learnedSkills: project.learnedSkills || [],
       relevanceWeight: project.relevanceWeight || 50,
       repositoryUrl: project.repositoryUrl || "",
       deployUrl: project.deployUrl || "",
@@ -104,6 +106,7 @@ function serializeProfile(profile) {
       period: course.period || "",
       workload: course.workload || "",
       description: course.description || "",
+      learnedSkills: course.learnedSkills || [],
     })),
     certifications: certifications.map((certification) => ({
       id: certification.id,
@@ -112,6 +115,7 @@ function serializeProfile(profile) {
       period: certification.period || "",
       workload: certification.workload || "",
       credentialUrl: certification.credentialUrl || "",
+      learnedSkills: certification.learnedSkills || [],
     })),
     languages: languages.map((language) => ({
       id: language.id,
@@ -123,6 +127,7 @@ function serializeProfile(profile) {
       title: education.title,
       institution: education.institution,
       period: education.period || "",
+      learnedSkills: education.learnedSkills || [],
     })),
   };
 }
@@ -526,6 +531,7 @@ async function addProject(userId, profileId, data) {
       shortDescription: data.shortDescription,
       category: data.category || "other",
       stack: data.stack || "",
+      learnedSkills: data.learnedSkills || [],
       businessProblem: "",
       technicalSolution: "",
       architecture: "",
@@ -558,6 +564,7 @@ async function updateProject(userId, profileId, id, data) {
       shortDescription: data.shortDescription,
       category: data.category || "other",
       stack: data.stack || "",
+      learnedSkills: data.learnedSkills || [],
       businessProblem: "",
       technicalSolution: "",
       architecture: "",

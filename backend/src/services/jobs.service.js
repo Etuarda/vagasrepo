@@ -26,6 +26,13 @@ async function listJobs(userId, { q, status, period, dateFrom, dateTo, limit = 5
   return cache.remember("jobs", userId, variant, () => loadJobs(userId, { q, status, period, dateFrom, dateTo, limit, cursor }));
 }
 
+function normalizeJobStatusAndPhase(data) {
+  if (data.fase === "Encerrada" || data.status === "Encerrada") {
+    return { ...data, fase: "Encerrada", status: "Encerrada" };
+  }
+  return data;
+}
+
 async function loadJobs(userId, { q, status, period, dateFrom, dateTo, limit = 50, cursor }) {
   const and = [];
 
@@ -74,10 +81,11 @@ async function loadJobs(userId, { q, status, period, dateFrom, dateTo, limit = 5
 }
 
 async function createJob(userId, data) {
+  const normalized = normalizeJobStatusAndPhase(data);
   const job = await prisma.$transaction(async (tx) => {
     await subscriptionService.assertApplicationTrackingLimit(userId, tx);
     return tx.job.create({
-      data: { ...data, userId },
+      data: { ...normalized, userId },
     });
   });
   await Promise.all([
@@ -98,9 +106,10 @@ async function getJob(userId, id) {
 }
 
 async function updateJob(userId, id, data) {
+  const normalized = normalizeJobStatusAndPhase(data);
   const result = await prisma.job.updateMany({
     where: { id, userId },
-    data,
+    data: normalized,
   });
 
   if (result.count === 0) {
@@ -110,10 +119,16 @@ async function updateJob(userId, id, data) {
   }
 
   const job = await prisma.job.findFirst({ where: { id, userId }, include: linkedJobInclude });
-  if (job.jobAnalysisId && data.fase === "Aplicada") {
+  if (job.jobAnalysisId && normalized.fase === "Aplicada") {
     await prisma.jobAnalysis.updateMany({
       where: { id: job.jobAnalysisId, userId, status: { not: "applied" } },
       data: { status: "applied", appliedAt: new Date() },
+    });
+  }
+  if (job.jobAnalysisId && (normalized.fase === "Encerrada" || normalized.status === "Encerrada")) {
+    await prisma.jobAnalysis.updateMany({
+      where: { id: job.jobAnalysisId, userId },
+      data: { status: "archived" },
     });
   }
   await Promise.all([
@@ -147,4 +162,4 @@ async function deleteJob(userId, id) {
   return { message: "Removido" };
 }
 
-module.exports = { listJobs, getJob, createJob, updateJob, deleteJob };
+module.exports = { listJobs, getJob, createJob, updateJob, deleteJob, normalizeJobStatusAndPhase };

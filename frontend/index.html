@@ -39,10 +39,46 @@
         <button data-open-auth="register" class="w-full sm:w-auto border border-borderLight px-8 sm:px-12 py-4 sm:py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-white transition-all">Criar Conta</button>
       </div>
       <section class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 text-left" aria-label="Planos disponiveis">
-        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Free</h2><p class="text-sm text-taupe">3 analises vitalicias e ate 10 acompanhamentos.</p><button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta Free</button></article>
-        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Basic</h2><p class="text-sm text-taupe">R$ 9,90/mes | 30 analises mensais.</p><button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button></article>
-        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Pro</h2><p class="text-sm text-taupe">R$ 19,90/mes | 100 analises mensais.</p><button data-open-auth="register" class="bg-ink text-paper px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button></article>
-        <article class="editorial-card rounded-2xl p-5 space-y-4"><h2 class="font-serif text-3xl">Premium</h2><p class="text-sm text-taupe">R$ 29,90/mes | 500 analises mensais.</p><button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button></article>
+        <article class="editorial-card rounded-2xl p-5 space-y-4">
+          <h2 class="font-serif text-3xl">Free</h2>
+          <p class="text-sm text-taupe">R$ 0,00</p>
+          <ul class="text-sm text-taupe space-y-2">
+            <li>3 analises de matching vitalicias com geracao de curriculo.</li>
+            <li>1 Perfil Global.</li>
+            <li>Sem subperfis, vagas compartilhadas ou acompanhamento de vagas.</li>
+          </ul>
+          <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta Free</button>
+        </article>
+        <article class="editorial-card rounded-2xl p-5 space-y-4">
+          <h2 class="font-serif text-3xl">Basic</h2>
+          <p class="text-sm text-taupe">R$ 9,90/mes</p>
+          <ul class="text-sm text-taupe space-y-2">
+            <li>Todas as funcionalidades principais.</li>
+            <li>30 analises de matching por mes.</li>
+            <li>Acompanhamento de vagas e acesso a vagas compartilhadas.</li>
+          </ul>
+          <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button>
+        </article>
+        <article class="editorial-card rounded-2xl p-5 space-y-4">
+          <h2 class="font-serif text-3xl">Pro</h2>
+          <p class="text-sm text-taupe">R$ 19,90/mes</p>
+          <ul class="text-sm text-taupe space-y-2">
+            <li>Todas as funcionalidades.</li>
+            <li>100 analises de matching por mes.</li>
+            <li>Ate 5 subperfis para adaptar sua estrategia por area.</li>
+          </ul>
+          <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button>
+        </article>
+        <article class="editorial-card rounded-2xl p-5 space-y-4">
+          <h2 class="font-serif text-3xl">Premium</h2>
+          <p class="text-sm text-taupe">R$ 29,90/mes</p>
+          <ul class="text-sm text-taupe space-y-2">
+            <li>Todas as funcionalidades.</li>
+            <li>500 analises de matching por mes.</li>
+            <li>Ate 10 subperfis e aderencia das vagas compartilhadas ao perfil.</li>
+          </ul>
+          <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button>
+        </article>
       </section>
     </section>
 
@@ -200,6 +236,7 @@
                 <input type="text" id="profile-objective" maxlength="500" placeholder="Objetivo no curriculo (ex: Desenvolvedora Backend)" class="editorial-input md:col-span-2" />
                 <select id="profile-seniority" required class="editorial-input bg-white md:col-span-2">
                   <option value="">Senioridade *</option>
+                  <option value="estagiario">Estagiario</option>
                   <option value="junior">Junior</option>
                   <option value="pleno">Pleno</option>
                   <option value="senior">Senior</option>
@@ -234,6 +271,7 @@
               <input type="text" id="education-title-field" required placeholder="Curso / graduação" class="editorial-input text-sm" />
               <input type="text" id="education-institution" required placeholder="Instituição" class="editorial-input text-sm" />
               <input type="text" id="education-period" placeholder="Período" class="editorial-input text-sm" />
+              <input type="text" id="education-learned-skills" placeholder="Habilidades aprendidas (ex: SQL, Java, Git)" class="editorial-input text-sm md:col-span-3" />
               <button type="submit" data-submit-label="Adicionar" class="bg-ink text-paper rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
               <button type="button" data-cancel-edit="education" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
             </form>
@@ -249,6 +287,7 @@
               </select>
               <textarea id="project-short-description" required minlength="10" maxlength="500" rows="3" placeholder="Resumo curto para currículo" class="editorial-input text-sm md:col-span-2"></textarea>
               <input type="text" id="project-stack" placeholder="Stack para matching, nao exibida no curriculo (ex: Node.js, TypeScript, PostgreSQL)" class="editorial-input text-sm md:col-span-2" />
+              <input type="text" id="project-learned-skills" placeholder="Habilidades aprendidas (ex: Node.js, PostgreSQL, Docker)" class="editorial-input text-sm md:col-span-2" />
               <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
               <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
               <div class="md:col-span-2 flex justify-end">
@@ -312,6 +351,7 @@
                 <input type="text" id="course-institution" placeholder="Instituição" class="editorial-input text-sm" />
                 <input type="text" id="course-period" placeholder="Período" class="editorial-input text-sm" />
                 <input type="text" id="course-workload" placeholder="Duração (ex: 360h)" class="editorial-input text-sm" />
+                <input type="text" id="course-learned-skills" placeholder="Habilidades aprendidas" class="editorial-input text-sm" />
                 <textarea id="course-description" rows="2" placeholder="Descrição curta" class="editorial-input text-sm"></textarea>
                 <button type="submit" data-submit-label="Adicionar curso" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar curso</button>
                 <button type="button" data-cancel-edit="course" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
@@ -322,6 +362,7 @@
                 <input type="text" id="certification-issuer" placeholder="Emissor" class="editorial-input text-sm" />
                 <input type="text" id="certification-period" placeholder="Data ou período" class="editorial-input text-sm" />
                 <input type="text" id="certification-workload" placeholder="Duração (ex: 80h)" class="editorial-input text-sm" />
+                <input type="text" id="certification-learned-skills" placeholder="Habilidades aprendidas" class="editorial-input text-sm" />
                 <input type="url" id="certification-url" placeholder="Link da credencial" class="editorial-input text-sm" />
                 <button type="submit" data-submit-label="Adicionar certificação" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar certificação</button>
                 <button type="button" data-cancel-edit="certification" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>

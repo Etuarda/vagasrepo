@@ -13,9 +13,14 @@ function uniqueByNormalized(values) {
 }
 
 function compileSkills(profile, matchResult, rules) {
-  const catalog = new Map((profile.skillItems || (profile.skills || []).map((name) => ({ name, category: "other" })))
-    .map((skill) => [normalizeTerm(skill.name), skill]));
-  const matched = (matchResult.matchedSkills || []).map((name) => catalog.get(normalizeTerm(name))).filter(Boolean);
+  const catalogItems = [
+    ...(profile.skillItems || (profile.skills || []).map((name) => ({ name, category: "other" }))),
+    ...collectLearnedSkillItems(profile),
+  ];
+  const catalog = new Map(catalogItems.map((skill) => [normalizeTerm(skill.name), skill]));
+  const matched = (matchResult.matchedSkills || []).map((name) =>
+    catalog.get(normalizeTerm(name)) || { name, category: "learned" }
+  ).filter(Boolean);
   const transversal = [...catalog.values()].filter((skill) =>
     TRANSVERSAL_SKILLS.includes(normalizeTerm(skill.name)) &&
     (matchResult.jobKeywords || []).map(normalizeTerm).includes(normalizeTerm(skill.name))
@@ -23,6 +28,15 @@ function compileSkills(profile, matchResult, rules) {
   const targeted = matched.length || (matchResult.jobKeywords || []).length ? matched : [...catalog.values()];
   const ordered = uniqueByNormalized([...targeted, ...transversal]);
   return ordered.map((skill) => skill.name).join(", ");
+}
+
+function collectLearnedSkillItems(profile) {
+  return [
+    ...(profile.projects || []),
+    ...(profile.courses || []),
+    ...(profile.certifications || []),
+    ...(profile.educations || []),
+  ].flatMap((item) => (item.learnedSkills || []).map((name) => ({ name, category: "learned" })));
 }
 
 function parseHours(value) {
@@ -36,7 +50,7 @@ function parseMostRecentYear(value) {
 }
 
 function evidenceMatches(item, keywords) {
-  const source = [item.title, item.issuer, item.institution, item.description].join(" ");
+  const source = [item.title, item.issuer, item.institution, item.description, ...(item.learnedSkills || [])].join(" ");
   const normalizedSource = ` ${normalizeText(source)} `;
   return uniqueByNormalized((keywords || []).filter((keyword) => normalizedSource.includes(` ${normalizeTerm(keyword)} `)));
 }
@@ -103,4 +117,4 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
   }, rules);
 }
 
-module.exports = { compileResume, compileSkills, uniqueByNormalized, rankLearningItems, parseHours, parseMostRecentYear };
+module.exports = { compileResume, compileSkills, uniqueByNormalized, rankLearningItems, parseHours, parseMostRecentYear, collectLearnedSkillItems };

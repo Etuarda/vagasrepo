@@ -62,7 +62,7 @@ async function createFromAnalysis(userId, analysisId, payload) {
         linkVaga,
         linkCV: payload.linkCV,
         data: new Date(),
-        status: "Ativa",
+        status: payload.fase === "Encerrada" ? "Encerrada" : "Ativa",
         fase: payload.fase,
         acaoNecessaria: payload.acaoNecessaria,
         qualAcao: payload.acaoNecessaria ? payload.qualAcao : null,
@@ -78,6 +78,12 @@ async function createFromAnalysis(userId, analysisId, payload) {
       await tx.jobAnalysis.update({
         where: { id: analysis.id },
         data: { status: "applied", appliedAt: analysis.appliedAt || new Date() },
+      });
+    }
+    if (payload.fase === "Encerrada" && analysis.status !== "archived") {
+      await tx.jobAnalysis.update({
+        where: { id: analysis.id },
+        data: { status: "archived" },
       });
     }
     return created;

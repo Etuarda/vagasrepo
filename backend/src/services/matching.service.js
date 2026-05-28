@@ -4,7 +4,7 @@ const profileService = require("./profile.service");
 const { generateOptimizedResumePdf } = require("./pdf-output.service");
 const { classifyJob, normalizeTerm, normalizeText } = require("../modules/matching/keyword-normalizer");
 const { rankProjects } = require("../modules/matching/project-ranking.service");
-const { compileResume, rankLearningItems } = require("../modules/resume/resume-compiler.service");
+const { compileResume, rankLearningItems, collectLearnedSkillItems } = require("../modules/resume/resume-compiler.service");
 const { createSharedMatchedJob } = require("../modules/matching/shared-matched-jobs.service");
 const subscriptionService = require("./subscription.service");
 
@@ -22,6 +22,7 @@ function scoreRatio(matched, total) {
 }
 
 const SENIORITY_ORDER = Object.freeze({
+  estagiario: 0,
   junior: 1,
   pleno: 2,
   senior: 3,
@@ -30,7 +31,8 @@ const SENIORITY_ORDER = Object.freeze({
 });
 
 const SENIORITY_ALIASES = Object.freeze({
-  junior: ["junior", "jr", "júnior", "estagio", "estagiario", "trainee"],
+  estagiario: ["estagio", "estagiario", "estagiaria", "intern", "trainee"],
+  junior: ["junior", "jr", "júnior"],
   pleno: ["pleno", "mid", "middle"],
   senior: ["senior", "sênior", "sr"],
   lead: ["lead", "lider", "líder", "tech lead", "principal", "staff"],
@@ -42,7 +44,7 @@ function normalizeSeniority(value) {
   for (const [level, aliases] of Object.entries(SENIORITY_ALIASES)) {
     if (aliases.map(normalizeTerm).includes(normalized)) return level;
   }
-  return SENIORITY_ORDER[normalized] ? normalized : "";
+  return Object.prototype.hasOwnProperty.call(SENIORITY_ORDER, normalized) ? normalized : "";
 }
 
 function inferSeniority(text) {
@@ -57,8 +59,8 @@ function seniorityMatchScore(profileSeniority, jobSeniority) {
   const profile = normalizeSeniority(profileSeniority);
   const job = normalizeSeniority(jobSeniority);
   if (!profile || !job) return 75;
+  if (SENIORITY_ORDER[job] <= SENIORITY_ORDER[profile]) return 100;
   const distance = Math.abs(SENIORITY_ORDER[profile] - SENIORITY_ORDER[job]);
-  if (distance === 0) return 100;
   if (distance === 1) return 70;
   return 35;
 }
@@ -77,7 +79,7 @@ function getMissingResumeFields(profile) {
   }
   if (!String(profile.summary || "").trim()) missing.push("resumo profissional");
   if (!String(profile.seniority || "").trim()) missing.push("senioridade");
-  if (!(profile.skillItems || []).length) missing.push("habilidades");
+  if (!(profile.skillItems || []).length && !collectLearnedSkillItems(profile).length) missing.push("habilidades");
   if (!(profile.educations || []).length && !(profile.experiences || []).length) {
     missing.push("pelo menos 1 formacao ou experiencia");
   }
@@ -96,11 +98,20 @@ function assertProfileReadyForResume(profile) {
   throw err;
 }
 
+function analysisStatusToJobUpdate(status) {
+  if (status === "applied") return { fase: "Aplicada", status: "Ativa" };
+  if (status === "archived" || status === "rejected") return { fase: "Encerrada", status: "Encerrada" };
+  return null;
+}
+
 function analyzeProfile(profile, jobDescription) {
   const job = classifyJob(jobDescription);
   const required = job.keywords;
   const jobSeniority = inferSeniority(jobDescription);
-  const skillMap = new Map((profile.skillItems || []).map((skill) => [normalizeTerm(skill.name), skill]));
+  const skillMap = new Map([
+    ...(profile.skillItems || []),
+    ...collectLearnedSkillItems(profile),
+  ].map((skill) => [normalizeTerm(skill.name), skill]));
   const matchedSkills = required.filter((keyword) => skillMap.has(normalizeTerm(keyword)))
     .map((keyword) => skillMap.get(normalizeTerm(keyword)).name);
   const missingSkills = required.filter((keyword) => !skillMap.has(normalizeTerm(keyword)));
@@ -317,7 +328,17 @@ async function updateAnalysis(userId, id, data) {
       data: { ...updates, ...(linkVaga !== undefined ? { jobUrl: linkVaga } : {}), appliedAt },
     });
   }
-  await cache.invalidate("match-history", userId);
+  const linkedJobUpdate = analysisStatusToJobUpdate(data.status);
+  if (linkedJobUpdate) {
+    await prisma.job.updateMany({
+      where: { userId, jobAnalysisId: id },
+      data: linkedJobUpdate,
+    });
+  }
+  await Promise.all([
+    cache.invalidate("match-history", userId),
+    ...(linkedJobUpdate ? [cache.invalidate("jobs", userId)] : []),
+  ]);
   return updated;
 }
 
@@ -380,4 +401,5 @@ module.exports = {
   inferSeniority,
   normalizeSeniority,
   seniorityMatchScore,
+  analysisStatusToJobUpdate,
 };

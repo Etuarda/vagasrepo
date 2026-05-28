@@ -532,6 +532,7 @@ function wireEvents() {
         title: document.getElementById("education-title-field")?.value || "",
         institution: document.getElementById("education-institution")?.value || "",
         period: document.getElementById("education-period")?.value || "",
+        learnedSkills: document.getElementById("education-learned-skills")?.value || "",
       };
       await runWithFeedback(
         getSubmitButton(e, formEducation),
@@ -566,12 +567,13 @@ function wireEvents() {
       const category = document.getElementById("project-category")?.value || "backend";
       const shortDescription = document.getElementById("project-short-description")?.value || "";
       const stack = document.getElementById("project-stack")?.value || "";
+      const learnedSkills = document.getElementById("project-learned-skills")?.value || "";
 
       await runWithFeedback(
         getSubmitButton(e, formProject),
         { busyText: "Salvando...", notice: "Salvando projeto..." },
         async () => {
-          const payload = { title, category, shortDescription, stack, repositoryUrl, deployUrl };
+          const payload = { title, category, shortDescription, stack, learnedSkills, repositoryUrl, deployUrl };
           if (formProject.dataset.editId) await career.updateProject(formProject.dataset.editId, payload);
           else await career.addProject(payload);
           career.cancelEdit("project");
@@ -643,6 +645,7 @@ function wireEvents() {
         period: document.getElementById("course-period")?.value || "",
         workload: document.getElementById("course-workload")?.value || "",
         description: document.getElementById("course-description")?.value || "",
+        learnedSkills: document.getElementById("course-learned-skills")?.value || "",
       };
       await runWithFeedback(
         getSubmitButton(e, formCourse),
@@ -681,6 +684,7 @@ function wireEvents() {
         period: document.getElementById("certification-period")?.value || "",
         workload: document.getElementById("certification-workload")?.value || "",
         credentialUrl: document.getElementById("certification-url")?.value || "",
+        learnedSkills: document.getElementById("certification-learned-skills")?.value || "",
       };
       await runWithFeedback(
         getSubmitButton(e, formCertification),
