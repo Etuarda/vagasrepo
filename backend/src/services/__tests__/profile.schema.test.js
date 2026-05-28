@@ -15,16 +15,16 @@ describe("profile skill input", () => {
 });
 
 describe("project and subprofile inputs", () => {
-  it("aceita stack textual cadastrada para um projeto", () => {
+  it("aceita habilidades aprendidas para matching do projeto", () => {
     const payload = projectSchema.parse({
       title: "API",
       category: "backend",
       shortDescription: "Servico de assinaturas.",
-      stack: "Node.js, TypeScript, PostgreSQL",
+      learnedSkills: "Node.js, TypeScript, PostgreSQL",
       repositoryUrl: "",
       deployUrl: "",
     });
-    expect(payload.stack).toBe("Node.js, TypeScript, PostgreSQL");
+    expect(payload.learnedSkills).toEqual(["Node.js", "TypeScript", "PostgreSQL"]);
   });
 
   it("valida a alocacao selecionada para um subperfil", () => {

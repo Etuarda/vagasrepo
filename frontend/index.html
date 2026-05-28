@@ -285,13 +285,9 @@
           <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-6" aria-labelledby="projects-title">
             <h3 id="projects-title" class="font-serif text-3xl">Projetos.</h3>
             <form id="form-project" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm" />
-              <select id="project-category" class="editorial-input text-sm bg-white">
-                <option value="backend">Backend</option><option value="frontend">Frontend</option><option value="fullstack">Fullstack</option><option value="data">Dados</option><option value="devops">DevOps</option><option value="ai">IA</option>
-              </select>
+              <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm md:col-span-2" />
               <textarea id="project-short-description" required minlength="10" maxlength="500" rows="3" placeholder="Resumo curto para currículo" class="editorial-input text-sm md:col-span-2"></textarea>
-              <input type="text" id="project-stack" placeholder="Stack para matching, nao exibida no curriculo (ex: Node.js, TypeScript, PostgreSQL)" class="editorial-input text-sm md:col-span-2" />
-              <input type="text" id="project-learned-skills" placeholder="Habilidades aprendidas (ex: Node.js, PostgreSQL, Docker)" class="editorial-input text-sm md:col-span-2" />
+              <input type="text" id="project-learned-skills" placeholder="Habilidades aprendidas para matching (ex: Node.js, PostgreSQL, Docker)" class="editorial-input text-sm md:col-span-2" />
               <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
               <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
               <div class="md:col-span-2 flex justify-end">

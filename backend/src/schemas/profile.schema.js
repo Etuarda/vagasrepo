@@ -56,7 +56,6 @@ const projectSchema = z.object({
   title: z.string().trim().min(2, "Titulo do projeto e obrigatorio").max(160),
   category: cleanString(40),
   shortDescription: z.string().trim().min(10, "Resumo curto deve ter pelo menos 10 caracteres").max(500),
-  stack: cleanString(500),
   learnedSkills: learnedSkillsSchema,
   repositoryUrl: z.string().trim().url("Link do repositorio invalido").or(z.literal("")).default(""),
   deployUrl: z.string().trim().url("Link do deploy invalido").or(z.literal("")).default(""),

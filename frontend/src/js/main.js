@@ -564,16 +564,15 @@ function wireEvents() {
       const title = document.getElementById("project-title")?.value || "";
       const repositoryUrl = document.getElementById("project-repository-url")?.value || "";
       const deployUrl = document.getElementById("project-deploy-url")?.value || "";
-      const category = document.getElementById("project-category")?.value || "backend";
+      const category = "other";
       const shortDescription = document.getElementById("project-short-description")?.value || "";
-      const stack = document.getElementById("project-stack")?.value || "";
       const learnedSkills = document.getElementById("project-learned-skills")?.value || "";
 
       await runWithFeedback(
         getSubmitButton(e, formProject),
         { busyText: "Salvando...", notice: "Salvando projeto..." },
         async () => {
-          const payload = { title, category, shortDescription, stack, learnedSkills, repositoryUrl, deployUrl };
+          const payload = { title, category, shortDescription, learnedSkills, repositoryUrl, deployUrl };
           if (formProject.dataset.editId) await career.updateProject(formProject.dataset.editId, payload);
           else await career.addProject(payload);
           career.cancelEdit("project");

@@ -12,7 +12,6 @@ function scoreProject(project, jobKeywords) {
   const skillSource = [
     project.title,
     project.category,
-    project.stack,
     ...(project.learnedSkills || []),
   ].join(" ");
   const evidenceSource = [

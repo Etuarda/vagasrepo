@@ -6,7 +6,7 @@ const projects = [
     title: "API de assinaturas",
     category: "backend",
     shortDescription: "API para assinaturas.",
-    stack: "Node.js, PostgreSQL, APIs REST",
+    learnedSkills: ["Node.js", "PostgreSQL", "APIs REST"],
     relevanceWeight: 70,
   },
   {
@@ -34,18 +34,21 @@ describe("project ranking", () => {
     expect(ranked[0].reason).toContain("nodejs");
   });
 
-  it("considera apenas os campos atuais, incluindo a stack textual", () => {
+  it("considera habilidades aprendidas, descricao e links, ignorando stack textual legada", () => {
     const ranked = rankProjects([{
       id: "legacy",
       title: "Portal",
       category: "frontend",
-      shortDescription: "Tela institucional.",
+      shortDescription: "Tela institucional com API REST documentada.",
       stack: "Node.js, PostgreSQL, APIs REST",
+      learnedSkills: ["Node.js", "PostgreSQL"],
+      repositoryUrl: "https://github.com/example/api-rest",
       technologies: ["Node.js"],
       technicalSolution: "API REST com PostgreSQL.",
       bullets: [{ content: "Node.js e PostgreSQL.", keywords: ["nodejs"] }],
     }], ["nodejs", "postgresql", "api-rest"], 1);
 
     expect(ranked[0].matchedKeywords).toEqual(["nodejs", "postgresql", "api-rest"]);
+    expect(ranked[0].skillMatchScore).toBe(67);
   });
 });

@@ -212,7 +212,6 @@ function renderProjects() {
               <h4 class="font-serif text-2xl">${escapeHtml(project.title)}</h4>
               <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(project.category || "other")}</p>
               <p class="text-sm text-taupe mt-2 leading-relaxed">${escapeHtml(project.shortDescription)}</p>
-              ${project.stack ? `<p class="text-xs text-stone mt-2">Stack: ${escapeHtml(project.stack)}</p>` : ""}
               ${project.learnedSkills?.length ? `<p class="text-xs text-stone mt-2">Habilidades aprendidas: ${escapeHtml(project.learnedSkills.join(", "))}</p>` : ""}
               <div class="flex flex-wrap gap-4 mt-3">
                 ${project.repositoryUrl ? `<a href="${escapeHtml(project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(project.repositoryUrl)}</a>` : ""}
@@ -1082,9 +1081,7 @@ export const career = {
       setValue("experience-description", item.description);
     } else if (type === "project") {
       setValue("project-title", item.title);
-      setValue("project-category", item.category);
       setValue("project-short-description", item.shortDescription);
-      setValue("project-stack", item.stack);
       setValue("project-learned-skills", (item.learnedSkills || []).join(", "));
       setValue("project-repository-url", item.repositoryUrl);
       setValue("project-deploy-url", item.deployUrl);
