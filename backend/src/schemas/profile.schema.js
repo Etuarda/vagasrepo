@@ -3,6 +3,9 @@ const { z } = require("zod");
 const cleanString = (max = 500) => z.string().trim().max(max).default("");
 const emptyToUndefined = (value) => (value === "" || value === null ? undefined : value);
 const optionalUuid = (message) => z.preprocess(emptyToUndefined, z.string().uuid(message).optional());
+const senioritySchema = z.enum(["junior", "pleno", "senior", "lead", "specialist"], {
+  errorMap: () => ({ message: "Senioridade e obrigatoria" }),
+});
 
 const profileSchema = z.object({
   profileName: z.string().trim().min(2, "Nome do perfil deve ter pelo menos 2 caracteres").max(80),
@@ -17,6 +20,7 @@ const profileSchema = z.object({
   lattes: cleanString(300),
   summary: cleanString(2600),
   objective: z.string().trim().max(500).optional(),
+  seniority: senioritySchema,
   category: z.string().trim().max(40).optional(),
 });
 

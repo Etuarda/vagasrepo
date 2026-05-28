@@ -18,16 +18,18 @@ const PLAN_RULES = Object.freeze({
     matchingLimit: 3,
     matchingPeriod: "lifetime",
     maxSubprofiles: 0,
-    maxTrackedApplications: 10,
+    maxTrackedApplications: 0,
     sharedMatchedJobs: false,
+    applicationTracking: false,
   }),
   [PLAN_KEYS.BASIC]: Object.freeze({
     priceCents: 990,
     matchingLimit: 30,
     matchingPeriod: "monthly",
-    maxSubprofiles: 2,
+    maxSubprofiles: 0,
     maxTrackedApplications: null,
     sharedMatchedJobs: true,
+    applicationTracking: true,
   }),
   [PLAN_KEYS.PRO]: Object.freeze({
     priceCents: 1990,
@@ -36,6 +38,7 @@ const PLAN_RULES = Object.freeze({
     maxSubprofiles: 5,
     maxTrackedApplications: null,
     sharedMatchedJobs: true,
+    applicationTracking: true,
   }),
   [PLAN_KEYS.PREMIUM]: Object.freeze({
     priceCents: 2990,
@@ -44,6 +47,7 @@ const PLAN_RULES = Object.freeze({
     maxSubprofiles: 10,
     maxTrackedApplications: null,
     sharedMatchedJobs: true,
+    applicationTracking: true,
   }),
 });
 

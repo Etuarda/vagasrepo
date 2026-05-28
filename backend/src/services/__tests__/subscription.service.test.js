@@ -36,9 +36,14 @@ function dbFor(plan, options = {}) {
 describe("subscription plans and quotas", () => {
   it("define os limites solicitados para todos os planos", () => {
     expect(PLAN_RULES.free).toEqual(expect.objectContaining({
-      matchingLimit: 3, matchingPeriod: "lifetime", maxSubprofiles: 0, maxTrackedApplications: 10, sharedMatchedJobs: false,
+      matchingLimit: 3,
+      matchingPeriod: "lifetime",
+      maxSubprofiles: 0,
+      maxTrackedApplications: 0,
+      sharedMatchedJobs: false,
+      applicationTracking: false,
     }));
-    expect(PLAN_RULES.basic).toEqual(expect.objectContaining({ matchingLimit: 30, maxSubprofiles: 2 }));
+    expect(PLAN_RULES.basic).toEqual(expect.objectContaining({ matchingLimit: 30, maxSubprofiles: 0, applicationTracking: true }));
     expect(PLAN_RULES.pro).toEqual(expect.objectContaining({ matchingLimit: 100, maxSubprofiles: 5 }));
     expect(PLAN_RULES.premium).toEqual(expect.objectContaining({ matchingLimit: 500, maxSubprofiles: 10 }));
   });
@@ -75,8 +80,6 @@ describe("subscription plans and quotas", () => {
   });
 
   it.each([
-    [PLAN_KEYS.FREE, 0],
-    [PLAN_KEYS.BASIC, 2],
     [PLAN_KEYS.PRO, 5],
     [PLAN_KEYS.PREMIUM, 10],
   ])("bloqueia subperfis do plano %s no limite %i sem contar Perfil Global", async (plan, limit) => {
@@ -85,11 +88,14 @@ describe("subscription plans and quotas", () => {
     expect(db.careerProfile.count).toHaveBeenCalledWith({ where: { userId: "user", isGlobal: false } });
   });
 
-  it("permite dez acompanhamentos no Free e bloqueia o decimo primeiro", async () => {
-    await expect(assertApplicationTrackingLimit("user", dbFor(PLAN_KEYS.FREE, { applicationsUsed: 9 })))
-      .resolves.toMatchObject({ limit: 10, used: 9 });
-    await expect(assertApplicationTrackingLimit("user", dbFor(PLAN_KEYS.FREE, { applicationsUsed: 10 })))
-      .rejects.toMatchObject({ statusCode: 402, code: "APPLICATION_TRACKING_LIMIT_REACHED" });
+  it.each([PLAN_KEYS.FREE, PLAN_KEYS.BASIC])("nega subperfis para o plano %s por feature indisponivel", async (plan) => {
+    await expect(assertSubprofileLimit("user", dbFor(plan)))
+      .rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
+  });
+
+  it("nega acompanhamento de vagas no Free", async () => {
+    await expect(assertApplicationTrackingLimit("user", dbFor(PLAN_KEYS.FREE, { applicationsUsed: 0 })))
+      .rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
   });
 
   it.each([PLAN_KEYS.BASIC, PLAN_KEYS.PRO, PLAN_KEYS.PREMIUM])(
@@ -102,7 +108,7 @@ describe("subscription plans and quotas", () => {
   );
 
   it("serializa a validacao de limite quando executada dentro de transacao", async () => {
-    const db = dbFor(PLAN_KEYS.FREE, { applicationsUsed: 0 });
+    const db = dbFor(PLAN_KEYS.BASIC, { applicationsUsed: 0 });
     db.$executeRaw = jest.fn().mockResolvedValue(undefined);
 
     await assertApplicationTrackingLimit("user", db);

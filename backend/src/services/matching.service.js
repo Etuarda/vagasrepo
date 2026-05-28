@@ -2,7 +2,7 @@ const { prisma } = require("../lib/prisma");
 const cache = require("../lib/cache");
 const profileService = require("./profile.service");
 const { generateOptimizedResumePdf } = require("./pdf-output.service");
-const { classifyJob, normalizeTerm } = require("../modules/matching/keyword-normalizer");
+const { classifyJob, normalizeTerm, normalizeText } = require("../modules/matching/keyword-normalizer");
 const { rankProjects } = require("../modules/matching/project-ranking.service");
 const { compileResume, rankLearningItems } = require("../modules/resume/resume-compiler.service");
 const { createSharedMatchedJob } = require("../modules/matching/shared-matched-jobs.service");
@@ -21,6 +21,48 @@ function scoreRatio(matched, total) {
   return total ? Math.round((matched / total) * 100) : 0;
 }
 
+const SENIORITY_ORDER = Object.freeze({
+  junior: 1,
+  pleno: 2,
+  senior: 3,
+  lead: 4,
+  specialist: 4,
+});
+
+const SENIORITY_ALIASES = Object.freeze({
+  junior: ["junior", "jr", "júnior", "estagio", "estagiario", "trainee"],
+  pleno: ["pleno", "mid", "middle"],
+  senior: ["senior", "sênior", "sr"],
+  lead: ["lead", "lider", "líder", "tech lead", "principal", "staff"],
+  specialist: ["especialista", "specialist"],
+});
+
+function normalizeSeniority(value) {
+  const normalized = normalizeTerm(value);
+  for (const [level, aliases] of Object.entries(SENIORITY_ALIASES)) {
+    if (aliases.map(normalizeTerm).includes(normalized)) return level;
+  }
+  return SENIORITY_ORDER[normalized] ? normalized : "";
+}
+
+function inferSeniority(text) {
+  const normalized = ` ${normalizeText(String(text || "").replace(/[\/|,.;:()[\]{}]/g, " "))} `;
+  const matches = Object.entries(SENIORITY_ALIASES)
+    .filter(([, aliases]) => aliases.some((alias) => normalized.includes(` ${normalizeTerm(alias)} `)))
+    .map(([level]) => level);
+  return matches.sort((a, b) => SENIORITY_ORDER[b] - SENIORITY_ORDER[a])[0] || "";
+}
+
+function seniorityMatchScore(profileSeniority, jobSeniority) {
+  const profile = normalizeSeniority(profileSeniority);
+  const job = normalizeSeniority(jobSeniority);
+  if (!profile || !job) return 75;
+  const distance = Math.abs(SENIORITY_ORDER[profile] - SENIORITY_ORDER[job]);
+  if (distance === 0) return 100;
+  if (distance === 1) return 70;
+  return 35;
+}
+
 function validStructuredProject(project) {
   const title = String(project.title || "").trim();
   return title.length >= 2 &&
@@ -34,6 +76,7 @@ function getMissingResumeFields(profile) {
     missing.push("dados pessoais (nome e e-mail ou telefone)");
   }
   if (!String(profile.summary || "").trim()) missing.push("resumo profissional");
+  if (!String(profile.seniority || "").trim()) missing.push("senioridade");
   if (!(profile.skillItems || []).length) missing.push("habilidades");
   if (!(profile.educations || []).length && !(profile.experiences || []).length) {
     missing.push("pelo menos 1 formacao ou experiencia");
@@ -56,6 +99,7 @@ function assertProfileReadyForResume(profile) {
 function analyzeProfile(profile, jobDescription) {
   const job = classifyJob(jobDescription);
   const required = job.keywords;
+  const jobSeniority = inferSeniority(jobDescription);
   const skillMap = new Map((profile.skillItems || []).map((skill) => [normalizeTerm(skill.name), skill]));
   const matchedSkills = required.filter((keyword) => skillMap.has(normalizeTerm(keyword)))
     .map((keyword) => skillMap.get(normalizeTerm(keyword)).name);
@@ -69,7 +113,10 @@ function analyzeProfile(profile, jobDescription) {
   const skillsScore = scoreRatio(matchedSkills.length, required.length);
   const projectsScore = selectedProjects.length ? Math.round(selectedProjects.reduce((sum, item) => sum + item.score, 0) / selectedProjects.length) : 0;
   const learningScore = required.length ? scoreRatio(unique(selectedLearningItems.flatMap((item) => item.matchedKeywords)).length, required.length) : 0;
-  const totalScore = Math.round(skillsScore * 0.50 + projectsScore * 0.35 + learningScore * 0.15);
+  const skillsAndLearningScore = Math.round(skillsScore * 0.75 + learningScore * 0.25);
+  const seniorityScore = seniorityMatchScore(profile.seniority, jobSeniority);
+  const baseScore = Math.round(skillsAndLearningScore * 0.60 + projectsScore * 0.40);
+  const totalScore = Math.round(baseScore * (0.55 + seniorityScore * 0.45 / 100));
   const warnings = [];
   if (!required.length) warnings.push("Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.");
   if (missingSkills.length) warnings.push("Skills ausentes sao requisitos identificados na vaga e nao serao exibidas como habilidades do candidato.");
@@ -78,12 +125,17 @@ function analyzeProfile(profile, jobDescription) {
 
   return {
     jobCategory: job.category,
+    jobSeniority,
+    profileSeniority: profile.seniority || "",
     jobKeywords: required,
     score: totalScore,
     scoreDetails: {
       skillsMatchScore: skillsScore,
+      skillsAndCertificationsMatchScore: skillsAndLearningScore,
       projectsMatchScore: projectsScore,
       coursesAndCertificationsMatchScore: learningScore,
+      seniorityMatchScore: seniorityScore,
+      baseScore,
       totalScore,
     },
     matchedSkills: unique(matchedSkills),
@@ -120,7 +172,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
     selectedSubprofileName: profile.profileName,
     linkVaga: metadata.linkVaga || "",
     suggestedSummary: profile.summary,
-    semanticFeedback: `Matching deterministico: skills 50%, projetos 35% e certificacoes/cursos 15%. Resumo, formacao, experiencias e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
+    semanticFeedback: `Matching deterministico: habilidades e certificacoes/cursos 60%, projetos 40%, com senioridade como fator decisivo. Resumo, formacao, experiencias e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
   };
   const compiledResume = compileResume({ profile, matchResult: result });
   const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: result, compiledResume });
@@ -325,4 +377,7 @@ module.exports = {
   analyzeProfile,
   getMissingResumeFields,
   assertProfileReadyForResume,
+  inferSeniority,
+  normalizeSeniority,
+  seniorityMatchScore,
 };

@@ -1,0 +1,1 @@
+ALTER TABLE "CareerProfile" ADD COLUMN "seniority" TEXT NOT NULL DEFAULT '';

@@ -77,7 +77,7 @@ async function getPlanContext(userId, db = prisma) {
       [FEATURES.MATCHING_ANALYSIS]: true,
       [FEATURES.SHARED_MATCHED_JOBS]: rules.sharedMatchedJobs,
       [FEATURES.SUBPROFILES]: rules.maxSubprofiles > 0,
-      [FEATURES.APPLICATION_TRACKING]: true,
+      [FEATURES.APPLICATION_TRACKING]: rules.applicationTracking,
     },
     usage: {
       matching: {
@@ -109,6 +109,12 @@ async function assertFeatureAccess(userId, feature, db = prisma) {
   const rules = PLAN_RULES[plan];
   if (feature === FEATURES.SHARED_MATCHED_JOBS && !rules.sharedMatchedJobs) {
     throw planError("Vagas compartilhadas nao estao incluidas no plano Free.", 403, "FEATURE_NOT_INCLUDED");
+  }
+  if (feature === FEATURES.APPLICATION_TRACKING && !rules.applicationTracking) {
+    throw planError("Acompanhamento de vagas nao esta incluido no plano Free.", 403, "FEATURE_NOT_INCLUDED");
+  }
+  if (feature === FEATURES.SUBPROFILES && rules.maxSubprofiles <= 0) {
+    throw planError("Subperfis nao estao incluidos no plano atual.", 403, "FEATURE_NOT_INCLUDED");
   }
   return { subscription, plan, rules };
 }

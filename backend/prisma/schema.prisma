@@ -171,6 +171,7 @@ model CareerProfile {
   lattes       String   @default("")
   summary      String   @default("")
   objective    String   @default("")
+  seniority    String   @default("")
   category     String   @default("unknown")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
