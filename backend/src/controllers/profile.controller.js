@@ -307,7 +307,7 @@ async function updateAnalysis(req, res, next) {
     const { id } = idParamSchema.parse(req.params);
     const payload = jobAnalysisUpdateSchema.parse(req.body);
     const analysis = await matchingService.updateAnalysis(req.userId, id, payload);
-    const message = analysis.status === "applied"
+    const message = analysis.status === "applied" || analysis.status === "Aplicada"
       ? `Curriculo marcado como aplicado para a vaga ${analysis.jobTitle}${analysis.company ? ` na empresa ${analysis.company}` : ""}.`
       : "Analise atualizada.";
     return res.json({ analysis, message });

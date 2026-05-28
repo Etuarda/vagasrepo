@@ -134,7 +134,19 @@ const sharedMatchedJobsQuerySchema = z.object({
 });
 
 const jobAnalysisUpdateSchema = z.object({
-  status: z.enum(["draft", "reviewed", "applied", "archived", "rejected"]).optional(),
+  status: z.enum([
+    "draft",
+    "reviewed",
+    "applied",
+    "archived",
+    "rejected",
+    "Currículo gerado",
+    "Aplicada",
+    "Entrevista",
+    "Teste técnico",
+    "Feedback",
+    "Encerrada",
+  ]).optional(),
   notes: z.string().trim().max(3000).optional(),
   jobTitle: z.string().trim().min(2).max(160).optional(),
   company: z.string().trim().max(160).optional(),

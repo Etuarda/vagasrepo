@@ -24,16 +24,16 @@ const { updateAnalysis } = require("../matching.service");
 describe("job analysis status", () => {
   it("registra appliedAt somente para analise pertencente ao usuario", async () => {
     prisma.jobAnalysis.findFirst.mockResolvedValue({ id: "analysis", userId: "user", appliedAt: null });
-    prisma.jobAnalysis.update.mockResolvedValue({ status: "applied" });
+    prisma.jobAnalysis.update.mockResolvedValue({ status: "Aplicada" });
 
-    await updateAnalysis("user", "analysis", { status: "applied" });
+    await updateAnalysis("user", "analysis", { status: "Aplicada" });
 
     expect(prisma.jobAnalysis.findFirst).toHaveBeenCalledWith({
       where: { id: "analysis", userId: "user" },
     });
     expect(prisma.jobAnalysis.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "analysis" },
-      data: expect.objectContaining({ status: "applied", appliedAt: expect.any(Date) }),
+      data: expect.objectContaining({ status: "Aplicada", appliedAt: expect.any(Date) }),
     }));
     expect(prisma.job.updateMany).toHaveBeenCalledWith({
       where: { userId: "user", jobAnalysisId: "analysis" },

@@ -43,7 +43,7 @@ describe("application tracking from analysis", () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it("cria candidatura ativa vinculada sem marcar aplicada ao gerar curriculo", async () => {
+  it("cria candidatura ativa vinculada e alinha a fase ao gerar curriculo", async () => {
     prisma.jobAnalysis.findFirst.mockResolvedValue(analysis);
     prisma.job.findFirst.mockResolvedValue(null);
     const tx = { job: { create: jest.fn().mockResolvedValue({ id: "job", fase: "Currículo gerado", status: "Ativa" }) }, jobAnalysis: { update: jest.fn() } };
@@ -61,7 +61,10 @@ describe("application tracking from analysis", () => {
       }),
     }));
     expect(subscriptionService.assertApplicationTrackingLimit).toHaveBeenCalledWith("user", tx);
-    expect(tx.jobAnalysis.update).not.toHaveBeenCalled();
+    expect(tx.jobAnalysis.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "analysis" },
+      data: { status: "Currículo gerado" },
+    }));
     expect(cache.invalidate).toHaveBeenCalledWith("jobs", "user");
     expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
     expect(cache.invalidate).toHaveBeenCalledWith("shared-jobs-board", "global");
@@ -99,7 +102,7 @@ describe("application tracking from analysis", () => {
 
     expect(tx.jobAnalysis.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "analysis" },
-      data: expect.objectContaining({ status: "applied", appliedAt: expect.any(Date) }),
+      data: expect.objectContaining({ status: "Aplicada", appliedAt: expect.any(Date) }),
     }));
   });
 

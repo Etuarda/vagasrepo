@@ -33,6 +33,13 @@ function normalizeJobStatusAndPhase(data) {
   return data;
 }
 
+function phaseToAnalysisStatus(fase) {
+  if (["Currículo gerado", "Aplicada", "Entrevista", "Teste técnico", "Feedback", "Encerrada"].includes(fase)) {
+    return fase;
+  }
+  return null;
+}
+
 async function loadJobs(userId, { q, status, period, dateFrom, dateTo, limit = 50, cursor }) {
   const and = [];
 
@@ -119,16 +126,14 @@ async function updateJob(userId, id, data) {
   }
 
   const job = await prisma.job.findFirst({ where: { id, userId }, include: linkedJobInclude });
-  if (job.jobAnalysisId && normalized.fase === "Aplicada") {
-    await prisma.jobAnalysis.updateMany({
-      where: { id: job.jobAnalysisId, userId, status: { not: "applied" } },
-      data: { status: "applied", appliedAt: new Date() },
-    });
-  }
-  if (job.jobAnalysisId && (normalized.fase === "Encerrada" || normalized.status === "Encerrada")) {
+  const analysisStatus = phaseToAnalysisStatus(normalized.fase);
+  if (job.jobAnalysisId && analysisStatus) {
     await prisma.jobAnalysis.updateMany({
       where: { id: job.jobAnalysisId, userId },
-      data: { status: "archived" },
+      data: {
+        status: analysisStatus,
+        ...(analysisStatus === "Aplicada" ? { appliedAt: new Date() } : {}),
+      },
     });
   }
   await Promise.all([

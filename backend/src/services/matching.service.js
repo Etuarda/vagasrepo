@@ -99,9 +99,16 @@ function assertProfileReadyForResume(profile) {
 }
 
 function analysisStatusToJobUpdate(status) {
-  if (status === "applied") return { fase: "Aplicada", status: "Ativa" };
-  if (status === "archived" || status === "rejected") return { fase: "Encerrada", status: "Encerrada" };
+  if (status === "draft" || status === "Currículo gerado") return { fase: "Currículo gerado", status: "Ativa" };
+  if (status === "applied" || status === "Aplicada") return { fase: "Aplicada", status: "Ativa" };
+  if (status === "reviewed") return { fase: "Feedback", status: "Ativa" };
+  if (status === "Entrevista" || status === "Teste técnico" || status === "Feedback") return { fase: status, status: "Ativa" };
+  if (status === "archived" || status === "rejected" || status === "Encerrada") return { fase: "Encerrada", status: "Encerrada" };
   return null;
+}
+
+function isAppliedAnalysisStatus(status) {
+  return status === "applied" || status === "Aplicada";
 }
 
 function analyzeProfile(profile, jobDescription) {
@@ -220,7 +227,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
         missingSkills: result.missingSkills,
         selectedProjectIds: result.selectedProjects.map((project) => project.id),
         generatedResumeId: savedResume.id,
-        status: "draft",
+        status: "Currículo gerado",
       },
     });
     await createSharedMatchedJob(tx, { jobTitle: targetTitle, company: metadata.company, linkVaga: metadata.linkVaga });
@@ -296,7 +303,7 @@ async function updateAnalysis(userId, id, data) {
     err.statusCode = 404;
     throw err;
   }
-  const appliedAt = data.status === "applied" ? (existing.appliedAt || new Date()) : existing.appliedAt;
+  const appliedAt = isAppliedAnalysisStatus(data.status) ? (existing.appliedAt || new Date()) : existing.appliedAt;
   const createsVersion = ["notes", "jobTitle", "company", "linkVaga", "jobDescription"].some((key) => data[key] !== undefined);
   let updated;
   if (createsVersion) {
@@ -314,7 +321,7 @@ async function updateAnalysis(userId, id, data) {
         missingSkills: existing.missingSkills,
         selectedProjectIds: existing.selectedProjectIds,
         generatedResumeId: existing.generatedResumeId,
-        status: data.status ?? "draft",
+        status: data.status ?? existing.status ?? "Currículo gerado",
         notes: data.notes ?? existing.notes,
         appliedAt,
         parentAnalysisId: existing.id,

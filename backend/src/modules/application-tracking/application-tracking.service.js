@@ -18,6 +18,16 @@ const linkedJobInclude = {
   optimizedResume: { select: { id: true, generatedFileName: true, selectedProjects: true } },
 };
 
+function phaseToAnalysisUpdate(fase, appliedAt) {
+  if (!["Currículo gerado", "Aplicada", "Entrevista", "Teste técnico", "Feedback", "Encerrada"].includes(fase)) {
+    return null;
+  }
+  return {
+    status: fase,
+    ...(fase === "Aplicada" ? { appliedAt: appliedAt || new Date() } : {}),
+  };
+}
+
 async function createFromAnalysis(userId, analysisId, payload) {
   const analysis = await prisma.jobAnalysis.findFirst({
     where: { id: analysisId, userId },
@@ -74,16 +84,11 @@ async function createFromAnalysis(userId, analysisId, payload) {
       include: linkedJobInclude,
     });
 
-    if (payload.fase === "Aplicada" && analysis.status !== "applied") {
+    const analysisUpdate = phaseToAnalysisUpdate(payload.fase, analysis.appliedAt);
+    if (analysisUpdate && analysis.status !== payload.fase) {
       await tx.jobAnalysis.update({
         where: { id: analysis.id },
-        data: { status: "applied", appliedAt: analysis.appliedAt || new Date() },
-      });
-    }
-    if (payload.fase === "Encerrada" && analysis.status !== "archived") {
-      await tx.jobAnalysis.update({
-        where: { id: analysis.id },
-        data: { status: "archived" },
+        data: analysisUpdate,
       });
     }
     return created;

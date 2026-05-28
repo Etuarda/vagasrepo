@@ -27,6 +27,14 @@ const HISTORY_CLIENT_CACHE_MS = 2 * 60 * 1000;
 const historyCache = new Map();
 const historyRequests = new Map();
 let historyRevision = 0;
+const APPLICATION_PHASE_OPTIONS = ["Currículo gerado", "Aplicada", "Entrevista", "Teste técnico", "Feedback", "Encerrada"];
+const LEGACY_ANALYSIS_STATUS_LABELS = {
+  draft: "Currículo gerado",
+  reviewed: "Feedback",
+  applied: "Aplicada",
+  archived: "Encerrada",
+  rejected: "Encerrada",
+};
 const RESUME_FILES_CLIENT_CACHE_MS = 5 * 60 * 1000;
 const resumeFilesCache = new Map();
 const resumeFilesRequests = new Map();
@@ -66,6 +74,10 @@ function historyCacheKey(profileId) {
 function invalidateHistoryCache() {
   historyRevision += 1;
   historyCache.clear();
+}
+
+function analysisStatusLabel(status) {
+  return LEGACY_ANALYSIS_STATUS_LABELS[status] || status || "Currículo gerado";
 }
 
 function resumeFilesCacheKey(profileId) {
@@ -426,7 +438,7 @@ function renderHistory() {
           <div class="flex items-start justify-between gap-3">
             <div>
               <button type="button" data-open-analysis="${item.analysisId}" class="font-bold text-sm underline text-left">${escapeHtml(item.targetTitle)}</button>
-              <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${escapeHtml(item.company || "")} ${item.company ? "·" : ""} ${formatDateTime(item.createdAt)} · ${item.score}% · ${escapeHtml(item.status || "draft")}</p>
+              <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${escapeHtml(item.company || "")} ${item.company ? "·" : ""} ${formatDateTime(item.createdAt)} · ${item.score}% · ${escapeHtml(analysisStatusLabel(item.status))}</p>
               ${item.linkVaga ? `<a href="${escapeHtml(item.linkVaga)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest underline">Link da vaga</a>` : ""}
               ${item.application ? `<p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-2">Candidatura: ${escapeHtml(item.application.status)} · ${escapeHtml(item.application.fase)}${item.appliedAt ? ` · aplicada em ${escapeHtml(formatDateTime(item.appliedAt))}` : ""}</p>` : ""}
               ${
@@ -437,7 +449,7 @@ function renderHistory() {
                       ${item.resumeFileId ? `<a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>` : ""}
                       ${item.application ? `<button type="button" data-open-linked-job="${item.application.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Abrir candidatura</button>` : ""}
                       ${!item.application ? `<button type="button" data-register-history-application="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Cadastrar acompanhamento</button>` : ""}
-                      ${item.status !== "applied" ? `<button type="button" data-mark-applied="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Marcar aplicado</button>` : ""}
+                      ${item.status !== "applied" && item.status !== "Aplicada" ? `<button type="button" data-mark-applied="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Marcar aplicado</button>` : ""}
                     </div>
                   `
                   : ""
@@ -590,6 +602,7 @@ function renderMatchResult(result) {
 function renderAnalysisEditor(analysis) {
   const root = document.getElementById("match-result");
   if (!root) return;
+  const currentStatus = analysisStatusLabel(analysis.status);
   root.className = "lg:col-span-7 space-y-4 sm:space-y-6";
   root.innerHTML = `
     <form data-analysis-edit-form="${analysis.id}" class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-5">
@@ -602,7 +615,7 @@ function renderAnalysisEditor(analysis) {
       <textarea name="jobDescription" rows="10" required minlength="30" maxlength="15000" class="editorial-input text-sm">${escapeHtml(analysis.jobDescription)}</textarea>
       <textarea name="notes" rows="3" placeholder="Notas da revisão" class="editorial-input text-sm">${escapeHtml(analysis.notes || "")}</textarea>
       <select name="status" class="editorial-input text-sm bg-white">
-        ${["draft", "reviewed", "applied", "archived", "rejected"].map((status) => `<option value="${status}" ${analysis.status === status ? "selected" : ""}>${status}</option>`).join("")}
+        ${APPLICATION_PHASE_OPTIONS.map((status) => `<option value="${escapeHtml(status)}" ${currentStatus === status ? "selected" : ""}>${escapeHtml(status)}</option>`).join("")}
       </select>
       <div class="flex flex-wrap gap-3">
         <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Salvar nova versão</button>
@@ -998,7 +1011,7 @@ export const career = {
   },
 
   async markAnalysisApplied(id) {
-    const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify({ status: "applied" }) }, state.token);
+    const out = await api(`/job-analyses/${id}`, { method: "PATCH", body: JSON.stringify({ status: "Aplicada" }) }, state.token);
     ui.notify(out.message);
     invalidateHistoryCache();
     await Promise.all([jobs.load(), career.loadHistory({ force: true, successMessage: "Histórico atualizado." })]);
