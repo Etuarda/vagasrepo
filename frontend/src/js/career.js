@@ -479,6 +479,15 @@ function renderSharedMatchedJobs() {
           <h3 class="font-bold text-lg">${escapeHtml(item.jobTitle)}</h3>
           <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-2">${escapeHtml(item.company)}</p>
           <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))} · ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
+          ${item.profileMatch ? `
+            <div class="mt-4 rounded-2xl border border-borderLight p-4 bg-white">
+              <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Aderencia ao perfil</p>
+              <p class="font-serif text-4xl mt-2">${Number(item.profileMatch.score || 0)}%</p>
+              <p class="text-xs text-taupe mt-2">
+                Skills: ${(item.profileMatch.matchedSkills || []).length} encontradas · Senioridade: ${escapeHtml(item.profileMatch.jobSeniority || "nao identificada")}
+              </p>
+            </div>
+          ` : ""}
           <a href="${escapeHtml(item.jobUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 text-[10px] font-bold uppercase tracking-widest underline">Abrir vaga</a>
         </article>
       `

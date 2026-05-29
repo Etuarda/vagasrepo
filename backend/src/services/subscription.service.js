@@ -1,5 +1,5 @@
 const { prisma } = require("../lib/prisma");
-const { PLAN_KEYS, FEATURES, PLAN_RULES } = require("../constants/subscription-plans");
+const { PLAN_KEYS, FEATURES, PLAN_RULES, PLAN_DETAILS } = require("../constants/subscription-plans");
 
 function planError(message, statusCode, code) {
   const err = new Error(message);
@@ -72,6 +72,11 @@ async function getPlanContext(userId, db = prisma) {
     subscription,
     plan,
     rules,
+    availablePlans: Object.values(PLAN_KEYS).map((key) => ({
+      key,
+      ...PLAN_DETAILS[key],
+      rules: PLAN_RULES[key],
+    })),
     coupon: subscription.coupon ? { code: subscription.coupon.code } : null,
     features: {
       [FEATURES.MATCHING_ANALYSIS]: true,

@@ -600,6 +600,7 @@ model SharedMatchedJob {
   jobTitle  String
   company   String
   jobUrl    String
+  jobDescription String @default("")
   createdAt DateTime @default(now())
 
   @@index([createdAt])

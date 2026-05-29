@@ -9,6 +9,101 @@ const PLAN_NAMES = Object.freeze({
   premium: "Premium",
 });
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatLimit(limit) {
+  return limit === null ? "sem limite visivel" : limit;
+}
+
+function renderLimitCards(context) {
+  const root = document.getElementById("billing-limits");
+  if (!root) return;
+  const matching = context.usage.matching;
+  const subprofiles = context.usage.subprofiles;
+  const tracking = context.usage.applicationTracking;
+  const periodLabel = matching.period === "lifetime" ? "vitalicias" : "neste mes";
+  root.innerHTML = [
+    {
+      title: "Matching",
+      value: `${matching.used}/${matching.limit}`,
+      detail: `${matching.remaining} restantes ${periodLabel}`,
+    },
+    {
+      title: "Subperfis",
+      value: `${subprofiles.used}/${subprofiles.limit}`,
+      detail: subprofiles.limit > 0 ? `${subprofiles.remaining} restantes` : "Nao incluido no plano atual",
+    },
+    {
+      title: "Acompanhamento",
+      value: tracking.limit === null ? `${tracking.used}` : `${tracking.used}/${tracking.limit}`,
+      detail: tracking.limit === null ? "sem limite visivel" : `${tracking.remaining} restantes`,
+    },
+  ].map((item) => `
+    <article class="contrast-surface border border-borderLight rounded-2xl p-4">
+      <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">${escapeHtml(item.title)}</p>
+      <p class="font-serif text-3xl mt-2">${escapeHtml(item.value)}</p>
+      <p class="text-xs text-taupe mt-1">${escapeHtml(item.detail)}</p>
+    </article>
+  `).join("");
+}
+
+function renderPlanCards(context) {
+  const root = document.getElementById("billing-plan-cards");
+  if (!root) return;
+  root.innerHTML = (context.availablePlans || []).map((plan) => {
+    const current = plan.key === context.plan;
+    return `
+      <article class="border border-borderLight rounded-2xl p-5 bg-white flex flex-col gap-4 ${current ? "ring-2 ring-ink" : ""}">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">${current ? "Plano atual" : "Plano disponivel"}</p>
+          <h4 class="font-serif text-3xl mt-2">${escapeHtml(plan.name)}</h4>
+          <p class="font-bold text-sm mt-1">${escapeHtml(plan.priceLabel)}</p>
+          <p class="text-xs text-taupe mt-2">${escapeHtml(plan.description)}</p>
+        </div>
+        <ul class="space-y-2 text-xs text-taupe leading-relaxed">
+          ${(plan.benefits || []).map((benefit) => `<li>${escapeHtml(benefit)}</li>`).join("")}
+        </ul>
+        <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-auto">
+          ${plan.rules.matchingLimit} matchings ${plan.rules.matchingPeriod === "lifetime" ? "vitalicios" : "por mes"} · ${formatLimit(plan.rules.maxSubprofiles)} subperfis
+        </p>
+      </article>
+    `;
+  }).join("");
+}
+
+function syncSubprofileCreation(context) {
+  const form = document.getElementById("form-create-profile");
+  if (!form) return;
+  const input = document.getElementById("new-profile-name");
+  const button = form.querySelector('button[type="submit"]');
+  const usage = context.usage.subprofiles;
+  const allowed = usage.limit > 0 && usage.remaining > 0;
+  const messageId = "subprofile-plan-limit";
+  let message = document.getElementById(messageId);
+  if (!message) {
+    message = document.createElement("p");
+    message.id = messageId;
+    message.className = "text-xs text-taupe sm:col-span-2";
+    form.appendChild(message);
+  }
+  message.textContent = usage.limit > 0
+    ? `Subperfis do plano: ${usage.used}/${usage.limit}. Restam ${usage.remaining}.`
+    : "Seu plano atual nao permite criar subperfis.";
+  if (input) input.disabled = !allowed;
+  if (button) {
+    button.disabled = !allowed;
+    button.classList.toggle("opacity-50", !allowed);
+    button.classList.toggle("cursor-not-allowed", !allowed);
+  }
+}
+
 function render() {
   const context = state.billing;
   if (!context) return;
@@ -35,6 +130,9 @@ function render() {
     usage.textContent = `${matching.used}/${matching.limit} analises (${matching.period === "lifetime" ? "vitalicias" : "neste mes"}) | ${trackingText}`;
   }
   if (select) select.value = context.subscription?.pendingPlan || (context.plan === "free" ? "basic" : context.plan);
+  renderLimitCards(context);
+  renderPlanCards(context);
+  syncSubprofileCreation(context);
 }
 
 export const billing = {

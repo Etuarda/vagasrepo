@@ -14,6 +14,16 @@ jest.mock("../../lib/cache", () => ({
 jest.mock("../../services/subscription.service", () => ({
   assertFeatureAccess: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../services/profile.service", () => ({
+  getProfile: jest.fn().mockResolvedValue({
+    seniority: "junior",
+    skillItems: [{ name: "React" }],
+    projects: [],
+    courses: [],
+    certifications: [],
+    educations: [],
+  }),
+}));
 
 const { prisma } = require("../../lib/prisma");
 const subscriptionService = require("../../services/subscription.service");
@@ -31,7 +41,7 @@ describe("shared matched jobs", () => {
     prisma.job.findMany.mockResolvedValue([]);
   });
 
-  it("grava apenas os metadados publicos da vaga", async () => {
+  it("grava metadados e descricao para calcular aderencia no painel compartilhado", async () => {
     const db = { sharedMatchedJob: { create: jest.fn().mockResolvedValue({ id: "shared" }) } };
 
     await createSharedMatchedJob(db, {
@@ -46,6 +56,7 @@ describe("shared matched jobs", () => {
         jobTitle: "Backend Developer",
         company: "Empresa",
         jobUrl: "https://example.com/vaga",
+        jobDescription: "Nao deve ser compartilhada.",
       },
     });
   });
@@ -71,6 +82,7 @@ describe("shared matched jobs", () => {
       titulo: "Frontend Developer",
       empresa: "Empresa",
       linkVaga: "https://example.com/frontend",
+      jobDescription: "Vaga React junior",
       data: new Date(),
     }]);
 
@@ -81,6 +93,7 @@ describe("shared matched jobs", () => {
       company: "Empresa",
       jobUrl: "https://example.com/frontend",
       origin: "tracking",
+      profileMatch: expect.objectContaining({ score: expect.any(Number) }),
     })]);
   });
 

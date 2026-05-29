@@ -5,14 +5,6 @@ import { jobs } from "./jobs.js";
 import { career } from "./career.js";
 import { billing } from "./billing.js";
 
-function debounce(fn, wait = 300) {
-  let t = null;
-  return (...args) => {
-    if (t) clearTimeout(t);
-    t = setTimeout(() => fn(...args), wait);
-  };
-}
-
 async function runWithFeedback(button, options, action) {
   const target = button || null;
   if (target?.dataset?.busy === "true") return;
@@ -272,13 +264,10 @@ function wireEvents() {
       );
     });
   }
-  const debouncedLoad = debounce(() => jobs.load(), 300);
-
   const filterQ = document.getElementById("filter-q");
   if (filterQ) {
     filterQ.addEventListener("input", (e) => {
       state.filters.q = e.target.value;
-      debouncedLoad();
     });
   }
 
@@ -286,7 +275,6 @@ function wireEvents() {
   if (filterStatus) {
     filterStatus.addEventListener("change", (e) => {
       state.filters.status = e.target.value;
-      jobs.load();
     });
   }
 
@@ -295,7 +283,6 @@ function wireEvents() {
     periodFilter.addEventListener("change", (e) => {
       state.filters.period = e.target.value || "all";
       ui.syncPeriodUI();
-      jobs.load();
     });
   }
 
@@ -304,7 +291,6 @@ function wireEvents() {
     dateFrom.addEventListener("change", (e) => {
       state.filters.dateFrom = e.target.value || "";
       ui.syncPeriodUI();
-      if (state.filters.period === "custom") jobs.load();
     });
   }
 
@@ -313,7 +299,17 @@ function wireEvents() {
     dateTo.addEventListener("change", (e) => {
       state.filters.dateTo = e.target.value || "";
       ui.syncPeriodUI();
-      if (state.filters.period === "custom") jobs.load();
+    });
+  }
+
+  const applyFilters = document.getElementById("applyFilters");
+  if (applyFilters) {
+    applyFilters.addEventListener("click", async () => {
+      await runWithFeedback(
+        applyFilters,
+        { busyText: "Pesquisando...", notice: "Aplicando filtros..." },
+        () => jobs.load()
+      );
     });
   }
 
@@ -417,6 +413,7 @@ function wireEvents() {
         { busyText: "Criando...", notice: "Criando subperfil..." },
         async () => {
           await career.createProfile(profileName);
+          await billing.load();
           input.value = "";
         }
       );

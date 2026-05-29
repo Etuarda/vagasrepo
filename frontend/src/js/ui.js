@@ -76,7 +76,7 @@ export const ui = {
     const toEl = document.getElementById("dateTo");
 
     if (!state.filters) state.filters = {};
-    if (!state.filters.period) state.filters.period = "all";
+    if (!state.filters.period) state.filters.period = "month";
     if (typeof state.filters.dateFrom !== "string") state.filters.dateFrom = "";
     if (typeof state.filters.dateTo !== "string") state.filters.dateTo = "";
 

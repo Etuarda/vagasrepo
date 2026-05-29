@@ -115,7 +115,7 @@
       </div>
 
       <div id="panel-jobs" data-dashboard-panel="jobs" class="space-y-8 sm:space-y-12 lg:space-y-16">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8 p-4 sm:p-8 lg:p-10 editorial-card rounded-2xl sm:rounded-3xl editorial-shadow">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-5 sm:gap-8 p-4 sm:p-8 lg:p-10 editorial-card rounded-2xl sm:rounded-3xl editorial-shadow">
         <div class="space-y-3">
           <label for="filter-q" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Busca Textual</label>
           <input type="text" id="filter-q" placeholder="Ex: Desenvolvedor..." class="editorial-input text-sm" />
@@ -134,12 +134,18 @@
         <div class="space-y-3">
           <label for="periodFilter" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Período</label>
           <select id="periodFilter" class="editorial-input text-sm bg-white">
-            <option value="currentMonth" selected>Mês atual</option>
             <option value="all">Tudo</option>
-            <option value="last7">Última semana</option>
-            <option value="last30">Último mês</option>
+            <option value="day">Dia</option>
+            <option value="week">Semana</option>
+            <option value="month" selected>Mês</option>
             <option value="custom">Intervalo</option>
           </select>
+        </div>
+
+        <div class="space-y-3 flex flex-col justify-end">
+          <button id="applyFilters" type="button" class="w-full px-6 py-4 bg-ink text-paper rounded-full text-[10px] font-bold uppercase tracking-[0.3em]">
+            Confirmar pesquisa
+          </button>
         </div>
       </div>
 
@@ -398,8 +404,10 @@
             <div>
               <h3 id="billing-current-plan" class="font-serif text-3xl">Plano atual.</h3>
               <p id="billing-usage" class="text-sm text-taupe mt-2">Carregando uso do plano...</p>
+              <div id="billing-limits" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5"></div>
               <p id="billing-status" class="text-sm text-taupe mt-2">Carregando status da assinatura...</p>
             </div>
+            <div id="billing-plan-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
             <form id="form-billing-customer" class="flex flex-col sm:flex-row gap-3 max-w-xl">
               <input id="billing-cpf-cnpj" class="editorial-input text-sm" placeholder="CPF ou CNPJ para cobranca" required />
               <button type="submit" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Salvar CPF/CNPJ</button>
