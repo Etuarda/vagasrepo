@@ -27,6 +27,8 @@ jest.mock("../../services/profile.service", () => ({
 
 const { prisma } = require("../../lib/prisma");
 const subscriptionService = require("../../services/subscription.service");
+const profileService = require("../../services/profile.service");
+const { evaluateJobMatch } = require("../../modules/matching/job-match-evaluator.service");
 const {
   createSharedMatchedJob,
   dedupeLatestJobs,
@@ -93,8 +95,34 @@ describe("shared matched jobs", () => {
       company: "Empresa",
       jobUrl: "https://example.com/frontend",
       origin: "tracking",
-      profileMatch: expect.objectContaining({ score: expect.any(Number) }),
+      profileMatch: expect.objectContaining({ overallScore: expect.any(Number) }),
     })]);
+    expect(rows[0]).not.toHaveProperty("jobDescription");
+  });
+
+  it("usa a mesma logica do avaliador e considera jobDescription sem expor a descricao completa", async () => {
+    const job = {
+      id: "shared",
+      jobTitle: "Vaga Junior",
+      company: "Empresa",
+      jobUrl: "https://example.com/vaga",
+      jobDescription: "Descricao com React e acessibilidade.",
+      createdAt: new Date(),
+    };
+    prisma.sharedMatchedJob.findMany.mockResolvedValue([job]);
+
+    const rows = await listSharedMatchedJobs("user", "month");
+    const profile = await profileService.getProfile("user");
+    const expected = evaluateJobMatch({
+      profile,
+      jobTitle: job.jobTitle,
+      company: job.company,
+      jobDescription: job.jobDescription,
+    });
+
+    expect(rows[0]).not.toHaveProperty("jobDescription");
+    expect(rows[0].profileMatch).toEqual(expected);
+    expect(rows[0].profileMatch.matchedSkills).toContain("React");
   });
 
   it("nao duplica vaga compartilhada pelos dois fluxos", () => {

@@ -2,76 +2,35 @@ const { prisma } = require("../lib/prisma");
 const cache = require("../lib/cache");
 const profileService = require("./profile.service");
 const { generateOptimizedResumePdf } = require("./pdf-output.service");
-const { classifyJob, normalizeTerm, normalizeText } = require("../modules/matching/keyword-normalizer");
-const { rankProjects } = require("../modules/matching/project-ranking.service");
-const { compileResume, rankLearningItems, collectLearnedSkillItems } = require("../modules/resume/resume-compiler.service");
+const {
+  evaluateJobMatch,
+  inferSeniority: inferJobSeniority,
+  normalizeSeniorityLevel,
+  validStructuredProject,
+} = require("../modules/matching/job-match-evaluator.service");
+const { compileResume, collectLearnedSkillItems } = require("../modules/resume/resume-compiler.service");
 const { createSharedMatchedJob } = require("../modules/matching/shared-matched-jobs.service");
 const subscriptionService = require("./subscription.service");
-
-function unique(values) {
-  return [...new Set((values || []).filter(Boolean))];
-}
 
 function inferTitle(text) {
   const firstLine = String(text).split(/\r?\n/).find((line) => line.trim().length > 4);
   return firstLine ? firstLine.trim().slice(0, 120) : "Vaga analisada";
 }
 
-function scoreRatio(matched, total) {
-  return total ? Math.round((matched / total) * 100) : 0;
-}
-
-const SENIORITY_ORDER = Object.freeze({
-  estagiario: 0,
-  junior: 1,
-  pleno: 2,
-  senior: 3,
-  lead: 4,
-  specialist: 4,
-});
-
-const SENIORITY_ALIASES = Object.freeze({
-  estagiario: ["estagio", "estagiario", "estagiaria", "intern", "trainee"],
-  junior: ["junior", "jr", "júnior"],
-  pleno: ["pleno", "mid", "middle"],
-  senior: ["senior", "sênior", "sr"],
-  lead: ["lead", "lider", "líder", "tech lead", "principal", "staff"],
-  specialist: ["especialista", "specialist"],
-});
-
 function normalizeSeniority(value) {
-  const normalized = normalizeTerm(value);
-  for (const [level, aliases] of Object.entries(SENIORITY_ALIASES)) {
-    if (aliases.map(normalizeTerm).includes(normalized)) return level;
-  }
-  return Object.prototype.hasOwnProperty.call(SENIORITY_ORDER, normalized) ? normalized : "";
+  return normalizeSeniorityLevel(value);
 }
 
 function inferSeniority(text) {
-  const normalized = ` ${normalizeText(String(text || "").replace(/[\/|,.;:()[\]{}]/g, " "))} `;
-  const matches = Object.entries(SENIORITY_ALIASES)
-    .filter(([, aliases]) => aliases.some((alias) => normalized.includes(` ${normalizeTerm(alias)} `)))
-    .map(([level]) => level);
-  return matches.sort((a, b) => SENIORITY_ORDER[b] - SENIORITY_ORDER[a])[0] || "";
+  return inferJobSeniority(text);
 }
 
 function seniorityMatchScore(profileSeniority, jobSeniority) {
-  const profile = normalizeSeniority(profileSeniority);
-  const job = normalizeSeniority(jobSeniority);
-  if (!profile || !job) return 75;
-  if (SENIORITY_ORDER[job] <= SENIORITY_ORDER[profile]) return 100;
-  const distance = Math.abs(SENIORITY_ORDER[profile] - SENIORITY_ORDER[job]);
-  if (distance === 1) return 70;
-  return 35;
+  return evaluateJobMatch({
+    profile: { seniority: profileSeniority, skillItems: [], projects: [], courses: [], certifications: [] },
+    jobTitle: String(jobSeniority || ""),
+  }).seniorityMatch.score;
 }
-
-function validStructuredProject(project) {
-  const title = String(project.title || "").trim();
-  return title.length >= 2 &&
-    !/^(modelagem|otimizacao|otimização|implementacao|implementação|construcao|construção|desenvolvimento|integracao|integração)\b/i.test(title) &&
-    Boolean(String(project.shortDescription || "").trim());
-}
-
 function getMissingResumeFields(profile) {
   const missing = [];
   if (!String(profile.name || "").trim() || !String(profile.emailContact || profile.phone || "").trim()) {
@@ -111,63 +70,14 @@ function isAppliedAnalysisStatus(status) {
   return status === "applied" || status === "Aplicada";
 }
 
-function analyzeProfile(profile, jobDescription) {
-  const job = classifyJob(jobDescription);
-  const required = job.keywords;
-  const jobSeniority = inferSeniority(jobDescription);
-  const skillMap = new Map([
-    ...(profile.skillItems || []),
-    ...collectLearnedSkillItems(profile),
-  ].map((skill) => [normalizeTerm(skill.name), skill]));
-  const matchedSkills = required.filter((keyword) => skillMap.has(normalizeTerm(keyword)))
-    .map((keyword) => skillMap.get(normalizeTerm(keyword)).name);
-  const missingSkills = required.filter((keyword) => !skillMap.has(normalizeTerm(keyword)));
-  const validProjects = (profile.projects || []).filter(validStructuredProject);
-  const selectedProjects = rankProjects(validProjects, required, 2);
-  const selectedLearningItems = rankLearningItems(profile, { jobKeywords: required }, 5);
-  const selectedCertifications = selectedLearningItems.filter((item) => item.itemType === "certification");
-  const selectedCourses = selectedLearningItems.filter((item) => item.itemType === "course");
-
-  const skillsScore = scoreRatio(matchedSkills.length, required.length);
-  const projectsScore = selectedProjects.length ? Math.round(selectedProjects.reduce((sum, item) => sum + item.score, 0) / selectedProjects.length) : 0;
-  const learningScore = required.length ? scoreRatio(unique(selectedLearningItems.flatMap((item) => item.matchedKeywords)).length, required.length) : 0;
-  const skillsAndLearningScore = Math.round(skillsScore * 0.75 + learningScore * 0.25);
-  const seniorityScore = seniorityMatchScore(profile.seniority, jobSeniority);
-  const baseScore = Math.round(skillsAndLearningScore * 0.60 + projectsScore * 0.40);
-  const totalScore = Math.round(baseScore * (0.55 + seniorityScore * 0.45 / 100));
-  const warnings = [];
-  if (!required.length) warnings.push("Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.");
-  if (missingSkills.length) warnings.push("Skills ausentes sao requisitos identificados na vaga e nao serao exibidas como habilidades do candidato.");
-  if (!validProjects.length) warnings.push("Nao ha projetos estruturados suficientes para gerar um curriculo otimizado com qualidade.");
-  if (validProjects.length !== (profile.projects || []).length) warnings.push("Projetos sem estrutura valida foram ignorados; revise os dados cadastrados no perfil.");
-
-  return {
-    jobCategory: job.category,
-    jobSeniority,
-    profileSeniority: profile.seniority || "",
-    jobKeywords: required,
-    score: totalScore,
-    scoreDetails: {
-      skillsMatchScore: skillsScore,
-      skillsAndCertificationsMatchScore: skillsAndLearningScore,
-      projectsMatchScore: projectsScore,
-      coursesAndCertificationsMatchScore: learningScore,
-      seniorityMatchScore: seniorityScore,
-      baseScore,
-      totalScore,
-    },
-    matchedSkills: unique(matchedSkills),
-    missingSkills,
-    matchedTechnologies: unique(matchedSkills),
-    missingTechnologies: missingSkills,
-    selectedProjects,
-    selectedCourses,
-    selectedCertifications,
-    projectScores: selectedProjects.map((project) => ({ project, score: project.score, reason: project.reason })),
-    warnings,
-  };
+function analyzeProfile(profile, jobDescription, metadata = {}) {
+  return evaluateJobMatch({
+    profile,
+    jobTitle: metadata.jobTitle || "",
+    company: metadata.company || "",
+    jobDescription,
+  });
 }
-
 async function selectProfile(userId, jobDescription, requestedProfileId) {
   if (requestedProfileId) return profileService.getProfile(userId, requestedProfileId);
   const listed = await profileService.listProfiles(userId);
@@ -181,7 +91,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
   const profile = await selectProfile(userId, text, profileId);
   assertProfileReadyForResume(profile);
 
-  const analysis = analyzeProfile(profile, text);
+  const analysis = analyzeProfile(profile, text, metadata);
   const targetTitle = metadata.jobTitle || inferTitle(text);
   const result = {
     ...analysis,
@@ -190,7 +100,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
     selectedSubprofileName: profile.profileName,
     linkVaga: metadata.linkVaga || "",
     suggestedSummary: profile.summary,
-    semanticFeedback: `Matching deterministico: habilidades e certificacoes/cursos 60%, projetos 40%, com senioridade como fator decisivo. Resumo, formacao, experiencias e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
+    semanticFeedback: `Matching deterministico: senioridade 30%, habilidades 25%, projetos 25%, cursos/certificacoes 10% e competencias 10%. Resumo, formacao, experiencias e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
   };
   const compiledResume = compileResume({ profile, matchResult: result });
   const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: result, compiledResume });
@@ -201,7 +111,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
         userId,
         targetTitle,
         jobDescription: text,
-        score: result.score,
+        score: result.overallScore,
         suggestedSummary: profile.summary || "",
         selectedProjects: result.selectedProjects,
         matchedSkills: result.matchedSkills,
@@ -221,7 +131,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
         jobUrl: metadata.linkVaga,
         jobDescription: text,
         selectedSubprofileId: profile.id,
-        matchScore: result.score,
+        matchScore: result.overallScore,
         jobCategory: result.jobCategory,
         matchedSkills: result.matchedSkills,
         missingSkills: result.missingSkills,
@@ -230,7 +140,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
         status: "Currículo gerado",
       },
     });
-    await createSharedMatchedJob(tx, { jobTitle: targetTitle, company: metadata.company, linkVaga: metadata.linkVaga });
+    await createSharedMatchedJob(tx, { jobTitle: targetTitle, company: metadata.company, linkVaga: metadata.linkVaga, jobDescription: text });
     return { saved: savedResume, jobAnalysis: analysisRow };
   });
   await Promise.all([
@@ -246,7 +156,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
     resume: compiledResume,
     generatedPdfAvailable: true,
     generatedFileName: saved.generatedFileName,
-    message: `Curriculo gerado com ${result.score}% de aderencia. Status: ainda nao aplicado. Revise antes de enviar.`,
+    message: `Curriculo gerado com ${result.overallScore}% de aderencia. Status: ainda nao aplicado. Revise antes de enviar.`,
   };
 }
 
@@ -410,3 +320,4 @@ module.exports = {
   seniorityMatchScore,
   analysisStatusToJobUpdate,
 };
+

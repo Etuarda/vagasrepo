@@ -3,9 +3,18 @@ const { z } = require("zod");
 const cleanString = (max = 500) => z.string().trim().max(max).default("");
 const emptyToUndefined = (value) => (value === "" || value === null ? undefined : value);
 const optionalUuid = (message) => z.preprocess(emptyToUndefined, z.string().uuid(message).optional());
-const senioritySchema = z.enum(["estagiario", "junior", "pleno", "senior", "lead", "specialist"], {
-  errorMap: () => ({ message: "Senioridade e obrigatoria" }),
-});
+const seniorityAliases = {
+  estagiario: "internship",
+  pleno: "mid",
+  specialist: "lead",
+};
+const senioritySchema = z
+  .string({ required_error: "Senioridade e obrigatoria" })
+  .trim()
+  .transform((value) => seniorityAliases[value] || value)
+  .pipe(z.enum(["internship", "junior", "mid", "senior", "lead", "unknown"], {
+    errorMap: () => ({ message: "Senioridade e obrigatoria" }),
+  }));
 const learnedSkillsSchema = z
   .array(z.string().trim().min(1).max(2000))
   .or(z.string().trim().max(2000).transform((value) => [value]))

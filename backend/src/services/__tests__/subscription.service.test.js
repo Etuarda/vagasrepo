@@ -13,7 +13,12 @@ function dbFor(plan, options = {}) {
   const rules = PLAN_RULES[plan];
   return {
     subscription: {
-      upsert: jest.fn().mockResolvedValue({ userId: "user", plan, status: options.status || "active" }),
+      upsert: jest.fn().mockResolvedValue({
+        userId: "user",
+        plan,
+        status: options.status || "active",
+        currentPeriodEnd: options.currentPeriodEnd,
+      }),
     },
     usageCounter: {
       findUnique: jest.fn().mockResolvedValue(options.counter || null),
@@ -137,5 +142,14 @@ describe("subscription plans and quotas", () => {
 
     expect(context.plan).toBe(PLAN_KEYS.FREE);
     expect(context.rules.matchingLimit).toBe(3);
+  });
+
+  it("mantem regras Free quando o plano pago esta cancelado ou expirado", async () => {
+    await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.PRO, { status: "canceled" })))
+      .rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
+
+    await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.PRO, {
+      currentPeriodEnd: new Date("2026-01-01T00:00:00.000Z"),
+    }))).rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
   });
 });

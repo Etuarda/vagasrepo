@@ -177,6 +177,19 @@ describe("subprofile deletion", () => {
     });
   });
 
+  it("impede acessar subperfil de outro usuario", async () => {
+    prisma.careerProfile.findFirst.mockResolvedValue(null);
+
+    await expect(getProfile("user", "profile-from-other-user")).rejects.toMatchObject({
+      statusCode: 404,
+    });
+
+    expect(prisma.careerProfile.findFirst).toHaveBeenCalledWith({
+      where: { id: "profile-from-other-user", userId: "user" },
+      include: profileInclude,
+    });
+  });
+
   it("seleciona apenas campos utilizados das colecoes de perfil", () => {
     expect(profileInclude.projects.select).toEqual(expect.objectContaining({ id: true, title: true, stack: true }));
     expect(profileInclude.projects.select.description).toBeUndefined();

@@ -11,6 +11,9 @@ function planError(message, statusCode, code) {
 function effectivePlan(subscription) {
   const configuredPlan = PLAN_RULES[subscription?.plan] ? subscription.plan : PLAN_KEYS.FREE;
   if (configuredPlan !== PLAN_KEYS.FREE && subscription?.status !== "active") return PLAN_KEYS.FREE;
+  if (configuredPlan !== PLAN_KEYS.FREE && subscription?.currentPeriodEnd && new Date(subscription.currentPeriodEnd) <= new Date()) {
+    return PLAN_KEYS.FREE;
+  }
   return configuredPlan;
 }
 
@@ -195,4 +198,5 @@ module.exports = {
   assertSubprofileLimit,
   assertApplicationTrackingLimit,
   matchingPeriod,
+  effectivePlan,
 };
