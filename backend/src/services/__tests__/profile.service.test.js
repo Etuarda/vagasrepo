@@ -1,5 +1,6 @@
 jest.mock("../../lib/prisma", () => ({
   prisma: {
+    $transaction: jest.fn(),
     careerProfile: {
       findFirst: jest.fn(),
       delete: jest.fn(),
@@ -37,6 +38,68 @@ describe("subprofile deletion", () => {
       select: { id: true },
     });
     expect(subscriptionService.assertSubprofileLimit).not.toHaveBeenCalled();
+  });
+
+  it("cria subperfil mesmo quando o Perfil Global tem colecoes vazias", async () => {
+    const base = {
+      id: "global",
+      userId: "user",
+      profileName: "Perfil Global",
+      isGlobal: true,
+      name: "Pessoa",
+      title: "",
+      emailContact: "",
+      phone: "",
+      location: "",
+      cep: "",
+      linkedin: "",
+      github: "",
+      lattes: "",
+      summary: "",
+      objective: "",
+      seniority: "junior",
+      category: "unknown",
+      skills: [],
+      projects: [],
+      experiences: [],
+      courses: [],
+      certifications: [],
+      educations: [],
+      languages: [],
+      subprofileSkills: [],
+      subprofileProjects: [],
+      subprofileExperiences: [],
+      subprofileCourses: [],
+      subprofileCertifications: [],
+      subprofileEducations: [],
+      subprofileLanguages: [],
+    };
+    const created = { ...base, id: "frontend", profileName: "Frontend", isGlobal: false };
+    const tx = {
+      careerProfile: {
+        findFirst: jest.fn().mockResolvedValue(base),
+        create: jest.fn().mockResolvedValue(created),
+        findUnique: jest.fn().mockResolvedValue(base),
+      },
+      subprofileSkill: { createMany: jest.fn() },
+      subprofileProject: { createMany: jest.fn() },
+      subprofileExperience: { createMany: jest.fn() },
+      subprofileCourse: { createMany: jest.fn() },
+      subprofileCertification: { createMany: jest.fn() },
+      subprofileEducation: { createMany: jest.fn() },
+      subprofileLanguage: { createMany: jest.fn() },
+    };
+    prisma.careerProfile.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(created);
+    prisma.$transaction.mockImplementation((work) => work(tx));
+
+    await expect(createProfile("user", { profileName: "Frontend" })).resolves.toMatchObject({ id: "frontend" });
+
+    expect(subscriptionService.assertSubprofileLimit).toHaveBeenCalledWith("user", tx);
+    expect(tx.careerProfile.create).toHaveBeenCalled();
+    expect(tx.subprofileSkill.createMany).not.toHaveBeenCalled();
+    expect(cache.invalidate).toHaveBeenCalledWith("profiles", "user");
   });
 
   it("remove somente subperfil pertencente ao usuario", async () => {

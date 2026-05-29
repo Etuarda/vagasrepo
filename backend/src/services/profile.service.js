@@ -328,14 +328,15 @@ async function inheritGlobalCollections(subprofileId, globalProfileId, db = pris
     where: { id: globalProfileId },
     include: { skills: true, projects: true, experiences: true, courses: true, certifications: true, educations: true, languages: true },
   });
+  const createManyIfAny = (model, data) => data.length ? model.createMany({ data, skipDuplicates: true }) : Promise.resolve();
   await Promise.all([
-    db.subprofileSkill.createMany({ data: global.skills.map((item) => ({ subprofileId, skillId: item.id })), skipDuplicates: true }),
-    db.subprofileProject.createMany({ data: global.projects.map((item) => ({ subprofileId, projectId: item.id })), skipDuplicates: true }),
-    db.subprofileExperience.createMany({ data: global.experiences.map((item) => ({ subprofileId, experienceId: item.id })), skipDuplicates: true }),
-    db.subprofileCourse.createMany({ data: global.courses.map((item) => ({ subprofileId, courseId: item.id })), skipDuplicates: true }),
-    db.subprofileCertification.createMany({ data: global.certifications.map((item) => ({ subprofileId, certificationId: item.id })), skipDuplicates: true }),
-    db.subprofileEducation.createMany({ data: global.educations.map((item) => ({ subprofileId, educationId: item.id })), skipDuplicates: true }),
-    db.subprofileLanguage.createMany({ data: global.languages.map((item) => ({ subprofileId, languageId: item.id })), skipDuplicates: true }),
+    createManyIfAny(db.subprofileSkill, global.skills.map((item) => ({ subprofileId, skillId: item.id }))),
+    createManyIfAny(db.subprofileProject, global.projects.map((item) => ({ subprofileId, projectId: item.id }))),
+    createManyIfAny(db.subprofileExperience, global.experiences.map((item) => ({ subprofileId, experienceId: item.id }))),
+    createManyIfAny(db.subprofileCourse, global.courses.map((item) => ({ subprofileId, courseId: item.id }))),
+    createManyIfAny(db.subprofileCertification, global.certifications.map((item) => ({ subprofileId, certificationId: item.id }))),
+    createManyIfAny(db.subprofileEducation, global.educations.map((item) => ({ subprofileId, educationId: item.id }))),
+    createManyIfAny(db.subprofileLanguage, global.languages.map((item) => ({ subprofileId, languageId: item.id }))),
   ]);
 }
 
