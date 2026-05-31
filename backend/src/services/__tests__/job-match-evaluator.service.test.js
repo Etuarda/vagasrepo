@@ -94,7 +94,7 @@ describe("job match evaluator", () => {
     expect(result.overallScore).toBe(expectedBase);
     expect(result.scoreDetails.totalScore).toBe(expectedBase);
     expect(result.scoreDetails.weightedBeforePenalty).toBe(expectedBase);
-    expect(result.scoringVersion).toBe("deterministic-v3");
+    expect(result.scoringVersion).toBe("ats-v3-skills-projects-no-seniority");
   });
 
   it("gera warning quando encontra menos de 10 habilidades compativeis", () => {

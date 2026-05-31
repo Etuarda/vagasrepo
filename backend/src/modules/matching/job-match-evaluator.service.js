@@ -155,7 +155,7 @@ function evaluateJobMatch(input = {}) {
     seniorityPenalty: 0,
     aderenciaBase,
     aderenciaFinal: overallScore,
-    scoringVersion: "deterministic-v3",
+    scoringVersion: "ats-v3-skills-projects-no-seniority",
     inferredSeniority,
     confirmedSeniority: input.confirmedSeniority
       ? normalizeSeniorityLevel(input.confirmedSeniority)
