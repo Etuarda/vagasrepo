@@ -29,7 +29,13 @@ function buildListParams(filters) {
   const params = new URLSearchParams();
 
   if (filters && filters.q) params.set("q", filters.q);
+  if (filters && filters.titulo) params.set("titulo", filters.titulo);
+  if (filters && filters.empresa) params.set("empresa", filters.empresa);
+  if (filters && filters.linkVaga) params.set("linkVaga", filters.linkVaga);
   if (filters && filters.status) params.set("status", filters.status);
+  if (filters && filters.fase) params.set("fase", filters.fase);
+  if (filters && filters.subprofileId) params.set("subprofileId", filters.subprofileId);
+  if (filters && filters.origin) params.set("origin", filters.origin);
 
   if (filters && ["day", "week", "month", "currentMonth", "last7", "last30"].includes(filters.period)) {
     params.set("period", filters.period);

@@ -17,7 +17,13 @@ export const state = {
   resumeFiles: [],
   filters: {
     q: "",
+    titulo: "",
+    empresa: "",
+    linkVaga: "",
     status: "",
+    fase: "",
+    subprofileId: "",
+    origin: "",
     period: "month", // day | week | month | all | custom
     dateFrom: "",
     dateTo: "",

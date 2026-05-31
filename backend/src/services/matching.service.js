@@ -10,6 +10,7 @@ const {
 } = require("../modules/matching/job-match-evaluator.service");
 const { compileResume, collectLearnedSkillItems } = require("../modules/resume/resume-compiler.service");
 const { createSharedMatchedJob } = require("../modules/matching/shared-matched-jobs.service");
+const { recordApplicationStatusHistory } = require("../modules/application-tracking/application-history.service");
 const subscriptionService = require("./subscription.service");
 
 function inferTitle(text) {
@@ -36,24 +37,51 @@ function getMissingResumeFields(profile) {
   if (!String(profile.name || "").trim() || !String(profile.emailContact || profile.phone || "").trim()) {
     missing.push("dados pessoais (nome e e-mail ou telefone)");
   }
+  if (!String(profile.objective || "").trim()) missing.push("objetivo profissional");
   if (!String(profile.summary || "").trim()) missing.push("resumo profissional");
   if (!String(profile.seniority || "").trim()) missing.push("senioridade");
   if (!(profile.skillItems || []).length && !collectLearnedSkillItems(profile).length) missing.push("habilidades");
-  if (!(profile.educations || []).length && !(profile.experiences || []).length) {
-    missing.push("pelo menos 1 formacao ou experiencia");
-  }
+  if (!(profile.educations || []).length) missing.push("pelo menos 1 formacao");
+  if (!(profile.languages || []).length) missing.push("pelo menos 1 idioma");
   if (!(profile.projects || []).some(validStructuredProject)) missing.push("pelo menos 1 projeto estruturado");
+  if (!(profile.courses || []).length && !(profile.certifications || []).length) missing.push("pelo menos 1 curso ou certificacao");
+  if (!hasRequiredLearnedSkills(profile)) missing.push("habilidades aprendidas em formacao, projetos, cursos e certificacoes");
   if ((profile.languages || []).some((language) => !String(language.name || "").trim() || !String(language.level || "").trim())) {
     missing.push("nivel dos idiomas cadastrados");
   }
   return missing;
 }
 
+function hasRequiredLearnedSkills(profile) {
+  const collections = [
+    ...(profile.educations || []),
+    ...(profile.projects || []),
+    ...(profile.courses || []),
+    ...(profile.certifications || []),
+  ];
+  return collections.length > 0 && collections.every((item) => (item.learnedSkills || []).length > 0);
+}
+
 function assertProfileReadyForResume(profile) {
   const missing = getMissingResumeFields(profile);
   if (!missing.length) return;
-  const err = new Error(`Complete o perfil antes de gerar o curriculo otimizado. Campos faltantes: ${missing.join("; ")}.`);
+  const learnedSkillsMissing = missing.some((item) => item.includes("habilidades aprendidas"));
+  const err = new Error(learnedSkillsMissing
+    ? "Preencha as habilidades aprendidas antes de gerar o matching."
+    : `Complete o perfil antes de gerar o curriculo otimizado. Campos faltantes: ${missing.join("; ")}.`);
   err.statusCode = 422;
+  err.code = learnedSkillsMissing ? "LEARNED_SKILLS_REQUIRED" : "PROFILE_INCOMPLETE";
+  err.details = { missing };
+  throw err;
+}
+
+function requireConfirmedSeniority(metadata = {}) {
+  if (metadata.confirmedSeniority) return normalizeSeniority(metadata.confirmedSeniority);
+  const text = [metadata.jobTitle, metadata.company, metadata.jobDescription].filter(Boolean).join(" ");
+  const err = new Error("Confirme ou ajuste a senioridade da vaga antes de gerar o matching.");
+  err.statusCode = 409;
+  err.code = "SENIORITY_CONFIRMATION_REQUIRED";
+  err.details = { inferredSeniority: inferSeniority(text) };
   throw err;
 }
 
@@ -76,22 +104,25 @@ function analyzeProfile(profile, jobDescription, metadata = {}) {
     jobTitle: metadata.jobTitle || "",
     company: metadata.company || "",
     jobDescription,
+    confirmedSeniority: metadata.confirmedSeniority,
   });
 }
-async function selectProfile(userId, jobDescription, requestedProfileId) {
+async function selectProfile(userId, jobDescription, requestedProfileId, metadata = {}) {
   if (requestedProfileId) return profileService.getProfile(userId, requestedProfileId);
   const listed = await profileService.listProfiles(userId);
   const candidates = await Promise.all(listed.map((item) => profileService.getProfile(userId, item.id)));
-  return candidates.map((profile) => ({ profile, score: analyzeProfile(profile, jobDescription).score }))
+  return candidates.map((profile) => ({ profile, score: analyzeProfile(profile, jobDescription, metadata).score }))
     .sort((a, b) => b.score - a.score)[0]?.profile || profileService.getProfile(userId);
 }
 
 async function executeMatch(userId, jobDescription, profileId = null, metadata = {}) {
   const text = jobDescription.trim();
-  const profile = await selectProfile(userId, text, profileId);
+  const confirmedSeniority = requireConfirmedSeniority({ ...metadata, jobDescription: text });
+  const normalizedMetadata = { ...metadata, confirmedSeniority };
+  const profile = await selectProfile(userId, text, profileId, normalizedMetadata);
   assertProfileReadyForResume(profile);
 
-  const analysis = analyzeProfile(profile, text, metadata);
+  const analysis = analyzeProfile(profile, text, normalizedMetadata);
   const targetTitle = metadata.jobTitle || inferTitle(text);
   const result = {
     ...analysis,
@@ -100,7 +131,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
     selectedSubprofileName: profile.profileName,
     linkVaga: metadata.linkVaga || "",
     suggestedSummary: profile.summary,
-    semanticFeedback: `Matching deterministico: senioridade 30%, habilidades 25%, projetos 25%, cursos/certificacoes 10% e competencias 10%. Resumo, formacao, experiencias e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
+    semanticFeedback: `Matching deterministico: score base por habilidades 70% e projetos 30%, com senioridade aplicada como teto ou penalidade. Resumo, formacao, experiencias e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
   };
   const compiledResume = compileResume({ profile, matchResult: result });
   const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: result, compiledResume });
@@ -136,11 +167,30 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
         matchedSkills: result.matchedSkills,
         missingSkills: result.missingSkills,
         selectedProjectIds: result.selectedProjects.map((project) => project.id),
+        selectedCourseIds: result.selectedCourses.map((course) => course.id).filter(Boolean),
+        selectedCertificationIds: result.selectedCertifications.map((certification) => certification.id).filter(Boolean),
+        extraRelevantSkills: result.extraRelevantSkills,
+        confirmedSeniority: result.confirmedSeniority,
+        inferredSeniority: result.inferredSeniority,
+        aderenciaBase: result.aderenciaBase,
+        aderenciaFinal: result.aderenciaFinal,
+        skillsScore: result.scoreDetails.skillsMatchScore,
+        projectsScore: result.scoreDetails.projectsMatchScore,
+        seniorityPenalty: result.seniorityPenalty,
+        warnings: result.warnings,
+        scoringVersion: result.scoringVersion,
         generatedResumeId: savedResume.id,
         status: "Currículo gerado",
       },
     });
-    await createSharedMatchedJob(tx, { jobTitle: targetTitle, company: metadata.company, linkVaga: metadata.linkVaga, jobDescription: text });
+    await createSharedMatchedJob(tx, {
+      jobTitle: targetTitle,
+      company: metadata.company,
+      linkVaga: metadata.linkVaga,
+      jobDescription: text,
+      confirmedSeniority: result.confirmedSeniority,
+      inferredSeniority: result.inferredSeniority,
+    });
     return { saved: savedResume, jobAnalysis: analysisRow };
   });
   await Promise.all([
@@ -247,10 +297,29 @@ async function updateAnalysis(userId, id, data) {
   }
   const linkedJobUpdate = analysisStatusToJobUpdate(data.status);
   if (linkedJobUpdate) {
-    await prisma.job.updateMany({
-      where: { userId, jobAnalysisId: id },
-      data: linkedJobUpdate,
-    });
+    if (typeof prisma.$transaction !== "function") {
+      await prisma.job.updateMany({
+        where: { userId, jobAnalysisId: id },
+        data: linkedJobUpdate,
+      });
+    } else {
+      await prisma.$transaction(async (tx) => {
+      const linkedJobs = await tx.job.findMany({ where: { userId, jobAnalysisId: id } });
+      await tx.job.updateMany({
+        where: { userId, jobAnalysisId: id },
+        data: linkedJobUpdate,
+      });
+      await Promise.all(linkedJobs.map((job) => recordApplicationStatusHistory(tx, {
+        userId,
+        jobId: job.id,
+        statusAnterior: job.status,
+        novoStatus: linkedJobUpdate.status,
+        faseAnterior: job.fase,
+        novaFase: linkedJobUpdate.fase,
+        observacao: "Atualizacao sincronizada pelo historico de matching.",
+      })));
+      });
+    }
   }
   await Promise.all([
     cache.invalidate("match-history", userId),

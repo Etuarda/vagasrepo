@@ -270,6 +270,24 @@ function wireEvents() {
       state.filters.q = e.target.value;
     });
   }
+  const bindFilterInput = (id, key) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("input", (e) => {
+      state.filters[key] = e.target.value;
+    });
+  };
+  const bindFilterChange = (id, key) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", (e) => {
+      state.filters[key] = e.target.value;
+    });
+  };
+  bindFilterInput("filter-title", "titulo");
+  bindFilterInput("filter-company", "empresa");
+  bindFilterInput("filter-link", "linkVaga");
+  bindFilterChange("filter-fase", "fase");
+  bindFilterChange("filter-origin", "origin");
+  bindFilterChange("filter-subprofile", "subprofileId");
 
   const filterStatus = document.getElementById("filter-status");
   if (filterStatus) {
@@ -368,6 +386,13 @@ function wireEvents() {
   });
 
   const formProfile = document.getElementById("form-profile");
+  const profileSummary = document.getElementById("profile-summary");
+  if (profileSummary) {
+    profileSummary.addEventListener("input", () => {
+      const counter = document.getElementById("profile-summary-counter");
+      if (counter) counter.textContent = `${profileSummary.value.length}/3000 caracteres`;
+    });
+  }
   if (formProfile) {
     formProfile.addEventListener("submit", async (e) => {
       e.preventDefault();

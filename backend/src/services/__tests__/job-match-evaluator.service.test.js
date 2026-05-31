@@ -54,7 +54,7 @@ describe("job match evaluator", () => {
     });
 
     expect(result.overallScore).toBeLessThanOrEqual(59);
-    expect(result.seniorityPenalty).toBeGreaterThanOrEqual(40);
+    expect(result.seniorityPenalty).toBeGreaterThanOrEqual(35);
     expect(result.riskFlags).toContain("severe_seniority_mismatch");
   });
 

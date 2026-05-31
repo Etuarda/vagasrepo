@@ -174,7 +174,7 @@ async function assertSubprofileLimit(userId, db = prisma) {
   const { plan, rules } = await assertFeatureAccess(userId, FEATURES.SUBPROFILES, db);
   const count = await db.careerProfile.count({ where: { userId, isGlobal: false } });
   if (count >= rules.maxSubprofiles) {
-    throw planError("Limite de subperfis atingido para o plano atual.", 402, "SUBPROFILE_LIMIT_REACHED");
+    throw planError("Seu plano atingiu o limite de subperfis.", 402, "SUBPROFILE_LIMIT_REACHED");
   }
   return { plan, used: count, limit: rules.maxSubprofiles };
 }

@@ -76,6 +76,20 @@ describe("subprofile deletion", () => {
     };
     const created = { ...base, id: "frontend", profileName: "Frontend", isGlobal: false };
     const tx = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: "user",
+          name: "Pessoa",
+          email: "pessoa@example.com",
+          emailContact: "",
+          phone: "",
+          location: "",
+          cep: "",
+          linkedin: "",
+          github: "",
+          lattes: "",
+        }),
+      },
       careerProfile: {
         findFirst: jest.fn().mockResolvedValue(base),
         create: jest.fn().mockResolvedValue(created),
@@ -98,6 +112,11 @@ describe("subprofile deletion", () => {
 
     expect(subscriptionService.assertSubprofileLimit).toHaveBeenCalledWith("user", tx);
     expect(tx.careerProfile.create).toHaveBeenCalled();
+    expect(tx.careerProfile.create.mock.calls[0][0].data).toEqual(expect.objectContaining({
+      summary: "",
+      objective: "",
+      seniority: "",
+    }));
     expect(tx.subprofileSkill.createMany).not.toHaveBeenCalled();
     expect(cache.invalidate).toHaveBeenCalledWith("profiles", "user");
   });

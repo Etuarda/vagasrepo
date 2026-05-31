@@ -60,7 +60,7 @@ function serializeProfile(profile) {
   const certifications = dedupeById([...(profile.certifications || []), ...(profile.subprofileCertifications || []).map((item) => ({ ...item.certification, relevanceWeight: item.relevanceWeight }))]);
   const educations = dedupeById([...(profile.educations || []), ...(profile.subprofileEducations || []).map((item) => item.education)]);
   const languages = dedupeById([...(profile.languages || []), ...(profile.subprofileLanguages || []).map((item) => item.language)]);
-  return {
+  const serialized = {
     id: profile.id,
     profileName: profile.profileName,
     isGlobal: !!profile.isGlobal,
@@ -130,6 +130,38 @@ function serializeProfile(profile) {
       learnedSkills: education.learnedSkills || [],
     })),
   };
+  serialized.completion = profileCompletionChecklist(serialized);
+  return serialized;
+}
+
+function profileCompletionChecklist(profile) {
+  const checks = [
+    ["nome", Boolean(String(profile.name || "").trim()), "informe o nome"],
+    ["objetivo profissional", Boolean(String(profile.objective || "").trim()), "informe o objetivo profissional"],
+    ["resumo profissional", Boolean(String(profile.summary || "").trim()), "informe o resumo profissional"],
+    ["formacao", (profile.educations || []).length > 0, "adicione pelo menos 1 formacao"],
+    ["idiomas", (profile.languages || []).length > 0, "adicione pelo menos 1 idioma"],
+    ["habilidades tecnicas", (profile.skillItems || []).length > 0, "adicione habilidades tecnicas"],
+    ["competencias", (profile.skillItems || []).some((skill) => ["other", "learned"].includes(skill.category || "other")), "adicione competencias relevantes"],
+    ["projetos", (profile.projects || []).length > 0, "adicione pelo menos 1 projeto"],
+    ["cursos ou certificacoes", (profile.courses || []).length + (profile.certifications || []).length > 0, "adicione pelo menos 1 curso ou certificacao"],
+    ["habilidades aprendidas", hasCompleteLearnedSkills(profile), "preencha habilidades aprendidas em formacao, projetos, cursos e certificacoes"],
+  ];
+  const pending = checks.filter(([, ok]) => !ok).map(([, , message]) => message);
+  return {
+    percent: Math.round(((checks.length - pending.length) / checks.length) * 100),
+    pending,
+  };
+}
+
+function hasCompleteLearnedSkills(profile) {
+  const collections = [
+    ...(profile.educations || []),
+    ...(profile.projects || []),
+    ...(profile.courses || []),
+    ...(profile.certifications || []),
+  ];
+  return collections.length > 0 && collections.every((item) => (item.learnedSkills || []).length > 0);
 }
 
 function buildGlobalCatalog(global, subprofile) {
@@ -270,29 +302,28 @@ async function createProfile(userId, { profileName }) {
 
   const profile = await prisma.$transaction(async (tx) => {
     await subscriptionService.assertSubprofileLimit(userId, tx);
-    const base = await ensureDefaultProfile(userId, tx);
+    await ensureDefaultProfile(userId, tx);
+    const user = await tx.user.findUnique({ where: { id: userId } });
     const created = await tx.careerProfile.create({
       data: {
         userId,
         profileName,
-        name: base.name,
-        title: base.title,
-        emailContact: base.emailContact,
-        phone: base.phone,
-        location: base.location,
-        cep: base.cep,
-        linkedin: base.linkedin,
-        github: base.github,
-        lattes: base.lattes,
-        summary: base.summary,
-        objective: base.objective,
-        seniority: base.seniority,
+        name: user.name,
+        title: "",
+        emailContact: user.emailContact || user.email || "",
+        phone: user.phone || "",
+        location: user.location || "",
+        cep: user.cep || "",
+        linkedin: user.linkedin || "",
+        github: user.github || "",
+        lattes: user.lattes || "",
+        summary: "",
+        objective: "",
+        seniority: "",
         category: normalizeTerm(profileName),
       },
       include: profileInclude,
     });
-
-    await inheritGlobalCollections(created.id, base.id, tx);
     return created;
   });
   return refreshedProfile(userId, profile.id);
@@ -632,7 +663,11 @@ async function deleteExperience(userId, profileId, id) {
 
 async function addCourse(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
-  await prisma.course.create({ data: { ...data, userId, profileId: profile.id } });
+  const owner = profile.isGlobal ? profile : await ensureDefaultProfile(userId);
+  const course = await prisma.course.create({ data: { ...data, userId, profileId: owner.id } });
+  if (!profile.isGlobal) {
+    await prisma.subprofileCourse.create({ data: { subprofileId: profile.id, courseId: course.id } });
+  }
   return refreshedProfile(userId, profile.id);
 }
 
@@ -665,7 +700,11 @@ async function deleteCourse(userId, profileId, id) {
 
 async function addCertification(userId, profileId, data) {
   const profile = await resolveProfile(userId, profileId);
-  await prisma.certification.create({ data: { ...data, userId, profileId: profile.id } });
+  const owner = profile.isGlobal ? profile : await ensureDefaultProfile(userId);
+  const certification = await prisma.certification.create({ data: { ...data, userId, profileId: owner.id } });
+  if (!profile.isGlobal) {
+    await prisma.subprofileCertification.create({ data: { subprofileId: profile.id, certificationId: certification.id } });
+  }
   return refreshedProfile(userId, profile.id);
 }
 
@@ -799,4 +838,5 @@ module.exports = {
   resolveProfile,
   serializeProfile,
   profileInclude,
+  profileCompletionChecklist,
 };

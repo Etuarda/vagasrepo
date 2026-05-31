@@ -22,11 +22,8 @@ const SENIORITY_ALIASES = Object.freeze({
 });
 
 const WEIGHTS = Object.freeze({
-  seniority: 0.30,
-  technicalSkills: 0.25,
-  projects: 0.25,
-  learning: 0.10,
-  competencies: 0.10,
+  skills: 0.70,
+  projects: 0.30,
 });
 
 function unique(values) {
@@ -53,15 +50,25 @@ function inferSeniority(text) {
   return matches.sort((a, b) => SENIORITY_ORDER[b] - SENIORITY_ORDER[a])[0] || "unknown";
 }
 
-function evaluateSeniority(profileSeniority, jobText) {
+function seniorityCap(profile, job, distance) {
+  if (distance <= 0) return null;
+  if (profile === "internship" && ["senior", "lead"].includes(job)) return 45;
+  if (profile === "junior" && ["senior", "lead"].includes(job)) return 55;
+  if (profile === "junior" && job === "mid") return 70;
+  if (profile === "mid" && ["senior", "lead"].includes(job)) return 80;
+  return distance === 1 ? 70 : 55;
+}
+
+function evaluateSeniority(profileSeniority, jobText, confirmedSeniority = null) {
   const profile = normalizeSeniorityLevel(profileSeniority);
-  const job = inferSeniority(jobText);
+  const inferredJob = inferSeniority(jobText);
+  const job = confirmedSeniority ? normalizeSeniorityLevel(confirmedSeniority) : inferredJob;
   const riskFlags = [];
 
   if (job === "unknown") {
     riskFlags.push("seniority_not_explicit");
     return {
-      match: { profile, job, score: 85, inferred: true, compatible: true, distance: null },
+      match: { profile, job, inferredJob, score: 95, inferred: !confirmedSeniority, compatible: true, distance: null },
       penalty: 5,
       cap: null,
       riskFlags,
@@ -71,7 +78,7 @@ function evaluateSeniority(profileSeniority, jobText) {
   if (profile === "unknown") {
     riskFlags.push("profile_seniority_unknown");
     return {
-      match: { profile, job, score: 70, inferred: true, compatible: false, distance: null },
+      match: { profile, job, inferredJob, score: 85, inferred: !confirmedSeniority, compatible: false, distance: null },
       penalty: 15,
       cap: 80,
       riskFlags,
@@ -80,29 +87,21 @@ function evaluateSeniority(profileSeniority, jobText) {
 
   const distance = SENIORITY_ORDER[job] - SENIORITY_ORDER[profile];
   if (distance <= 0) {
+    if (distance < 0) riskFlags.push("seniority_above_job");
     return {
-      match: { profile, job, score: 100, inferred: true, compatible: true, distance },
+      match: { profile, job, inferredJob, score: 100, inferred: !confirmedSeniority, compatible: true, distance },
       penalty: 0,
       cap: null,
       riskFlags,
     };
   }
 
-  if (distance === 1) {
-    riskFlags.push("seniority_gap");
-    return {
-      match: { profile, job, score: 65, inferred: true, compatible: false, distance },
-      penalty: 20,
-      cap: 74,
-      riskFlags,
-    };
-  }
-
-  riskFlags.push("severe_seniority_mismatch");
+  riskFlags.push(distance === 1 ? "seniority_gap" : "severe_seniority_mismatch");
+  const cap = seniorityCap(profile, job, distance);
   return {
-    match: { profile, job, score: 25, inferred: true, compatible: false, distance },
-    penalty: 45,
-    cap: 59,
+    match: { profile, job, inferredJob, score: distance === 1 ? 75 : 45, inferred: !confirmedSeniority, compatible: false, distance },
+    penalty: 0,
+    cap,
     riskFlags,
   };
 }
@@ -124,11 +123,8 @@ function splitKeywords(required) {
 
 function weightedScore(scores) {
   return Math.round(
-    scores.seniority * WEIGHTS.seniority +
-    scores.technicalSkills * WEIGHTS.technicalSkills +
-    scores.projects * WEIGHTS.projects +
-    scores.learning * WEIGHTS.learning +
-    scores.competencies * WEIGHTS.competencies
+    scores.skills * WEIGHTS.skills +
+    scores.projects * WEIGHTS.projects
   );
 }
 
@@ -144,19 +140,19 @@ function evaluateJobMatch(input = {}) {
   ].map((skill) => [normalizeTerm(skill.name), skill]));
 
   const matchedRequired = required.filter((keyword) => skillMap.has(normalizeTerm(keyword)));
-  const matchedTechnical = technical.filter((keyword) => skillMap.has(normalizeTerm(keyword)));
   const matchedCompetencies = competencies.filter((keyword) => skillMap.has(normalizeTerm(keyword)));
   const matchedSkills = unique(matchedRequired.map((keyword) => skillMap.get(normalizeTerm(keyword)).name));
   const missingSkills = required.filter((keyword) => !skillMap.has(normalizeTerm(keyword)));
 
   const validProjects = (profile.projects || []).filter(validStructuredProject);
-  const matchedProjects = rankProjects(validProjects, required, input.projectLimit || 2);
+  const matchedProjects = rankProjects(validProjects, required, input.projectLimit || 2)
+    .filter((project) => project.score > 0 && project.matchedKeywords.length > 0);
   const learningItems = rankLearningItems(profile, { jobKeywords: required }, 5);
   const relevantCertifications = learningItems.filter((item) => item.itemType === "certification");
   const relevantCourses = learningItems.filter((item) => item.itemType === "course");
 
-  const seniority = evaluateSeniority(profile.seniority, jobText);
-  const technicalSkillsScore = scoreRatio(matchedTechnical.length, technical.length || required.length);
+  const seniority = evaluateSeniority(profile.seniority, jobText, input.confirmedSeniority);
+  const skillsScore = scoreRatio(matchedRequired.length, required.length);
   const projectsScore = matchedProjects.length
     ? Math.round(matchedProjects.reduce((sum, item) => sum + item.score, 0) / matchedProjects.length)
     : 0;
@@ -164,33 +160,41 @@ function evaluateJobMatch(input = {}) {
     ? scoreRatio(unique(learningItems.flatMap((item) => item.matchedKeywords)).length, required.length)
     : 0;
   const competenciesScore = competencies.length ? scoreRatio(matchedCompetencies.length, competencies.length) : 50;
+  const extraRelevantSkills = unique([...skillMap.values()]
+    .map((skill) => skill.name)
+    .filter((name) => !matchedSkills.map(normalizeTerm).includes(normalizeTerm(name)))
+    .slice(0, 10));
   const scores = {
-    seniority: seniority.match.score,
-    technicalSkills: technicalSkillsScore,
+    skills: skillsScore,
     projects: projectsScore,
     learning: learningScore,
     competencies: competenciesScore,
+    seniority: seniority.match.score,
   };
-  const weightedBeforePenalty = weightedScore(scores);
-  const penalizedScore = Math.max(0, weightedBeforePenalty - seniority.penalty);
+  const aderenciaBase = weightedScore(scores);
+  const penalizedScore = Math.max(0, aderenciaBase - seniority.penalty);
   const overallScore = seniority.cap === null ? penalizedScore : Math.min(penalizedScore, seniority.cap);
+  const seniorityPenalty = Math.max(seniority.penalty, aderenciaBase - overallScore);
   const riskFlags = [...seniority.riskFlags];
   if (!required.length) riskFlags.push("no_job_keywords_detected");
   if (!validProjects.length) riskFlags.push("no_structured_projects");
+  if (validProjects.length && !matchedProjects.length) riskFlags.push("no_compatible_projects");
   if (validProjects.length !== (profile.projects || []).length) riskFlags.push("invalid_projects_ignored");
+  if (learningItems.length < 5) riskFlags.push("insufficient_learning_items");
 
   return {
     overallScore,
     score: overallScore,
-    scores: { ...scores, weightedBeforePenalty },
+    scores: { ...scores, aderenciaBase },
     scoreDetails: {
-      skillsMatchScore: technicalSkillsScore,
-      skillsAndCertificationsMatchScore: Math.round(technicalSkillsScore * 0.75 + learningScore * 0.25),
+      skillsMatchScore: skillsScore,
+      skillsAndCertificationsMatchScore: skillsScore,
       projectsMatchScore: projectsScore,
       coursesAndCertificationsMatchScore: learningScore,
       competenciesMatchScore: competenciesScore,
       seniorityMatchScore: seniority.match.score,
-      weightedBeforePenalty,
+      weightedBeforePenalty: aderenciaBase,
+      aderenciaBase,
       totalScore: overallScore,
     },
     matchedSkills,
@@ -203,18 +207,26 @@ function evaluateJobMatch(input = {}) {
     selectedCertifications: relevantCertifications,
     jobCategory: job.category,
     jobKeywords: required,
+    extraRelevantSkills,
     matchedTechnologies: matchedSkills,
     missingTechnologies: missingSkills,
     projectScores: matchedProjects.map((project) => ({ project, score: project.score, reason: project.reason })),
     seniorityMatch: seniority.match,
-    seniorityPenalty: seniority.penalty,
+    seniorityPenalty,
+    aderenciaBase,
+    aderenciaFinal: overallScore,
+    scoringVersion: "deterministic-v2",
     profileSeniority: seniority.match.profile,
     jobSeniority: seniority.match.job,
-    explanation: `Score calculado por senioridade 30%, habilidades 25%, projetos 25%, cursos/certificacoes 10% e competencias 10%. Penalidade de senioridade aplicada: ${seniority.penalty} pontos.`,
+    inferredSeniority: seniority.match.inferredJob,
+    confirmedSeniority: seniority.match.job,
+    explanation: `Score base calculado por habilidades 70% e projetos 30%. Senioridade atua como teto ou penalidade. Penalidade/teto aplicado: ${seniorityPenalty} pontos.`,
     riskFlags,
     warnings: riskFlags.map((flag) => ({
       no_job_keywords_detected: "Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.",
       no_structured_projects: "Nao ha projetos estruturados suficientes para gerar um curriculo otimizado com qualidade.",
+      no_compatible_projects: "Nenhum projeto compatível com a vaga foi encontrado.",
+      insufficient_learning_items: `Foram encontrados apenas ${learningItems.length} cursos ou certificações compatíveis com a vaga.`,
       invalid_projects_ignored: "Projetos sem estrutura valida foram ignorados; revise os dados cadastrados no perfil.",
       severe_seniority_mismatch: "A senioridade da vaga esta muito acima da senioridade do perfil.",
       seniority_gap: "A senioridade da vaga esta acima da senioridade do perfil.",

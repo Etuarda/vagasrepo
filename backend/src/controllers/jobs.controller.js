@@ -3,14 +3,20 @@ const jobsService = require("../services/jobs.service");
 
 async function list(req, res, next) {
   try {
-    const { q, status, period, dateFrom, dateTo, limit, cursor } = jobListQuerySchema.parse(req.query);
+    const { q, titulo, empresa, linkVaga, status, fase, subprofileId, origin, period, dateFrom, dateTo, limit, cursor } = jobListQuerySchema.parse(req.query);
 
     // Regras de precedência:
     // - Se period for currentMonth/last7/last30, ignora dateFrom/dateTo
     // - Se period for ausente, usa dateFrom/dateTo se existirem
     const filters = {
       q,
+      titulo,
+      empresa,
+      linkVaga,
       status,
+      fase,
+      subprofileId,
+      origin,
       period,
       dateFrom: period ? undefined : dateFrom,
       dateTo: period ? undefined : dateTo,

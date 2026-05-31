@@ -1,6 +1,8 @@
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
 const subscriptionService = require("../../services/subscription.service");
+const { APPLICATION_PHASES } = require("../../constants/application-status");
+const { recordApplicationStatusHistory } = require("./application-history.service");
 
 const linkedJobInclude = {
   jobAnalysis: {
@@ -16,12 +18,14 @@ const linkedJobInclude = {
     },
   },
   optimizedResume: { select: { id: true, generatedFileName: true, selectedProjects: true } },
+  statusHistory: {
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  },
 };
 
 function phaseToAnalysisUpdate(fase, appliedAt) {
-  if (!["Currículo gerado", "Aplicada", "Entrevista", "Teste técnico", "Feedback", "Encerrada"].includes(fase)) {
-    return null;
-  }
+  if (!APPLICATION_PHASES.includes(fase)) return null;
   return {
     status: fase,
     ...(fase === "Aplicada" ? { appliedAt: appliedAt || new Date() } : {}),
@@ -82,6 +86,14 @@ async function createFromAnalysis(userId, analysisId, payload) {
         notes: payload.notes,
       },
       include: linkedJobInclude,
+    });
+
+    await recordApplicationStatusHistory(tx, {
+      userId,
+      jobId: created.id,
+      novoStatus: created.status,
+      novaFase: created.fase,
+      observacao: "Candidatura criada a partir do matching.",
     });
 
     const analysisUpdate = phaseToAnalysisUpdate(payload.fase, analysis.appliedAt);

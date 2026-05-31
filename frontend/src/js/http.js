@@ -25,6 +25,8 @@ export async function api(endpoint, options = {}, token = null) {
     if (!silent) toast(message, "error");
     const err = new Error(message);
     err.status = res.status;
+    err.code = data?.code;
+    err.details = data?.details;
     err.issues = data?.issues || [];
     throw err;
   }

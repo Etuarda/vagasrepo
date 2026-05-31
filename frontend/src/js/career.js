@@ -360,6 +360,7 @@ function renderCoursesAndCertifications() {
 function renderProfileForm() {
   const profile = state.profile;
   if (!profile) return;
+  const seniorityAliases = { estagiario: "internship", pleno: "mid", specialist: "lead" };
 
   setValue("profile-profile-name", profile.profileName);
   setValue("profile-name", profile.name);
@@ -372,8 +373,10 @@ function renderProfileForm() {
   setValue("profile-github", profile.github);
   setValue("profile-lattes", profile.lattes);
   setValue("profile-objective", profile.objective);
-  setValue("profile-seniority", profile.seniority);
+  setValue("profile-seniority", seniorityAliases[profile.seniority] || profile.seniority);
   setValue("profile-summary", profile.summary);
+  updateSummaryCounter();
+  renderProfileCompletion(profile.completion);
 
   renderSkills();
   renderLanguages();
@@ -382,6 +385,28 @@ function renderProfileForm() {
   renderEducations();
   renderExperiences();
   renderCoursesAndCertifications();
+}
+
+function renderProfileCompletion(completion) {
+  const root = document.getElementById("profile-completion");
+  if (!root) return;
+  if (!completion) {
+    root.innerHTML = "";
+    return;
+  }
+  root.innerHTML = `
+    <p class="font-bold">Perfil ${Number(completion.percent || 0)}% completo</p>
+    ${(completion.pending || []).length
+      ? `<ul class="mt-2 list-disc pl-5">${completion.pending.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+      : `<p class="mt-2">Sem pendencias essenciais.</p>`}
+  `;
+}
+
+function updateSummaryCounter() {
+  const input = document.getElementById("profile-summary");
+  const counter = document.getElementById("profile-summary-counter");
+  if (!input || !counter) return;
+  counter.textContent = `${input.value.length}/3000 caracteres`;
 }
 
 function profileInitials(name) {
@@ -411,13 +436,24 @@ function renderProfileCards() {
 
 function renderMatchProfileOptions() {
   const select = document.getElementById("match-profile-id");
-  if (!select) return;
-  const selected = select.value;
-  select.innerHTML = `
-    <option value="">Escolher perfil automaticamente pelo matching</option>
-    ${(state.profiles || []).map((profile) => `<option value="${profile.id}">${escapeHtml(profile.profileName)}</option>`).join("")}
-  `;
-  if ([...(state.profiles || []).map((profile) => profile.id), ""].includes(selected)) select.value = selected;
+  const profileOptions = (state.profiles || []).map((profile) => `<option value="${profile.id}">${escapeHtml(profile.profileName)}</option>`).join("");
+  if (select) {
+    const selected = select.value;
+    select.innerHTML = `
+      <option value="">Escolher perfil automaticamente pelo matching</option>
+      ${profileOptions}
+    `;
+    if ([...(state.profiles || []).map((profile) => profile.id), ""].includes(selected)) select.value = selected;
+  }
+  const filter = document.getElementById("filter-subprofile");
+  if (filter) {
+    const selected = filter.value;
+    filter.innerHTML = `
+      <option value="">Todos os perfis</option>
+      ${profileOptions}
+    `;
+    if ([...(state.profiles || []).map((profile) => profile.id), ""].includes(selected)) filter.value = selected;
+  }
 }
 
 function renderHistory() {
@@ -478,13 +514,17 @@ function renderSharedMatchedJobs() {
         <article class="editorial-card rounded-2xl p-5">
           <h3 class="font-bold text-lg">${escapeHtml(item.jobTitle)}</h3>
           <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-2">${escapeHtml(item.company)}</p>
-          <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))} · ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
+          <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))} | ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
           ${item.profileMatch ? `
             <div class="mt-4 rounded-2xl border border-borderLight p-4 bg-white">
-              <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Aderencia ao perfil</p>
+              <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Aderencia</p>
               <p class="font-serif text-4xl mt-2">${Number(item.profileMatch.score || 0)}%</p>
               <p class="text-xs text-taupe mt-2">
-                Skills: ${(item.profileMatch.matchedSkills || []).length} encontradas · Senioridade: ${escapeHtml(item.profileMatch.jobSeniority || "nao identificada")}
+                Perfil Global: ${Number(item.globalMatch?.score || 0)}%
+                ${item.bestSubprofileMatch ? ` | Melhor subperfil: ${escapeHtml(item.bestSubprofileMatch.profileName)} (${Number(item.bestSubprofileMatch.score || 0)}%)` : ""}
+              </p>
+              <p class="text-xs text-taupe mt-2">
+                Skills: ${(item.profileMatch.matchedSkills || []).join(", ") || "nenhuma"} | Gaps: ${(item.profileMatch.missingSkills || []).slice(0, 4).join(", ") || "nenhum"}
               </p>
             </div>
           ` : ""}
@@ -494,7 +534,6 @@ function renderSharedMatchedJobs() {
     )
     .join("");
 }
-
 function renderResumeFiles() {
   const list = document.getElementById("resume-files-list");
   const files = state.resumeFiles || [];
@@ -993,7 +1032,31 @@ export const career = {
     const company = document.getElementById("match-company")?.value || "";
     const linkVaga = document.getElementById("match-job-link")?.value || "";
     const requestedProfileId = document.getElementById("match-profile-id")?.value || undefined;
-    const result = await api("/match", { method: "POST", body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId }) }, state.token);
+    let confirmedSeniority = document.getElementById("match-confirmed-seniority")?.value || "";
+    let result;
+    try {
+      result = await api("/match", {
+        method: "POST",
+        silent: true,
+        body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId, confirmedSeniority }),
+      }, state.token);
+    } catch (err) {
+      if (err.code !== "SENIORITY_CONFIRMATION_REQUIRED") throw err;
+      const inferred = err.details?.inferredSeniority || "unknown";
+      const answer = window.prompt(
+        `Identificamos esta vaga como: ${inferred}. Confirme ou altere para internship, junior, mid, senior, lead ou unknown.`,
+        inferred
+      );
+      confirmedSeniority = ["internship", "junior", "mid", "senior", "lead", "unknown"].includes(String(answer || "").trim())
+        ? String(answer || "").trim()
+        : "unknown";
+      const select = document.getElementById("match-confirmed-seniority");
+      if (select) select.value = confirmedSeniority;
+      result = await api("/match", {
+        method: "POST",
+        body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId, confirmedSeniority }),
+      }, state.token);
+    }
     state.lastMatchResult = result;
     renderMatchResult(result);
     invalidateHistoryCache();

@@ -1,6 +1,12 @@
 const { prisma } = require("../lib/prisma");
 const cache = require("../lib/cache");
 const { linkedJobInclude } = require("../modules/application-tracking/application-tracking.service");
+const { recordApplicationStatusHistory } = require("../modules/application-tracking/application-history.service");
+const {
+  normalizeJobStatusAndPhase,
+  assertCanUpdateClosedJob,
+  phaseToAnalysisStatus,
+} = require("../constants/application-status");
 const subscriptionService = require("./subscription.service");
 
 function startOfDay(d) {
@@ -16,48 +22,66 @@ function endOfDay(d) {
 }
 
 function parseYMD(ymd) {
-  // "YYYY-MM-DD" -> Date (local)
   const [y, m, d] = String(ymd).split("-").map((n) => Number(n));
   return new Date(y, m - 1, d);
 }
 
-async function listJobs(userId, { q, status, period, dateFrom, dateTo, limit = 50, cursor }) {
-  const variant = JSON.stringify({ q: q || "", status: status || "", period: period || "", dateFrom: dateFrom || "", dateTo: dateTo || "", limit, cursor: cursor || "" });
-  return cache.remember("jobs", userId, variant, () => loadJobs(userId, { q, status, period, dateFrom, dateTo, limit, cursor }));
+async function listJobs(userId, filters = {}) {
+  const variant = JSON.stringify({
+    q: filters.q || "",
+    titulo: filters.titulo || "",
+    empresa: filters.empresa || "",
+    linkVaga: filters.linkVaga || "",
+    status: filters.status || "",
+    fase: filters.fase || "",
+    subprofileId: filters.subprofileId || "",
+    origin: filters.origin || "",
+    period: filters.period || "",
+    dateFrom: filters.dateFrom || "",
+    dateTo: filters.dateTo || "",
+    limit: filters.limit || 50,
+    cursor: filters.cursor || "",
+  });
+  return cache.remember("jobs", userId, variant, () => loadJobs(userId, filters));
 }
 
-function normalizeJobStatusAndPhase(data) {
-  if (data.fase === "Encerrada" || data.status === "Encerrada") {
-    return { ...data, fase: "Encerrada", status: "Encerrada" };
-  }
-  return data;
-}
-
-function phaseToAnalysisStatus(fase) {
-  if (["Currículo gerado", "Aplicada", "Entrevista", "Teste técnico", "Feedback", "Encerrada"].includes(fase)) {
-    return fase;
-  }
-  return null;
-}
-
-async function loadJobs(userId, { q, status, period, dateFrom, dateTo, limit = 50, cursor }) {
+async function loadJobs(userId, {
+  q,
+  titulo,
+  empresa,
+  linkVaga,
+  status,
+  fase,
+  subprofileId,
+  origin,
+  period,
+  dateFrom,
+  dateTo,
+  limit = 50,
+  cursor,
+}) {
   const and = [];
 
-  // A) Busca textual (case-insensitive)
   if (q) {
     and.push({
       OR: [
         { titulo: { contains: q, mode: "insensitive" } },
         { empresa: { contains: q, mode: "insensitive" } },
+        { linkVaga: { contains: q, mode: "insensitive" } },
         { fase: { contains: q, mode: "insensitive" } },
       ],
     });
   }
 
+  if (titulo) and.push({ titulo: { contains: titulo, mode: "insensitive" } });
+  if (empresa) and.push({ empresa: { contains: empresa, mode: "insensitive" } });
+  if (linkVaga) and.push({ linkVaga: { contains: linkVaga, mode: "insensitive" } });
   if (status) and.push({ status });
+  if (fase) and.push({ fase });
+  if (subprofileId) and.push({ jobAnalysis: { selectedSubprofileId: subprofileId } });
+  if (origin === "matching") and.push({ jobAnalysisId: { not: null } });
+  if (origin === "manual") and.push({ jobAnalysisId: null });
 
-  // B) Filtro por período
-  // Observação: o modelo atual não possui createdAt; usamos o campo "data" (DateTime) como referência temporal.
   if (period === "day") {
     const now = new Date();
     and.push({ data: { gte: startOfDay(now), lte: endOfDay(now) } });
@@ -82,10 +106,7 @@ async function loadJobs(userId, { q, status, period, dateFrom, dateTo, limit = 5
   }
 
   return prisma.job.findMany({
-    where: {
-      userId,
-      AND: and,
-    },
+    where: { userId, AND: and },
     orderBy: [{ data: "desc" }, { id: "desc" }],
     take: limit,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -97,9 +118,15 @@ async function createJob(userId, data) {
   const normalized = normalizeJobStatusAndPhase(data);
   const job = await prisma.$transaction(async (tx) => {
     await subscriptionService.assertApplicationTrackingLimit(userId, tx);
-    return tx.job.create({
-      data: { ...normalized, userId },
+    const created = await tx.job.create({ data: { ...normalized, userId } });
+    await recordApplicationStatusHistory(tx, {
+      userId,
+      jobId: created.id,
+      novoStatus: created.status,
+      novaFase: created.fase,
+      observacao: "Cadastro inicial da candidatura.",
     });
+    return created;
   });
   await Promise.all([
     cache.invalidate("jobs", userId),
@@ -111,7 +138,7 @@ async function createJob(userId, data) {
 async function getJob(userId, id) {
   const job = await prisma.job.findFirst({ where: { id, userId }, include: linkedJobInclude });
   if (!job) {
-    const err = new Error("Vaga não encontrada");
+    const err = new Error("Vaga nao encontrada");
     err.statusCode = 404;
     throw err;
   }
@@ -120,28 +147,39 @@ async function getJob(userId, id) {
 
 async function updateJob(userId, id, data) {
   const normalized = normalizeJobStatusAndPhase(data);
-  const result = await prisma.job.updateMany({
-    where: { id, userId },
-    data: normalized,
-  });
-
-  if (result.count === 0) {
-    const err = new Error("Vaga não encontrada");
+  const existing = await prisma.job.findFirst({ where: { id, userId } });
+  if (!existing) {
+    const err = new Error("Vaga nao encontrada");
     err.statusCode = 404;
     throw err;
   }
+  assertCanUpdateClosedJob(existing, normalized);
 
-  const job = await prisma.job.findFirst({ where: { id, userId }, include: linkedJobInclude });
-  const analysisStatus = phaseToAnalysisStatus(normalized.fase);
-  if (job.jobAnalysisId && analysisStatus) {
-    await prisma.jobAnalysis.updateMany({
-      where: { id: job.jobAnalysisId, userId },
-      data: {
-        status: analysisStatus,
-        ...(analysisStatus === "Aplicada" ? { appliedAt: new Date() } : {}),
-      },
+  const job = await prisma.$transaction(async (tx) => {
+    await tx.job.updateMany({ where: { id: existing.id, userId }, data: normalized });
+    await recordApplicationStatusHistory(tx, {
+      userId,
+      jobId: existing.id,
+      statusAnterior: existing.status,
+      novoStatus: normalized.status,
+      faseAnterior: existing.fase,
+      novaFase: normalized.fase,
+      observacao: normalized.notes || "",
     });
-  }
+    const updated = await tx.job.findFirst({ where: { id: existing.id, userId }, include: linkedJobInclude });
+    const analysisStatus = phaseToAnalysisStatus(normalized.fase);
+    if (updated.jobAnalysisId && analysisStatus && tx.jobAnalysis?.updateMany) {
+      await tx.jobAnalysis.updateMany({
+        where: { id: updated.jobAnalysisId, userId },
+        data: {
+          status: analysisStatus,
+          ...(analysisStatus === "Aplicada" ? { appliedAt: new Date() } : {}),
+        },
+      });
+    }
+    return updated;
+  });
+
   await Promise.all([
     cache.invalidate("jobs", userId),
     cache.invalidate("shared-jobs-board", "global"),
@@ -155,12 +193,10 @@ async function deleteJob(userId, id) {
     where: { id, userId },
     select: { jobAnalysisId: true },
   });
-  const result = await prisma.job.deleteMany({
-    where: { id, userId },
-  });
+  const result = await prisma.job.deleteMany({ where: { id, userId } });
 
   if (result.count === 0) {
-    const err = new Error("Vaga não encontrada");
+    const err = new Error("Vaga nao encontrada");
     err.statusCode = 404;
     throw err;
   }

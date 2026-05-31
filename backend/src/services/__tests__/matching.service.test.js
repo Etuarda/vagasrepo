@@ -60,10 +60,13 @@ describe("deterministic matching", () => {
 
     expect(missing).toEqual(expect.arrayContaining([
       "dados pessoais (nome e e-mail ou telefone)",
+      "objetivo profissional",
       "resumo profissional",
       "habilidades",
-      "pelo menos 1 formacao ou experiencia",
+      "pelo menos 1 formacao",
       "pelo menos 1 projeto estruturado",
+      "pelo menos 1 curso ou certificacao",
+      "habilidades aprendidas em formacao, projetos, cursos e certificacoes",
       "nivel dos idiomas cadastrados",
     ]));
     expect(() => assertProfileReadyForResume({
@@ -75,6 +78,6 @@ describe("deterministic matching", () => {
       educations: [],
       experiences: [],
       languages: [],
-    })).toThrow("Complete o perfil antes de gerar o curriculo otimizado");
+    })).toThrow("Preencha as habilidades aprendidas antes de gerar o matching");
   });
 });

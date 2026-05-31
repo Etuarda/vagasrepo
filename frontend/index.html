@@ -120,6 +120,18 @@
           <label for="filter-q" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Busca Textual</label>
           <input type="text" id="filter-q" placeholder="Ex: Desenvolvedor..." class="editorial-input text-sm" />
         </div>
+        <div class="space-y-3">
+          <label for="filter-title" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Titulo da vaga</label>
+          <input type="text" id="filter-title" placeholder="Cargo" class="editorial-input text-sm" />
+        </div>
+        <div class="space-y-3">
+          <label for="filter-company" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Empresa</label>
+          <input type="text" id="filter-company" placeholder="Empresa" class="editorial-input text-sm" />
+        </div>
+        <div class="space-y-3">
+          <label for="filter-link" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Link da vaga</label>
+          <input type="text" id="filter-link" placeholder="URL ou dominio" class="editorial-input text-sm" />
+        </div>
 
         <div class="space-y-3">
           <label for="filter-status" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Filtrar Status</label>
@@ -189,6 +201,7 @@
             <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Base de dados do currículo</p>
             <h2 id="profile-title" class="font-serif text-4xl sm:text-5xl tracking-tight mt-3">Perfil profissional.</h2>
             <p class="text-sm text-taupe leading-relaxed mt-4">Preencha as informações na ordem em que elas serão usadas no currículo otimizado.</p>
+            <div id="profile-completion" class="mt-4 text-sm text-taupe"></div>
           </header>
 
           <section class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-label="Seleção de perfil profissional">
@@ -246,12 +259,12 @@
                 <input type="text" id="profile-objective" maxlength="500" placeholder="Objetivo no curriculo (ex: Desenvolvedora Backend)" class="editorial-input md:col-span-2" />
                 <select id="profile-seniority" required class="editorial-input bg-white md:col-span-2">
                   <option value="">Senioridade *</option>
-                  <option value="estagiario">Estagiario</option>
+                  <option value="internship">Estagiario</option>
                   <option value="junior">Junior</option>
-                  <option value="pleno">Pleno</option>
+                  <option value="mid">Pleno</option>
                   <option value="senior">Senior</option>
                   <option value="lead">Lead</option>
-                  <option value="specialist">Especialista</option>
+                  <option value="unknown">Nao informada</option>
                 </select>
                 <input type="email" id="profile-email-contact" placeholder="E-mail de contato" class="editorial-input" />
                 <input type="text" id="profile-phone" placeholder="Telefone" class="editorial-input" />
@@ -264,7 +277,8 @@
             </section>
             <section class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-labelledby="summary-title">
               <h3 id="summary-title" class="font-serif text-3xl">Resumo profissional.</h3>
-              <textarea id="profile-summary" rows="5" maxlength="2600" placeholder="Resumo profissional (max. 2.600 caracteres)" class="editorial-input"></textarea>
+              <textarea id="profile-summary" rows="5" maxlength="3000" placeholder="Resumo profissional (max. 3.000 caracteres)" class="editorial-input"></textarea>
+              <p id="profile-summary-counter" class="text-xs text-taupe text-right">0/3000 caracteres</p>
               <div class="flex justify-end">
                 <button type="submit" class="bg-ink text-paper px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
                   Salvar perfil
@@ -281,7 +295,7 @@
               <input type="text" id="education-title-field" required placeholder="Curso / graduação" class="editorial-input text-sm" />
               <input type="text" id="education-institution" required placeholder="Instituição" class="editorial-input text-sm" />
               <input type="text" id="education-period" placeholder="Período" class="editorial-input text-sm" />
-              <input type="text" id="education-learned-skills" placeholder="Habilidades aprendidas (ex: SQL, Java, Git)" class="editorial-input text-sm md:col-span-3" />
+              <input type="text" id="education-learned-skills" required placeholder="Habilidades aprendidas (ex: SQL, Java, Git)" class="editorial-input text-sm md:col-span-3" />
               <button type="submit" data-submit-label="Adicionar" class="bg-ink text-paper rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
               <button type="button" data-cancel-edit="education" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
             </form>
@@ -293,7 +307,7 @@
             <form id="form-project" class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm md:col-span-2" />
               <textarea id="project-short-description" required minlength="10" maxlength="500" rows="3" placeholder="Resumo curto para currículo" class="editorial-input text-sm md:col-span-2"></textarea>
-              <input type="text" id="project-learned-skills" placeholder="Habilidades aprendidas para matching (ex: Node.js, PostgreSQL, Docker)" class="editorial-input text-sm md:col-span-2" />
+              <input type="text" id="project-learned-skills" required placeholder="Habilidades aprendidas para matching (ex: Node.js, PostgreSQL, Docker)" class="editorial-input text-sm md:col-span-2" />
               <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
               <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
               <div class="md:col-span-2 flex justify-end">
@@ -357,7 +371,7 @@
                 <input type="text" id="course-institution" placeholder="Instituição" class="editorial-input text-sm" />
                 <input type="text" id="course-period" placeholder="Período" class="editorial-input text-sm" />
                 <input type="text" id="course-workload" placeholder="Duração (ex: 360h)" class="editorial-input text-sm" />
-                <input type="text" id="course-learned-skills" placeholder="Habilidades aprendidas" class="editorial-input text-sm" />
+                <input type="text" id="course-learned-skills" required placeholder="Habilidades aprendidas" class="editorial-input text-sm" />
                 <textarea id="course-description" rows="2" placeholder="Descrição curta" class="editorial-input text-sm"></textarea>
                 <button type="submit" data-submit-label="Adicionar curso" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar curso</button>
                 <button type="button" data-cancel-edit="course" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
@@ -368,7 +382,7 @@
                 <input type="text" id="certification-issuer" placeholder="Emissor" class="editorial-input text-sm" />
                 <input type="text" id="certification-period" placeholder="Data ou período" class="editorial-input text-sm" />
                 <input type="text" id="certification-workload" placeholder="Duração (ex: 80h)" class="editorial-input text-sm" />
-                <input type="text" id="certification-learned-skills" placeholder="Habilidades aprendidas" class="editorial-input text-sm" />
+                <input type="text" id="certification-learned-skills" required placeholder="Habilidades aprendidas" class="editorial-input text-sm" />
                 <input type="url" id="certification-url" placeholder="Link da credencial" class="editorial-input text-sm" />
                 <button type="submit" data-submit-label="Adicionar certificação" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar certificação</button>
                 <button type="button" data-cancel-edit="certification" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
@@ -384,7 +398,14 @@
             <h3 id="languages-title" class="font-serif text-3xl">Idiomas.</h3>
             <form id="form-language" class="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl">
               <input type="text" id="language-name" required placeholder="Idioma" class="editorial-input text-sm" />
-              <input type="text" id="language-level" placeholder="Nível" class="editorial-input text-sm" />
+              <select id="language-level" class="editorial-input text-sm bg-white">
+                <option value="">Nivel</option>
+                <option value="Basico">Basico</option>
+                <option value="Intermediario">Intermediario</option>
+                <option value="Avancado">Avancado</option>
+                <option value="Fluente">Fluente</option>
+                <option value="Nativo">Nativo</option>
+              </select>
               <button type="submit" data-submit-label="Adicionar" class="bg-ink text-paper px-5 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
               <button type="button" data-cancel-edit="language" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
             </form>
@@ -440,6 +461,15 @@
               <input type="text" id="match-company" required minlength="2" placeholder="Empresa *" class="editorial-input text-sm" />
             </div>
             <input type="url" id="match-job-link" required placeholder="Link da vaga *" class="editorial-input text-sm" />
+            <select id="match-confirmed-seniority" class="editorial-input text-sm bg-white">
+              <option value="">Confirmar senioridade da vaga ao enviar</option>
+              <option value="internship">Estagio</option>
+              <option value="junior">Junior</option>
+              <option value="mid">Pleno</option>
+              <option value="senior">Senior</option>
+              <option value="lead">Lead</option>
+              <option value="unknown">Nao informada</option>
+            </select>
             <p class="text-sm text-taupe leading-relaxed">
               A geração usa exclusivamente Perfil Global e Subperfil preenchidos manualmente; PDFs anexados não alimentam o matching.
             </p>
@@ -611,6 +641,32 @@
             <option value="Teste técnico">Teste técnico</option>
             <option value="Feedback">Feedback</option>
             <option value="Encerrada">Encerrada</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <label for="filter-fase" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Acompanhamento</label>
+          <select id="filter-fase" class="editorial-input text-sm bg-white">
+            <option value="">Todas as fases</option>
+            <option value="Currículo gerado">Currículo gerado</option>
+            <option value="Aplicada">Aplicada</option>
+            <option value="Entrevista">Entrevista</option>
+            <option value="Teste técnico">Teste técnico</option>
+            <option value="Feedback">Feedback</option>
+            <option value="Encerrada">Encerrada</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <label for="filter-origin" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Origem</label>
+          <select id="filter-origin" class="editorial-input text-sm bg-white">
+            <option value="">Todas</option>
+            <option value="manual">Cadastro manual</option>
+            <option value="matching">Matching ATS</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <label for="filter-subprofile" class="text-[9px] font-bold uppercase tracking-[0.4em] text-stone">Subperfil</label>
+          <select id="filter-subprofile" class="editorial-input text-sm bg-white">
+            <option value="">Todos os perfis</option>
           </select>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

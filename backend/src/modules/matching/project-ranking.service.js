@@ -9,26 +9,33 @@ function termMatches(text, keyword) {
 }
 
 function scoreProject(project, jobKeywords) {
-  const skillSource = [
-    project.title,
-    project.category,
-    ...(project.learnedSkills || []),
-  ].join(" ");
-  const evidenceSource = [
-    project.shortDescription,
-    project.repositoryUrl,
-    project.deployUrl,
-  ].join(" ");
+  const learnedSkills = project.learnedSkills || [];
+  if (!learnedSkills.length) {
+    return { skillMatches: [], evidenceMatches: [], score: 0 };
+  }
+  const skillSource = learnedSkills.join(" ");
+  const descriptionSource = [project.shortDescription, project.description, project.technicalSolution].join(" ");
+  const categorySource = [project.category, project.stack].join(" ");
   const skillMatches = unique(jobKeywords.filter((keyword) => termMatches(skillSource, keyword)));
-  const evidenceMatches = unique(jobKeywords.filter((keyword) => termMatches(evidenceSource, keyword)));
+  const descriptionMatches = unique(jobKeywords.filter((keyword) => termMatches(descriptionSource, keyword)));
+  const categoryMatches = unique(jobKeywords.filter((keyword) => termMatches(categorySource, keyword)));
+  const evidenceMatches = unique([...descriptionMatches, ...categoryMatches]);
   const hasDescription = String(project.shortDescription || "").trim().length >= 10;
-  const hasLink = Boolean(String(project.repositoryUrl || project.deployUrl || "").trim());
+  const hasRepository = Boolean(String(project.repositoryUrl || "").trim());
+  const hasDeploy = Boolean(String(project.deployUrl || "").trim());
   const skillScore = Math.min(100, scoreRatio(skillMatches.length, jobKeywords.length));
-  const evidenceScore = Math.min(100, scoreRatio(evidenceMatches.length, jobKeywords.length) * 0.7 + (hasDescription ? 15 : 0) + (hasLink ? 15 : 0));
+  const descriptionScore = Math.min(100, scoreRatio(descriptionMatches.length, jobKeywords.length) + (hasDescription ? 20 : 0));
+  const categoryScore = Math.min(100, scoreRatio(categoryMatches.length, jobKeywords.length));
   return {
     skillMatches,
     evidenceMatches,
-    score: Math.round(skillScore * 0.5 + evidenceScore * 0.5),
+    score: Math.round(
+      skillScore * 0.45 +
+      descriptionScore * 0.20 +
+      (hasRepository ? 100 : 0) * 0.15 +
+      (hasDeploy ? 100 : 0) * 0.10 +
+      categoryScore * 0.10
+    ),
   };
 }
 

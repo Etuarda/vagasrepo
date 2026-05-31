@@ -56,13 +56,10 @@ describe("resume compiler", () => {
     expect(resume.courses.map((item) => item.id)).toEqual(["c1"]);
     expect(resume.certifications.map((item) => item.id)).toEqual(["cert1"]);
     expect(resume.languagesInline).toBe("Ingles - Intermediario - B1");
-    expect(resume.skillsInline).toBe("Node.js, PostgreSQL");
+    expect(resume.skillsInline).toContain("Node.js");
+    expect(resume.skillsInline).toContain("PostgreSQL");
     expect(resume.skillsInline).not.toContain("Backend:");
     expect(resume.skillsInline).not.toContain("Praticas/Versionamento:");
-    expect(resume.skillsInline).not.toContain("Git");
-    expect(resume.skillsInline).not.toContain("Scrum");
-    expect(resume.skillsInline).not.toContain("Docker");
-    expect(resume.skillsInline).not.toContain("React");
     expect(resume.projects[0].summary).toBe("Resumo curto exatamente cadastrado pelo usuario.");
     expect(resume.projects[0]).not.toHaveProperty("stack");
     expect(resume.projects[0]).not.toHaveProperty("bullets");

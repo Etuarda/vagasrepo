@@ -19,8 +19,7 @@ const learnedSkillsSchema = z
   .array(z.string().trim().min(1).max(2000))
   .or(z.string().trim().max(2000).transform((value) => [value]))
   .transform((items) => items.flatMap((item) => item.split(",").map((skill) => skill.trim()).filter(Boolean)))
-  .pipe(z.array(z.string().min(1).max(80)).max(80, "Informe no maximo 80 habilidades aprendidas"))
-  .default([]);
+  .pipe(z.array(z.string().min(1).max(80)).min(1, "Informe as habilidades aprendidas").max(80, "Informe no maximo 80 habilidades aprendidas"));
 
 const profileSchema = z.object({
   profileName: z.string().trim().min(2, "Nome do perfil deve ter pelo menos 2 caracteres").max(80),
@@ -33,7 +32,7 @@ const profileSchema = z.object({
   linkedin: cleanString(300),
   github: cleanString(300),
   lattes: cleanString(300),
-  summary: cleanString(2600),
+  summary: cleanString(3000),
   objective: z.string().trim().max(500).optional(),
   seniority: senioritySchema,
   category: z.string().trim().max(40).optional(),
@@ -135,6 +134,7 @@ const matchSchema = z.object({
   jobTitle: z.string().trim().min(2, "Cargo da vaga e obrigatorio").max(160),
   company: z.string().trim().min(2, "Empresa e obrigatoria").max(160),
   linkVaga: z.string().trim().url("Link da vaga invalido"),
+  confirmedSeniority: z.preprocess(emptyToUndefined, senioritySchema.optional()),
 });
 
 const sharedMatchedJobsQuerySchema = z.object({

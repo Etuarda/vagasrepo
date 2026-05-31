@@ -25,8 +25,11 @@ function compileSkills(profile, matchResult, rules) {
     TRANSVERSAL_SKILLS.includes(normalizeTerm(skill.name)) &&
     (matchResult.jobKeywords || []).map(normalizeTerm).includes(normalizeTerm(skill.name))
   );
+  const stackLabels = new Set(["backend", "frontend", "fullstack", "dados", "data", "cloud", "qa", "devops"]);
   const targeted = matched.length || (matchResult.jobKeywords || []).length ? matched : [...catalog.values()];
-  const ordered = uniqueByNormalized([...targeted, ...transversal]);
+  const ordered = uniqueByNormalized([...targeted, ...transversal, ...catalog.values()])
+    .filter((skill) => !stackLabels.has(normalizeTerm(skill.name)))
+    .slice(0, 25);
   return ordered.map((skill) => skill.name).join(", ");
 }
 

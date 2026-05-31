@@ -15,7 +15,11 @@ jest.mock("../../services/subscription.service", () => ({
   assertFeatureAccess: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../../services/profile.service", () => ({
+  listProfiles: jest.fn().mockResolvedValue([{ id: "global", isGlobal: true, profileName: "Perfil Global" }]),
   getProfile: jest.fn().mockResolvedValue({
+    id: "global",
+    profileName: "Perfil Global",
+    isGlobal: true,
     seniority: "junior",
     skillItems: [{ name: "React" }],
     projects: [],
@@ -59,6 +63,8 @@ describe("shared matched jobs", () => {
         company: "Empresa",
         jobUrl: "https://example.com/vaga",
         jobDescription: "Nao deve ser compartilhada.",
+        confirmedSeniority: "unknown",
+        inferredSeniority: "unknown",
       },
     });
   });
@@ -95,6 +101,7 @@ describe("shared matched jobs", () => {
       company: "Empresa",
       jobUrl: "https://example.com/frontend",
       origin: "tracking",
+      globalMatch: expect.objectContaining({ overallScore: expect.any(Number) }),
       profileMatch: expect.objectContaining({ overallScore: expect.any(Number) }),
     })]);
     expect(rows[0]).not.toHaveProperty("jobDescription");
@@ -121,7 +128,10 @@ describe("shared matched jobs", () => {
     });
 
     expect(rows[0]).not.toHaveProperty("jobDescription");
-    expect(rows[0].profileMatch).toEqual(expected);
+    expect(rows[0].profileMatch).toEqual(expect.objectContaining({
+      overallScore: expected.overallScore,
+      matchedSkills: expected.matchedSkills.slice(0, 8),
+    }));
     expect(rows[0].profileMatch.matchedSkills).toContain("React");
   });
 

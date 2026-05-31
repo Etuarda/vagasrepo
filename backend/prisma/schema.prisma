@@ -41,6 +41,7 @@ model User {
   usageCounters       UsageCounter[]
   billingEvents       BillingEvent[]
   couponRedemptions   CouponRedemption[]
+  applicationStatusHistory ApplicationStatusHistory[]
 }
 
 model Subscription {
@@ -224,6 +225,7 @@ model Job {
   user            User             @relation(fields: [userId], references: [id])
   jobAnalysis     JobAnalysis?     @relation(fields: [jobAnalysisId], references: [id], onDelete: SetNull)
   optimizedResume OptimizedResume? @relation("ApplicationResume", fields: [optimizedResumeId], references: [id], onDelete: SetNull)
+  statusHistory   ApplicationStatusHistory[]
 
   @@index([userId])
   @@index([userId, data])
@@ -231,6 +233,25 @@ model Job {
   @@index([fase])
   @@index([jobAnalysisId])
   @@index([optimizedResumeId])
+}
+
+model ApplicationStatusHistory {
+  id             String   @id @default(uuid())
+  userId         String
+  jobId          String
+  statusAnterior String   @default("")
+  novoStatus     String   @default("")
+  faseAnterior   String   @default("")
+  novaFase       String   @default("")
+  observacao     String   @default("")
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([createdAt])
 }
 
 model AuthSession {
@@ -572,8 +593,20 @@ model JobAnalysis {
   jobCategory          String    @default("unknown")
   matchedSkills        String[]  @default([])
   missingSkills        String[]  @default([])
+  extraRelevantSkills  String[]  @default([])
   selectedProjectIds   String[]  @default([])
+  selectedCourseIds    String[]  @default([])
+  selectedCertificationIds String[] @default([])
   generatedResumeId    String?
+  confirmedSeniority   String    @default("unknown")
+  inferredSeniority    String    @default("unknown")
+  aderenciaBase        Int       @default(0)
+  aderenciaFinal       Int       @default(0)
+  skillsScore          Int       @default(0)
+  projectsScore        Int       @default(0)
+  seniorityPenalty     Int       @default(0)
+  warnings             String[]  @default([])
+  scoringVersion       String    @default("deterministic-v1")
   status               String    @default("draft")
   appliedAt            DateTime?
   notes                String    @default("")
@@ -601,6 +634,8 @@ model SharedMatchedJob {
   company   String
   jobUrl    String
   jobDescription String @default("")
+  confirmedSeniority String @default("unknown")
+  inferredSeniority String @default("unknown")
   createdAt DateTime @default(now())
 
   @@index([createdAt])

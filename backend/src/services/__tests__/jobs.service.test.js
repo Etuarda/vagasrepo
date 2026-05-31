@@ -85,7 +85,7 @@ describe("job list pagination", () => {
     prisma.job.updateMany.mockResolvedValue({ count: 1 });
     prisma.job.findFirst.mockResolvedValue({ id: "job", jobAnalysisId: null });
 
-    await updateJob("user", "job", { fase: "Triagem" });
+    await updateJob("user", "job", { status: "Ativa", fase: "Feedback" });
 
     expect(cache.invalidate).not.toHaveBeenCalledWith("match-history", "user");
   });
@@ -94,7 +94,7 @@ describe("job list pagination", () => {
     prisma.job.updateMany.mockResolvedValue({ count: 1 });
     prisma.job.findFirst.mockResolvedValue({ id: "job", jobAnalysisId: "analysis" });
 
-    await updateJob("user", "job", { fase: "Triagem" });
+    await updateJob("user", "job", { status: "Ativa", fase: "Feedback" });
 
     expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
   });

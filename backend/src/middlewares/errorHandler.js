@@ -29,7 +29,11 @@ function errorHandler(err, req, res, next) {
       stack: err?.stack,
     }));
   }
-  return res.status(status).json({ error: message });
+  return res.status(status).json({
+    error: message,
+    ...(err?.code ? { code: err.code } : {}),
+    ...(err?.details ? { details: err.details } : {}),
+  });
 }
 
 module.exports = { errorHandler };
