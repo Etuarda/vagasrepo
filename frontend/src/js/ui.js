@@ -247,6 +247,44 @@ export const ui = {
     document.body.style.overflow = "auto";
   },
 
+  openSeniorityModal(inferredSeniority) {
+    return new Promise((resolve, reject) => {
+      const modal = document.getElementById("seniority-modal");
+      const select = document.getElementById("seniority-modal-select");
+      const infoEl = document.getElementById("seniority-modal-inferred");
+      if (!modal || !select) { resolve("unknown"); return; }
+
+      const LABELS = { internship: "Estágio", junior: "Júnior", mid: "Pleno", senior: "Sênior", lead: "Lead", unknown: "Não informada" };
+      if (infoEl) {
+        infoEl.textContent = `Senioridade identificada: ${LABELS[inferredSeniority] || inferredSeniority || "não identificada"}. Confirme ou ajuste antes de calcular.`;
+      }
+      const validValues = ["internship", "junior", "mid", "senior", "lead", "unknown"];
+      select.value = validValues.includes(inferredSeniority) ? inferredSeniority : "unknown";
+
+      const confirmBtn = document.getElementById("seniority-modal-confirm");
+      const cancelBtn = document.getElementById("seniority-modal-cancel");
+      const overlays = modal.querySelectorAll("[data-close-seniority]");
+
+      const cleanup = () => {
+        modal.classList.add("hidden");
+        document.body.style.overflow = "auto";
+        confirmBtn?.removeEventListener("click", onConfirm);
+        cancelBtn?.removeEventListener("click", onCancel);
+        overlays.forEach((el) => el.removeEventListener("click", onCancel));
+      };
+
+      const onConfirm = () => { cleanup(); resolve(select.value || "unknown"); };
+      const onCancel = () => { cleanup(); reject(new Error("cancelled")); };
+
+      confirmBtn?.addEventListener("click", onConfirm);
+      cancelBtn?.addEventListener("click", onCancel);
+      overlays.forEach((el) => el.addEventListener("click", onCancel));
+
+      modal.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    });
+  },
+
   syncApplicationConditionalFields() {
     const needsAction = !!document.getElementById("application-action-bool")?.checked;
     const hasFeedback = !!document.getElementById("application-feedback-bool")?.checked;

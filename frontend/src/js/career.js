@@ -567,42 +567,6 @@ function renderSharedMatchedJobs() {
     return;
   }
 
-  root.innerHTML = rows
-    .map(
-      (item) => `
-        <article class="editorial-card rounded-2xl p-5">
-          <h3 class="font-bold text-lg">${escapeHtml(item.jobTitle)}</h3>
-          <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-2">${escapeHtml(item.company)}</p>
-          <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))} | ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
-          ${item.profileMatch ? `
-            <div class="mt-4 rounded-2xl border border-borderLight p-4 bg-white">
-              <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Aderencia</p>
-              <p class="font-serif text-4xl mt-2">${Number(item.profileMatch.score || 0)}%</p>
-              <p class="text-xs text-taupe mt-2">
-                Perfil Global: ${Number(item.globalMatch?.score || 0)}%
-                ${item.bestSubprofileMatch ? ` | Melhor subperfil: ${escapeHtml(item.bestSubprofileMatch.profileName)} (${Number(item.bestSubprofileMatch.score || 0)}%)` : ""}
-              </p>
-              <p class="text-xs text-taupe mt-2">
-                Skills: ${(item.profileMatch.matchedSkills || []).join(", ") || "nenhuma"} | Gaps: ${(item.profileMatch.missingSkills || []).slice(0, 4).join(", ") || "nenhum"}
-              </p>
-            </div>
-          ` : ""}
-          <a href="${escapeHtml(item.jobUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 text-[10px] font-bold uppercase tracking-widest underline">Abrir vaga</a>
-        </article>
-      `
-    )
-    .join("");
-}
-function renderSharedMatchedJobs() {
-  const root = document.getElementById("shared-jobs-list");
-  if (!root) return;
-
-  const rows = state.sharedMatchedJobs || [];
-  if (!rows.length) {
-    root.innerHTML = `<p class="text-sm text-taupe">Nenhuma vaga compartilhada neste periodo.</p>`;
-    return;
-  }
-
   root.innerHTML = rows.map((item) => {
     const match = item.profileMatch || {};
     const available = isScoreAvailable(match);
@@ -675,82 +639,6 @@ function renderResumeFiles() {
       `
     )
     .join("");
-}
-
-function renderMatchResult(result) {
-  const root = document.getElementById("match-result");
-  if (!root) return;
-
-  const block = (title, items, positive = false) => `
-    <section class="editorial-card rounded-2xl p-5">
-      <h4 class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone mb-3">${title}</h4>
-      ${
-        items.length
-          ? `<div class="flex flex-wrap gap-2">${items.map((item) => `<span class="tag-pill contrast-chip ${positive ? "text-green-800" : "text-red-800"}">${escapeHtml(item)}</span>`).join("")}</div>`
-          : `<p class="text-sm text-taupe">Nenhum item encontrado.</p>`
-      }
-    </section>
-  `;
-
-  root.className = "lg:col-span-7 space-y-4 sm:space-y-6";
-  root.innerHTML = `
-    <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Relatório de aderência</p>
-          <h3 class="font-serif text-4xl sm:text-5xl mt-3">${result.scoreDetails.totalScore}%</h3>
-        </div>
-        <div class="grid grid-cols-2 gap-3 text-center">
-          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.skillsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Skills</span></div>
-          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${result.scoreDetails.projectsMatchScore}%</span><span class="text-[9px] uppercase tracking-widest">Projetos</span></div>
-        </div>
-      </div>
-      <p class="text-sm text-taupe leading-relaxed mt-6">${escapeHtml(result.semanticFeedback)}</p>
-      <p class="text-sm font-bold mt-3">${escapeHtml(result.message || "")}</p>
-      <div class="mt-6 flex flex-wrap gap-3">
-        ${
-          result.generatedPdfAvailable
-            ? `<button type="button" data-download-current-optimized="${result.id}" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Baixar curriculo atualizado</button>
-               <button type="button" data-register-application="${result.analysisId}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Cadastrar acompanhamento</button>`
-            : `<p class="text-sm text-taupe">Complete os dados estruturados do perfil para gerar o currículo otimizado.</p>`
-        }
-        <button type="button" data-new-matching class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Novo matching</button>
-      </div>
-    </section>
-    <section class="editorial-card rounded-2xl sm:rounded-3xl p-4 sm:p-8">
-      <h4 class="font-serif text-3xl mb-4">Resumo cadastrado.</h4>
-      <p class="text-sm text-taupe leading-relaxed">${escapeHtml(result.suggestedSummary)}</p>
-    </section>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      ${block("Skills aderentes", result.matchedSkills || [], true)}
-      ${block("Skills ausentes", result.missingSkills || [])}
-      ${block("Keywords reconhecidas", result.jobKeywords || [], true)}
-      ${block("Avisos", result.warnings || [])}
-    </div>
-    <section class="editorial-card rounded-2xl sm:rounded-3xl p-4 sm:p-8">
-      <h4 class="font-serif text-3xl mb-4">Projetos mais fortes.</h4>
-      <div class="space-y-4">
-        ${(result.projectScores || [])
-          .slice(0, 2)
-          .map(
-            (item) => `
-              <article class="contrast-surface border border-borderLight rounded-2xl p-5">
-                <div class="flex justify-between gap-4">
-                  <h5 class="font-bold">${escapeHtml(item.project.title)}</h5>
-                  <span class="font-bold">${item.score}%</span>
-                </div>
-                <p class="text-sm text-taupe mt-2">${escapeHtml(item.reason)}</p>
-                <div class="flex flex-wrap gap-4 mt-3">
-                  ${item.project.repositoryUrl ? `<a href="${escapeHtml(item.project.repositoryUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(item.project.repositoryUrl)}</a>` : ""}
-                  ${item.project.deployUrl ? `<a href="${escapeHtml(item.project.deployUrl)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#0563C1] underline break-all">${escapeHtml(item.project.deployUrl)}</a>` : ""}
-                </div>
-              </article>
-            `
-          )
-          .join("") || `<p class="text-sm text-taupe">Cadastre projetos para melhorar a seleção automática.</p>`}
-      </div>
-    </section>
-  `;
 }
 
 function renderMatchResult(result) {
@@ -1229,13 +1117,12 @@ export const career = {
     } catch (err) {
       if (err.code !== "SENIORITY_CONFIRMATION_REQUIRED") throw err;
       const inferred = err.details?.inferredSeniority || "unknown";
-      const answer = window.prompt(
-        `Identificamos esta vaga como: ${inferred}. Confirme ou altere para internship, junior, mid, senior, lead ou unknown.`,
-        inferred
-      );
-      confirmedSeniority = ["internship", "junior", "mid", "senior", "lead", "unknown"].includes(String(answer || "").trim())
-        ? String(answer || "").trim()
-        : "unknown";
+      try {
+        confirmedSeniority = await ui.openSeniorityModal(inferred);
+      } catch {
+        career.newMatching();
+        return;
+      }
       const select = document.getElementById("match-confirmed-seniority");
       if (select) select.value = confirmedSeniority;
       result = await api("/match", {

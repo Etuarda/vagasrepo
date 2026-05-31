@@ -693,6 +693,29 @@
     </div>
   </div>
 
+  <!-- Seniority confirmation modal -->
+  <div id="seniority-modal" class="hidden fixed inset-0 z-[190] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="Confirmar senioridade da vaga">
+    <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" data-close-seniority></div>
+    <div class="editorial-card w-full max-w-lg relative z-10 p-6 sm:p-8 rounded-t-3xl sm:rounded-3xl editorial-shadow">
+      <h2 class="font-serif text-3xl tracking-tight">Confirmar senioridade.</h2>
+      <p id="seniority-modal-inferred" class="text-sm text-taupe mt-3"></p>
+      <label for="seniority-modal-select" class="block text-[9px] font-bold uppercase tracking-[0.4em] text-stone mt-5">Senioridade da vaga</label>
+      <select id="seniority-modal-select" class="editorial-input bg-white text-sm mt-2">
+        <option value="internship">Estágio</option>
+        <option value="junior">Júnior</option>
+        <option value="mid">Pleno</option>
+        <option value="senior">Sênior</option>
+        <option value="lead">Lead</option>
+        <option value="unknown">Não informada</option>
+      </select>
+      <p class="text-xs text-taupe mt-3">Esta confirmação garante que o cálculo de aderência aplique corretamente o teto e a penalidade de senioridade.</p>
+      <div class="flex flex-col-reverse sm:flex-row justify-end gap-4 mt-6 pt-4 border-t border-borderLight">
+        <button type="button" id="seniority-modal-cancel" class="text-[10px] font-bold uppercase tracking-widest">Cancelar</button>
+        <button type="button" id="seniority-modal-confirm" class="w-full sm:w-auto bg-ink text-paper px-8 py-4 rounded-full text-[10px] font-bold uppercase tracking-widest">Confirmar e calcular</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Recalculate analysis modal -->
   <div id="recalculate-modal" class="hidden fixed inset-0 z-[180] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="Refazer calculo de matching">
     <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" data-close-recalculate></div>
