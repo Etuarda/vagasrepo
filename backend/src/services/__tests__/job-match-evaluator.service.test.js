@@ -34,28 +34,36 @@ function baseProfile(overrides = {}) {
 }
 
 describe("job match evaluator", () => {
-  it("perfil junior em vaga junior compativel gera score alto", () => {
-    const result = evaluateJobMatch({
-      profile: baseProfile(),
+  it("perfil com skills aderentes a vaga gera score alto independente de senioridade", () => {
+    const junior = evaluateJobMatch({
+      profile: baseProfile({ seniority: "junior" }),
       jobTitle: "Desenvolvedor Backend Junior",
       jobDescription: "Vaga junior com Node.js, PostgreSQL, Docker e APIs REST.",
     });
-
-    expect(result.overallScore).toBeGreaterThanOrEqual(75);
-    expect(result.seniorityMatch).toEqual(expect.objectContaining({ profile: "junior", job: "junior", compatible: true }));
-    expect(result.matchedSkills).toEqual(expect.arrayContaining(["Node.js", "PostgreSQL", "Docker"]));
-  });
-
-  it("perfil junior em vaga senior aplica penalidade forte e limita o score", () => {
-    const result = evaluateJobMatch({
-      profile: baseProfile(),
+    const senior = evaluateJobMatch({
+      profile: baseProfile({ seniority: "senior" }),
       jobTitle: "Desenvolvedor Backend Senior",
       jobDescription: "Vaga senior com Node.js, PostgreSQL, Docker e APIs REST.",
     });
 
-    expect(result.overallScore).toBeLessThanOrEqual(59);
-    expect(result.seniorityPenalty).toBeGreaterThanOrEqual(35);
-    expect(result.riskFlags).toContain("severe_seniority_mismatch");
+    expect(junior.overallScore).toBeGreaterThanOrEqual(75);
+    // senioridade nao afeta o score — mesmo perfil com mesmas skills retorna mesmo aderenciaBase
+    expect(junior.aderenciaBase).toBe(senior.aderenciaBase);
+    expect(junior.seniorityPenalty).toBe(0);
+    expect(senior.seniorityPenalty).toBe(0);
+  });
+
+  it("senioridade do perfil nao aplica penalidade nem teto ao score", () => {
+    const result = evaluateJobMatch({
+      profile: baseProfile({ seniority: "internship" }),
+      jobTitle: "Desenvolvedor Backend Senior",
+      jobDescription: "Vaga senior com Node.js, PostgreSQL, Docker e APIs REST.",
+    });
+
+    expect(result.seniorityPenalty).toBe(0);
+    expect(result.overallScore).toBe(result.aderenciaBase);
+    expect(result.riskFlags).not.toContain("severe_seniority_mismatch");
+    expect(result.riskFlags).not.toContain("seniority_gap");
   });
 
   it("projetos compativeis aumentam o score", () => {
@@ -74,20 +82,19 @@ describe("job match evaluator", () => {
     expect(withProject.overallScore).toBeGreaterThan(withoutProject.overallScore);
   });
 
-  it("usa formula base exata de 70% habilidades e 30% projetos antes da senioridade", () => {
+  it("formula e exatamente 70% habilidades + 30% projetos — sem ajuste de senioridade", () => {
     const result = evaluateJobMatch({
-      profile: baseProfile({ seniority: "junior" }),
+      profile: baseProfile(),
       jobTitle: "Backend Junior",
       jobDescription: "Node.js PostgreSQL Docker API REST.",
-      confirmedSeniority: "junior",
     });
 
-    const expectedBase = Math.round(
-      result.scores.skills * 0.70 +
-      result.scores.projects * 0.30
-    );
+    const expectedBase = Math.round(result.scores.skills * 0.70 + result.scores.projects * 0.30);
     expect(result.aderenciaBase).toBe(expectedBase);
+    expect(result.overallScore).toBe(expectedBase);
+    expect(result.scoreDetails.totalScore).toBe(expectedBase);
     expect(result.scoreDetails.weightedBeforePenalty).toBe(expectedBase);
+    expect(result.scoringVersion).toBe("deterministic-v3");
   });
 
   it("gera warning quando encontra menos de 10 habilidades compativeis", () => {
@@ -95,7 +102,6 @@ describe("job match evaluator", () => {
       profile: baseProfile(),
       jobTitle: "Backend Junior",
       jobDescription: "Node.js PostgreSQL Docker API REST.",
-      confirmedSeniority: "junior",
     });
 
     expect(result.riskFlags).toContain("insufficient_matched_skills");
@@ -127,5 +133,18 @@ describe("job match evaluator", () => {
     expect(analyzeProfile(profile, jobDescription, metadata)).toEqual(
       evaluateJobMatch({ profile, jobDescription, ...metadata })
     );
+  });
+
+  it("retorna inferredSeniority e confirmedSeniority como metadados sem afetar score", () => {
+    const result = evaluateJobMatch({
+      profile: baseProfile(),
+      jobTitle: "Backend Junior",
+      jobDescription: "Node.js PostgreSQL Docker API REST.",
+    });
+
+    expect(result).toHaveProperty("inferredSeniority");
+    expect(result).toHaveProperty("confirmedSeniority");
+    expect(result.seniorityPenalty).toBe(0);
+    expect(result.overallScore).toBe(result.aderenciaBase);
   });
 });

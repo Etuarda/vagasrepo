@@ -18,20 +18,10 @@ function inferTitle(text) {
   return firstLine ? firstLine.trim().slice(0, 120) : "Vaga analisada";
 }
 
-function normalizeSeniority(value) {
-  return normalizeSeniorityLevel(value);
-}
-
 function inferSeniority(text) {
   return inferJobSeniority(text);
 }
 
-function seniorityMatchScore(profileSeniority, jobSeniority) {
-  return evaluateJobMatch({
-    profile: { seniority: profileSeniority, skillItems: [], projects: [], courses: [], certifications: [] },
-    jobTitle: String(jobSeniority || ""),
-  }).seniorityMatch.score;
-}
 function getMissingResumeFields(profile) {
   const missing = [];
   if (!String(profile.name || "").trim() || !String(profile.emailContact || profile.phone || "").trim()) {
@@ -39,7 +29,6 @@ function getMissingResumeFields(profile) {
   }
   if (!String(profile.objective || "").trim()) missing.push("objetivo profissional");
   if (!String(profile.summary || "").trim()) missing.push("resumo profissional");
-  if (!String(profile.seniority || "").trim()) missing.push("senioridade");
   if (!(profile.skillItems || []).length && !collectLearnedSkillItems(profile).length) missing.push("habilidades");
   if (!(profile.educations || []).length) missing.push("pelo menos 1 formacao");
   if (!(profile.languages || []).length) missing.push("pelo menos 1 idioma");
@@ -72,16 +61,6 @@ function assertProfileReadyForResume(profile) {
   err.statusCode = 422;
   err.code = learnedSkillsMissing ? "LEARNED_SKILLS_REQUIRED" : "PROFILE_INCOMPLETE";
   err.details = { missing };
-  throw err;
-}
-
-function requireConfirmedSeniority(metadata = {}) {
-  if (metadata.confirmedSeniority) return normalizeSeniority(metadata.confirmedSeniority);
-  const text = [metadata.jobTitle, metadata.company, metadata.jobDescription].filter(Boolean).join(" ");
-  const err = new Error("Confirme ou ajuste a senioridade da vaga antes de gerar o matching.");
-  err.statusCode = 409;
-  err.code = "SENIORITY_CONFIRMATION_REQUIRED";
-  err.details = { inferredSeniority: inferSeniority(text) };
   throw err;
 }
 
@@ -256,8 +235,7 @@ async function selectProfile(userId, jobDescription, requestedProfileId, metadat
 
 async function executeMatch(userId, jobDescription, profileId = null, metadata = {}) {
   const text = jobDescription.trim();
-  const confirmedSeniority = requireConfirmedSeniority({ ...metadata, jobDescription: text });
-  const normalizedMetadata = { ...metadata, confirmedSeniority };
+  const normalizedMetadata = { ...metadata };
   const profile = await selectProfile(userId, text, profileId, normalizedMetadata);
   assertProfileReadyForResume(profile);
 
@@ -754,8 +732,6 @@ module.exports = {
   getMissingResumeFields,
   assertProfileReadyForResume,
   inferSeniority,
-  normalizeSeniority,
-  seniorityMatchScore,
   analysisStatusToJobUpdate,
 };
 

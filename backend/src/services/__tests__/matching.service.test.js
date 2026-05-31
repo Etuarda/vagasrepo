@@ -69,6 +69,7 @@ describe("deterministic matching", () => {
       "habilidades aprendidas em formacao, projetos, cursos e certificacoes",
       "nivel dos idiomas cadastrados",
     ]));
+    expect(missing).not.toContain("senioridade");
     expect(() => assertProfileReadyForResume({
       name: "Pessoa",
       emailContact: "",

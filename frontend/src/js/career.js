@@ -1124,30 +1124,10 @@ export const career = {
     const company = document.getElementById("match-company")?.value || "";
     const linkVaga = document.getElementById("match-job-link")?.value || "";
     const requestedProfileId = document.getElementById("match-profile-id")?.value || undefined;
-    let confirmedSeniority = document.getElementById("match-confirmed-seniority")?.value || "";
-    let result;
-    try {
-      result = await api("/match", {
-        method: "POST",
-        silent: true,
-        body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId, confirmedSeniority }),
-      }, state.token);
-    } catch (err) {
-      if (err.code !== "SENIORITY_CONFIRMATION_REQUIRED") throw err;
-      const inferred = err.details?.inferredSeniority || "unknown";
-      try {
-        confirmedSeniority = await ui.openSeniorityModal(inferred);
-      } catch {
-        career.newMatching();
-        return;
-      }
-      const select = document.getElementById("match-confirmed-seniority");
-      if (select) select.value = confirmedSeniority;
-      result = await api("/match", {
-        method: "POST",
-        body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId, confirmedSeniority }),
-      }, state.token);
-    }
+    const result = await api("/match", {
+      method: "POST",
+      body: JSON.stringify({ jobDescription, jobTitle, company, linkVaga, profileId: requestedProfileId }),
+    }, state.token);
     state.lastMatchResult = result;
     renderMatchResult(result);
     invalidateHistoryCache();
