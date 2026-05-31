@@ -501,48 +501,6 @@ function renderHistory() {
     return;
   }
 
-  root.innerHTML = rows
-    .map(
-      (item) => `
-        <article class="contrast-surface border border-borderLight rounded-2xl p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <button type="button" data-open-analysis="${item.analysisId}" class="font-bold text-sm underline text-left">${escapeHtml(item.targetTitle)}</button>
-              <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">${escapeHtml(item.company || "")} ${item.company ? "·" : ""} ${formatDateTime(item.createdAt)} · ${item.score}% · ${escapeHtml(analysisStatusLabel(item.status))}</p>
-              ${item.linkVaga ? `<a href="${escapeHtml(item.linkVaga)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest underline">Link da vaga</a>` : ""}
-              ${item.application ? `<p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-2">Candidatura: ${escapeHtml(item.application.status)} · ${escapeHtml(item.application.fase)}${item.appliedAt ? ` · aplicada em ${escapeHtml(formatDateTime(item.appliedAt))}` : ""}</p>` : ""}
-              ${
-                item.generatedFileName || item.resumeFileId
-                  ? `
-                    <div class="mt-2 flex flex-wrap gap-3">
-                      ${item.generatedFileName ? `<a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF otimizado</a>` : ""}
-                      ${item.resumeFileId ? `<a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>` : ""}
-                      ${item.application ? `<button type="button" data-open-linked-job="${item.application.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Abrir candidatura</button>` : ""}
-                      ${!item.application ? `<button type="button" data-register-history-application="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Cadastrar acompanhamento</button>` : ""}
-                      ${item.status !== "applied" && item.status !== "Aplicada" ? `<button type="button" data-mark-applied="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Marcar aplicado</button>` : ""}
-                    </div>
-                  `
-                  : ""
-              }
-            </div>
-            <button type="button" data-remove-match="${item.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
-          </div>
-        </article>
-      `
-    )
-    .join("");
-}
-
-function renderHistory() {
-  const root = document.getElementById("match-history");
-  if (!root) return;
-
-  const rows = state.matchHistory || [];
-  if (!rows.length) {
-    root.innerHTML = "";
-    return;
-  }
-
   root.innerHTML = rows.map((item) => {
     const available = isScoreAvailable(item);
     const gaps = (item.missingSkills || []).slice(0, 4);
