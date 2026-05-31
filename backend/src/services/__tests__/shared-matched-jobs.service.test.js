@@ -40,6 +40,15 @@ const {
   periodCutoff,
 } = require("../../modules/matching/shared-matched-jobs.service");
 
+const baseJob = {
+  id: "shared",
+  jobTitle: "Frontend Developer",
+  company: "Empresa",
+  jobUrl: "https://example.com/vaga",
+  jobDescription: "Vaga com React e acessibilidade.",
+  createdAt: new Date(),
+};
+
 describe("shared matched jobs", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -107,33 +116,71 @@ describe("shared matched jobs", () => {
     expect(rows[0]).not.toHaveProperty("jobDescription");
   });
 
-  it("usa a mesma logica do avaliador e considera jobDescription sem expor a descricao completa", async () => {
-    const job = {
-      id: "shared",
-      jobTitle: "Vaga Junior",
-      company: "Empresa",
-      jobUrl: "https://example.com/vaga",
-      jobDescription: "Descricao com React e acessibilidade.",
-      createdAt: new Date(),
-    };
-    prisma.sharedMatchedJob.findMany.mockResolvedValue([job]);
+  // --- Consistência entre Matching ATS individual e vagas compartilhadas ---
+
+  it("score de vagas compartilhadas e identico ao score do Matching ATS individual com os mesmos dados", async () => {
+    prisma.sharedMatchedJob.findMany.mockResolvedValue([baseJob]);
+    const profile = await profileService.getProfile("user");
 
     const rows = await listSharedMatchedJobs("user", "month");
+
+    const expected = evaluateJobMatch({
+      profile,
+      jobTitle: baseJob.jobTitle,
+      company: baseJob.company,
+      jobDescription: baseJob.jobDescription,
+    });
+
+    expect(rows[0].globalMatch.overallScore).toBe(expected.overallScore);
+    expect(rows[0].globalMatch.analysisStatus).toBe("complete");
+    expect(rows[0]).not.toHaveProperty("jobDescription");
+  });
+
+  it("globalMatch expoe skillsScore e projectsScore alem de overallScore", async () => {
+    prisma.sharedMatchedJob.findMany.mockResolvedValue([baseJob]);
     const profile = await profileService.getProfile("user");
     const expected = evaluateJobMatch({
       profile,
-      jobTitle: job.jobTitle,
-      company: job.company,
-      jobDescription: job.jobDescription,
+      jobTitle: baseJob.jobTitle,
+      company: baseJob.company,
+      jobDescription: baseJob.jobDescription,
     });
 
-    expect(rows[0]).not.toHaveProperty("jobDescription");
-    expect(rows[0].profileMatch).toEqual(expect.objectContaining({
-      overallScore: expected.overallScore,
-      matchedSkills: expected.matchedSkills.slice(0, 8),
-    }));
-    expect(rows[0].profileMatch.matchedSkills).toContain("React");
+    const rows = await listSharedMatchedJobs("user", "month");
+
+    expect(rows[0].globalMatch.skillsScore).toBe(expected.scores.skills);
+    expect(rows[0].globalMatch.projectsScore).toBe(expected.scores.projects);
   });
+
+  // --- jobDescription vazia → analysisStatus incompleto ---
+
+  it("jobDescription vazia gera analysisStatus incomplete e nao exibe 0%", async () => {
+    prisma.sharedMatchedJob.findMany.mockResolvedValue([{
+      ...baseJob,
+      jobDescription: "",
+    }]);
+
+    const rows = await listSharedMatchedJobs("user", "month");
+
+    expect(rows[0].globalMatch.analysisStatus).toBe("incomplete");
+    expect(rows[0].globalMatch.score).toBeNull();
+    expect(rows[0].globalMatch.overallScore).toBeNull();
+    expect(rows[0].globalMatch.scoreAvailable).toBe(false);
+  });
+
+  it("jobDescription somente com espacos em branco gera analysisStatus incomplete", async () => {
+    prisma.sharedMatchedJob.findMany.mockResolvedValue([{
+      ...baseJob,
+      jobDescription: "   ",
+    }]);
+
+    const rows = await listSharedMatchedJobs("user", "month");
+
+    expect(rows[0].globalMatch.analysisStatus).toBe("incomplete");
+    expect(rows[0].globalMatch.overallScore).toBeNull();
+  });
+
+  // --- Perfil incompleto → analysisStatus incompleto ---
 
   it("nao exibe 0% quando o perfil esta incompleto", async () => {
     profileService.getProfile.mockResolvedValueOnce({
@@ -143,12 +190,8 @@ describe("shared matched jobs", () => {
       completion: { pending: ["adicione habilidades aprendidas"] },
     });
     prisma.sharedMatchedJob.findMany.mockResolvedValue([{
-      id: "shared",
-      jobTitle: "Backend Junior",
-      company: "Empresa",
-      jobUrl: "https://example.com/vaga",
+      ...baseJob,
       jobDescription: "Node.js",
-      createdAt: new Date(),
     }]);
 
     const rows = await listSharedMatchedJobs("user", "month");
@@ -160,14 +203,68 @@ describe("shared matched jobs", () => {
     }));
   });
 
+  // --- Subperfis ---
+
+  it("vaga sem subperfil mostra apenas Perfil Global e bestSubprofileMatch null", async () => {
+    prisma.sharedMatchedJob.findMany.mockResolvedValue([baseJob]);
+
+    const rows = await listSharedMatchedJobs("user", "month");
+
+    expect(rows[0].globalMatch).toMatchObject({ profileType: "global" });
+    expect(rows[0].bestSubprofileMatch).toBeNull();
+  });
+
+  it("vaga com subperfil mostra Perfil Global e melhor subperfil separados", async () => {
+    profileService.listProfiles.mockResolvedValueOnce([
+      { id: "global", isGlobal: true, profileName: "Perfil Global" },
+      { id: "sub", isGlobal: false, profileName: "Backend" },
+    ]);
+    profileService.getProfile
+      .mockResolvedValueOnce({
+        id: "global",
+        profileName: "Perfil Global",
+        isGlobal: true,
+        seniority: "junior",
+        skillItems: [{ name: "React" }],
+        projects: [], courses: [], certifications: [], educations: [],
+      })
+      .mockResolvedValueOnce({
+        id: "sub",
+        profileName: "Backend",
+        isGlobal: false,
+        seniority: "junior",
+        skillItems: [{ name: "React" }, { name: "Node.js" }],
+        projects: [], courses: [], certifications: [], educations: [],
+      });
+    prisma.sharedMatchedJob.findMany.mockResolvedValue([baseJob]);
+
+    const rows = await listSharedMatchedJobs("user", "month");
+
+    expect(rows[0].globalMatch).toMatchObject({ profileId: "global", profileType: "global" });
+    expect(rows[0].bestSubprofileMatch).toMatchObject({ profileId: "sub", profileName: "Backend" });
+    expect(rows[0].bestSubprofileMatch.overallScore).toBeGreaterThanOrEqual(0);
+  });
+
+  // --- Deduplicação ---
+
   it("nao duplica vaga compartilhada pelos dois fluxos", () => {
     const rows = dedupeLatestJobs([
-      { id: "match", jobTitle: "Backend", company: "Empresa", jobUrl: "https://example.com/vaga", createdAt: new Date("2026-05-24"), origin: "matching" },
-      { id: "job", jobTitle: " backend ", company: "EMPRESA", jobUrl: "https://example.com/vaga", createdAt: new Date("2026-05-23"), origin: "tracking" },
+      { id: "match", jobTitle: "Backend", company: "Empresa", jobUrl: "https://example.com/vaga", jobDescription: "Node.js vaga backend.", createdAt: new Date("2026-05-24"), origin: "matching" },
+      { id: "job", jobTitle: " backend ", company: "EMPRESA", jobUrl: "https://example.com/vaga", jobDescription: "", createdAt: new Date("2026-05-23"), origin: "tracking" },
     ]);
 
     expect(rows).toHaveLength(1);
     expect(rows[0].id).toBe("match");
+  });
+
+  it("prefere entrada com jobDescription quando a outra e mais recente mas sem descricao", () => {
+    const rows = dedupeLatestJobs([
+      { id: "tracking-newer", jobTitle: "Backend", company: "Empresa", jobUrl: "https://example.com/vaga", jobDescription: "", createdAt: new Date("2026-05-26"), origin: "tracking" },
+      { id: "matching-older", jobTitle: "Backend", company: "Empresa", jobUrl: "https://example.com/vaga", jobDescription: "Node.js PostgreSQL Docker.", createdAt: new Date("2026-05-24"), origin: "matching" },
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe("matching-older");
   });
 
   it("calcula as janelas de dia, semana e mes", () => {

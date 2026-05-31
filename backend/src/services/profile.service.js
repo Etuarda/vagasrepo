@@ -297,6 +297,7 @@ async function invalidateProfileCache(userId) {
     cache.invalidate("profiles", userId),
     cache.invalidate("profile", userId),
     cache.invalidate("profile-catalog", userId),
+    cache.invalidate("shared-jobs-board", "global"),
   ]);
 }
 

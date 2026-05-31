@@ -24,7 +24,14 @@ function publicKey(job) {
 function dedupeLatestJobs(rows) {
   const jobs = new Map();
   rows
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .sort((a, b) => {
+      // Prefer entries with jobDescription so tracked jobs without description
+      // never override matched jobs that carry the full description for scoring.
+      const aDesc = String(a.jobDescription || "").trim() ? 1 : 0;
+      const bDesc = String(b.jobDescription || "").trim() ? 1 : 0;
+      if (bDesc !== aDesc) return bDesc - aDesc;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    })
     .forEach((job) => {
       const key = publicKey(job);
       if (!jobs.has(key)) jobs.set(key, job);
@@ -33,11 +40,12 @@ function dedupeLatestJobs(rows) {
 }
 
 function calculateProfileMatch(job, profile) {
+  if (!String(job.jobDescription || "").trim()) return null;
   return evaluateJobMatch({
     profile,
     jobTitle: job.jobTitle,
     company: job.company,
-    jobDescription: job.jobDescription || "",
+    jobDescription: job.jobDescription,
     confirmedSeniority: job.confirmedSeniority && job.confirmedSeniority !== "unknown" ? job.confirmedSeniority : undefined,
   });
 }
@@ -71,11 +79,15 @@ function unavailableMatch(profile) {
 
 function summarizeMatch(match, profile) {
   if (!match) return unavailableMatch(profile);
+  const riskFlags = match.riskFlags || [];
+  const noKeywords = riskFlags.includes("no_job_keywords_detected");
   return {
-    overallScore: match.overallScore,
-    score: match.overallScore,
-    scoreAvailable: true,
-    analysisStatus: "complete",
+    overallScore: noKeywords ? null : match.overallScore,
+    score: noKeywords ? null : match.overallScore,
+    skillsScore: noKeywords ? null : (match.scores?.skills ?? match.scoreDetails?.skillsMatchScore ?? null),
+    projectsScore: noKeywords ? null : (match.scores?.projects ?? match.scoreDetails?.projectsMatchScore ?? null),
+    scoreAvailable: !noKeywords,
+    analysisStatus: noKeywords ? "incomplete" : "complete",
     profileId: profile?.id,
     profileName: profile?.profileName || "",
     profileType: profile?.isGlobal ? "global" : "subprofile",
@@ -88,7 +100,7 @@ function summarizeMatch(match, profile) {
     seniorityMatch: match.seniorityMatch,
     seniorityPenalty: match.seniorityPenalty,
     warnings: match.warnings || [],
-    riskFlags: match.riskFlags || [],
+    riskFlags,
   };
 }
 
