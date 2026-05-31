@@ -164,6 +164,25 @@ function hasCompleteLearnedSkills(profile) {
   return collections.length > 0 && collections.every((item) => (item.learnedSkills || []).length > 0);
 }
 
+function normalizeLearnedSkillsInput(value) {
+  return [...new Map(
+    (Array.isArray(value) ? value : String(value || "").split(","))
+      .flatMap((item) => String(item || "").split(","))
+      .map((skill) => skill.trim())
+      .filter(Boolean)
+      .map((skill) => [normalizeTerm(skill), skill])
+  ).values()];
+}
+
+function assertLearnedSkills(data) {
+  const learnedSkills = normalizeLearnedSkillsInput(data.learnedSkills);
+  if (learnedSkills.length) return learnedSkills;
+  const err = new Error("Preencha as habilidades aprendidas antes de salvar este item.");
+  err.statusCode = 400;
+  err.code = "LEARNED_SKILLS_REQUIRED";
+  throw err;
+}
+
 function buildGlobalCatalog(global, subprofile) {
   const selected = {
     skills: new Set((subprofile.subprofileSkills || []).map((item) => item.skillId)),

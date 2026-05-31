@@ -154,6 +154,8 @@ async function updateJob(userId, id, data) {
     throw err;
   }
   assertCanUpdateClosedJob(existing, normalized);
+  const nextStatus = normalized.status ?? existing.status;
+  const nextPhase = normalized.fase ?? existing.fase;
 
   const job = await prisma.$transaction(async (tx) => {
     await tx.job.updateMany({ where: { id: existing.id, userId }, data: normalized });
@@ -161,13 +163,13 @@ async function updateJob(userId, id, data) {
       userId,
       jobId: existing.id,
       statusAnterior: existing.status,
-      novoStatus: normalized.status,
+      novoStatus: nextStatus,
       faseAnterior: existing.fase,
-      novaFase: normalized.fase,
+      novaFase: nextPhase,
       observacao: normalized.notes || "",
     });
     const updated = await tx.job.findFirst({ where: { id: existing.id, userId }, include: linkedJobInclude });
-    const analysisStatus = phaseToAnalysisStatus(normalized.fase);
+    const analysisStatus = phaseToAnalysisStatus(nextPhase);
     if (updated.jobAnalysisId && analysisStatus && tx.jobAnalysis?.updateMany) {
       await tx.jobAnalysis.updateMany({
         where: { id: updated.jobAnalysisId, userId },

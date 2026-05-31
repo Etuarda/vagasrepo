@@ -177,6 +177,7 @@ function evaluateJobMatch(input = {}) {
   const seniorityPenalty = Math.max(seniority.penalty, aderenciaBase - overallScore);
   const riskFlags = [...seniority.riskFlags];
   if (!required.length) riskFlags.push("no_job_keywords_detected");
+  if (matchedSkills.length < 10) riskFlags.push("insufficient_matched_skills");
   if (!validProjects.length) riskFlags.push("no_structured_projects");
   if (validProjects.length && !matchedProjects.length) riskFlags.push("no_compatible_projects");
   if (validProjects.length !== (profile.projects || []).length) riskFlags.push("invalid_projects_ignored");
@@ -224,6 +225,7 @@ function evaluateJobMatch(input = {}) {
     riskFlags,
     warnings: riskFlags.map((flag) => ({
       no_job_keywords_detected: "Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.",
+      insufficient_matched_skills: `Foram encontradas apenas ${matchedSkills.length} habilidades compativeis com a vaga.`,
       no_structured_projects: "Nao ha projetos estruturados suficientes para gerar um curriculo otimizado com qualidade.",
       no_compatible_projects: "Nenhum projeto compatível com a vaga foi encontrado.",
       insufficient_learning_items: `Foram encontrados apenas ${learningItems.length} cursos ou certificações compatíveis com a vaga.`,

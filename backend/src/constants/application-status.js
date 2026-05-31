@@ -24,8 +24,20 @@ function isActivePhase(phase) {
 
 function assertCanUpdateClosedJob(existing, next) {
   if (!existing || existing.status !== "Encerrada") return;
-  const keepsClosed = next.status === "Encerrada" && next.fase === "Encerrada";
-  if (keepsClosed) return;
+  const allowedFields = new Set(["notes"]);
+  const comparable = (value) => {
+    if (value instanceof Date) return value.getTime();
+    if (value === undefined || value === null) return "";
+    return value;
+  };
+  const changedProtectedField = Object.entries(next || {}).some(([field, value]) => {
+    if (allowedFields.has(field) || value === undefined) return false;
+    return comparable(existing[field]) !== comparable(value);
+  });
+  const nextStatus = next.status ?? existing.status;
+  const nextPhase = next.fase ?? existing.fase;
+  const keepsClosed = nextStatus === "Encerrada" && nextPhase === "Encerrada";
+  if (keepsClosed && !changedProtectedField) return;
   const err = new Error("Vaga encerrada permite apenas consulta e edição de observações históricas.");
   err.statusCode = 409;
   err.code = "JOB_CLOSED";
