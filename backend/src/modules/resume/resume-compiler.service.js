@@ -58,7 +58,7 @@ function evidenceMatches(item, keywords) {
   return uniqueByNormalized((keywords || []).filter((keyword) => normalizedSource.includes(` ${normalizeTerm(keyword)} `)));
 }
 
-function rankLearningItems({ courses = [], certifications = [] }, matchResult, limit = 5) {
+function rankLearningItems({ courses = [], certifications = [] }, matchResult, limit = 5, { includeUnmatched = false } = {}) {
   const keywords = matchResult.jobKeywords || [];
   return [
     ...certifications.map((item) => ({ ...item, itemType: "certification" })),
@@ -76,7 +76,7 @@ function rankLearningItems({ courses = [], certifications = [] }, matchResult, l
       shortCoursePenalty;
     return { ...item, matchedKeywords, score };
   })
-    .filter((item) => item.matchedKeywords.length)
+    .filter((item) => includeUnmatched || item.matchedKeywords.length)
     .sort((a, b) => b.matchedKeywords.length - a.matchedKeywords.length || b.score - a.score)
     .slice(0, limit);
 }
@@ -91,10 +91,11 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
     summary: project.shortDescription || "",
   }));
 
+  const learningItems = rankLearningItems(profile, matchResult, 5, { includeUnmatched: true });
+
   return compressResume({
     header: {
       name: profile.name,
-      title: profile.title || "",
       objective: profile.objective || "",
       location: profile.location || "",
       cep: profile.cep || "",
@@ -114,8 +115,8 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
       description: experience.description || "",
     })),
     projects,
-    courses: rankLearningItems(profile, matchResult).filter((item) => item.itemType === "course"),
-    certifications: rankLearningItems(profile, matchResult).filter((item) => item.itemType === "certification"),
+    courses: learningItems.filter((item) => item.itemType === "course"),
+    certifications: learningItems.filter((item) => item.itemType === "certification"),
     languagesInline: (profile.languages || []).map((item) => [item.name, item.level].filter(Boolean).join(" - ")).join("; "),
   }, rules);
 }

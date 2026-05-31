@@ -195,7 +195,6 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
 
   write(ctx, resume.header.name, { size: 23, font: bold, lineHeight: 29 });
   if (resume.header.objective) write(ctx, resume.header.objective, { size: 12, font: bold, lineHeight: 17 });
-  if (resume.header.title) write(ctx, resume.header.title, { size: 11, font: bold, lineHeight: 16 });
   writeSegments(ctx, [
     { label: resume.header.location },
     { label: resume.header.cep && `CEP ${resume.header.cep}` },

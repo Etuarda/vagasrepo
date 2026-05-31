@@ -365,7 +365,6 @@ function renderProfileForm() {
 
   setValue("profile-profile-name", profile.profileName);
   setValue("profile-name", profile.name);
-  setValue("profile-title-field", profile.title);
   setValue("profile-email-contact", profile.emailContact);
   setValue("profile-phone", profile.phone);
   setValue("profile-location", profile.location);
@@ -979,7 +978,7 @@ export const career = {
       profileId: state.activeProfileId,
       profileName: document.getElementById("profile-profile-name")?.value || "",
       name: document.getElementById("profile-name")?.value || "",
-      title: document.getElementById("profile-title-field")?.value || "",
+      title: "",
       emailContact: document.getElementById("profile-email-contact")?.value || "",
       phone: document.getElementById("profile-phone")?.value || "",
       location: document.getElementById("profile-location")?.value || "",
