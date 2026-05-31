@@ -40,7 +40,6 @@ function dedupeLatestJobs(rows) {
 }
 
 function calculateProfileMatch(job, profile) {
-  if (!String(job.jobDescription || "").trim()) return null;
   return evaluateJobMatch({
     profile,
     jobTitle: job.jobTitle,
@@ -54,7 +53,7 @@ function profileMissing(profile) {
   return profile?.completion?.pending || [];
 }
 
-function unavailableMatch(profile) {
+function unavailableMatch(profile, reason = null) {
   const missing = profileMissing(profile);
   return {
     score: null,
@@ -72,13 +71,13 @@ function unavailableMatch(profile) {
     relevantLearningCount: 0,
     warnings: missing.length
       ? missing.map((item) => `Perfil incompleto: ${item}`)
-      : ["Perfil insuficiente para calculo confiavel."],
+      : [reason || "Descricao da vaga nao disponivel para calcular aderencia."],
     riskFlags: ["profile_incomplete"],
   };
 }
 
-function summarizeMatch(match, profile) {
-  if (!match) return unavailableMatch(profile);
+function summarizeMatch(match, profile, reason = null) {
+  if (!match) return unavailableMatch(profile, reason);
   const riskFlags = match.riskFlags || [];
   const noKeywords = riskFlags.includes("no_job_keywords_detected");
   return {
@@ -107,25 +106,32 @@ function summarizeMatch(match, profile) {
 async function calculateSharedJobMatches(job, profiles) {
   const globalProfile = profiles.find((profile) => profile.isGlobal) || profiles[0];
   const globalReady = globalProfile && !profileMissing(globalProfile).length;
-  const globalMatch = globalReady ? calculateProfileMatch(job, globalProfile) : null;
+  const noDescription = !String(job.jobDescription || "").trim();
+  const noDescriptionReason = noDescription
+    ? "Descricao da vaga nao disponivel para calcular aderencia."
+    : null;
+
+  const globalMatch = (globalReady && !noDescription) ? calculateProfileMatch(job, globalProfile) : null;
   const subprofileMatches = profiles
     .filter((profile) => !profile.isGlobal)
     .map((profile) => ({
       profile,
-      match: profileMissing(profile).length ? null : calculateProfileMatch(job, profile),
+      match: (profileMissing(profile).length || noDescription) ? null : calculateProfileMatch(job, profile),
     }))
     .filter((item) => item.match)
     .sort((a, b) => b.match.overallScore - a.match.overallScore);
   const best = subprofileMatches[0] || null;
 
   return {
-    globalMatch: summarizeMatch(globalMatch, globalProfile),
+    globalMatch: summarizeMatch(globalMatch, globalProfile, noDescriptionReason),
     bestSubprofileMatch: best ? {
       profileId: best.profile.id,
       profileName: best.profile.profileName,
       ...summarizeMatch(best.match, best.profile),
     } : null,
-    profileMatch: best ? summarizeMatch(best.match, best.profile) : summarizeMatch(globalMatch, globalProfile),
+    profileMatch: best
+      ? summarizeMatch(best.match, best.profile)
+      : summarizeMatch(globalMatch, globalProfile, noDescriptionReason),
   };
 }
 

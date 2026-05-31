@@ -595,7 +595,7 @@ function renderSharedMatchedJobs() {
             <strong class="font-serif text-3xl ${d.canShowScore ? "" : "text-stone text-xl"}">${escapeHtml(d.scoreLabel)}</strong>
           </div>
 
-          ${!d.canShowScore ? `<p class="text-xs text-taupe">Não foi possível calcular uma aderência confiável. Complete os dados do perfil.</p>` : ""}
+          ${!d.canShowScore ? `<p class="text-xs text-taupe">Não foi possível calcular uma aderência confiável.</p>` : ""}
 
           <div class="text-xs text-taupe space-y-1 pt-1 border-t border-borderLight">
             <p>${escapeHtml(d.globalScoreLabel)}</p>
