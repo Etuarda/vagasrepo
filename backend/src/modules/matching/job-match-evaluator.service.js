@@ -234,6 +234,7 @@ function evaluateJobMatch(input = {}) {
       seniority_gap: "A senioridade da vaga esta acima da senioridade do perfil.",
       seniority_not_explicit: "Senioridade da vaga nao informada explicitamente; foi aplicada penalidade menor.",
       profile_seniority_unknown: "Senioridade do perfil nao informada; o score foi limitado.",
+      seniority_above_job: "Sua senioridade é superior à exigida pela vaga; pode haver desalinhamento de expectativas salariais ou de cargo.",
     }[flag])).filter(Boolean),
   };
 }

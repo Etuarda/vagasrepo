@@ -122,7 +122,7 @@ async function assertFeatureAccess(userId, feature, db = prisma) {
     throw planError("Acompanhamento de vagas nao esta incluido no plano Free.", 403, "FEATURE_NOT_INCLUDED");
   }
   if (feature === FEATURES.SUBPROFILES && rules.maxSubprofiles <= 0) {
-    throw planError("Subperfis nao estao incluidos no plano atual.", 403, "FEATURE_NOT_INCLUDED");
+    throw planError("Seu plano atingiu o limite de subperfis.", 402, "SUBPROFILE_LIMIT_REACHED");
   }
   return { subscription, plan, rules };
 }
