@@ -219,6 +219,25 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
       ctx.y -= 4;
     });
   }
+  if (resume.skillsInline) {
+    section(ctx, "Habilidades e competencias");
+    write(ctx, resume.skillsInline);
+  }
+  if (resume.certifications.length || resume.courses.length) {
+    section(ctx, "Certificacoes / Cursos");
+    resume.certifications.forEach((item) => {
+      write(ctx, item.title, { font: bold });
+      write(ctx, [item.issuer, item.period, item.workload && `Duracao: ${item.workload}`].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
+      if (item.credentialUrl) writeSegments(ctx, [{ label: item.credentialUrl, uri: toUrl(item.credentialUrl) }], { size: 10.5 });
+      ctx.y -= 4;
+    });
+    resume.courses.forEach((item) => {
+      write(ctx, item.title, { font: bold });
+      write(ctx, [item.institution, item.period, item.workload && `Duracao: ${item.workload}`].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
+      if (item.description) write(ctx, item.description);
+      ctx.y -= 4;
+    });
+  }
   if (resume.projects.length) {
     section(ctx, "Projetos");
     resume.projects.forEach((item) => {
@@ -237,25 +256,6 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
       write(ctx, item.title, { font: bold });
       write(ctx, [item.period, item.workload].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
       bullet(ctx, item.description);
-      ctx.y -= 4;
-    });
-  }
-  if (resume.skillsInline) {
-    section(ctx, "Habilidades e competencias");
-    write(ctx, resume.skillsInline);
-  }
-  if (resume.certifications.length || resume.courses.length) {
-    section(ctx, "Certificacoes / Cursos");
-    resume.certifications.forEach((item) => {
-      write(ctx, item.title, { font: bold });
-      write(ctx, [item.issuer, item.period, item.workload && `Duracao: ${item.workload}`].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
-      if (item.credentialUrl) writeSegments(ctx, [{ label: item.credentialUrl, uri: toUrl(item.credentialUrl) }], { size: 10.5 });
-      ctx.y -= 4;
-    });
-    resume.courses.forEach((item) => {
-      write(ctx, item.title, { font: bold });
-      write(ctx, [item.institution, item.period, item.workload && `Duracao: ${item.workload}`].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
-      if (item.description) write(ctx, item.description);
       ctx.y -= 4;
     });
   }

@@ -352,8 +352,10 @@ async function createApplication(req, res, next) {
 async function listOptimized(req, res, next) {
   try {
     const { profileId } = profileIdSchema.parse(req.query);
-    const rows = await matchingService.listHistory(req.userId, profileId);
-    return res.json(rows);
+    const cursor = req.query.cursor || null;
+    const limit = Math.min(Number(req.query.limit) || 20, 100);
+    const result = await matchingService.listHistory(req.userId, profileId, { cursor, limit });
+    return res.json(result);
   } catch (err) {
     return next(err);
   }

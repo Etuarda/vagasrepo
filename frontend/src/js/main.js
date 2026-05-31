@@ -937,6 +937,16 @@ function wireEvents() {
         return;
       }
 
+      const loadMoreBtn = e.target.closest("#match-history-load-more");
+      if (loadMoreBtn) {
+        await runWithFeedback(
+          loadMoreBtn,
+          { busyText: "Carregando...", notice: "Carregando mais analises..." },
+          () => career.loadHistory({ announce: true, append: true, successMessage: "Mais itens carregados." })
+        );
+        return;
+      }
+
       const btn = e.target.closest("[data-remove-match]");
       if (!btn) return;
       await runWithFeedback(

@@ -75,6 +75,8 @@ function historyCacheKey(profileId) {
 function invalidateHistoryCache() {
   historyRevision += 1;
   historyCache.clear();
+  state.nextCursorMatchHistory = null;
+  state.matchHistoryHasMore = false;
 }
 
 function analysisStatusLabel(status) {
@@ -562,6 +564,9 @@ function renderHistory() {
       </article>
     `;
   }).join("");
+
+  const loadMoreBtn = document.getElementById("match-history-load-more");
+  if (loadMoreBtn) loadMoreBtn.classList.toggle("hidden", !state.matchHistoryHasMore);
 }
 
 function renderSharedMatchedJobs() {
@@ -889,43 +894,69 @@ export const career = {
     }
   },
 
-  async loadHistory({ requestId = null, announce = true, force = false, successMessage = "Histórico carregado." } = {}) {
+  async loadHistory({ requestId = null, announce = true, force = false, append = false, successMessage = "Histórico carregado." } = {}) {
     const selectedProfileId = state.activeProfileId;
     const cacheKey = historyCacheKey(selectedProfileId);
     const revision = historyRevision;
-    const query = selectedProfileId ? `?profileId=${encodeURIComponent(selectedProfileId)}` : "";
-    const snapshot = historyCache.get(cacheKey);
 
-    if (!force && snapshot && Date.now() - snapshot.savedAt < HISTORY_CLIENT_CACHE_MS) {
-      if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
-      state.matchHistory = snapshot.rows;
-      renderHistory();
-      if (announce) {
-        setLoadStatus(
-          "match-history-status",
-          state.matchHistory.length ? successMessage : "Nenhuma analise encontrada no historico.",
-          "loaded",
-          5000
-        );
-      }
-      return state.matchHistory;
+    if (!append) {
+      state.nextCursorMatchHistory = null;
+      state.matchHistoryHasMore = false;
     }
 
-    if (announce) setLoadStatus("match-history-status", "Carregando histórico...", "loading");
+    const cursor = append ? (state.nextCursorMatchHistory || "") : "";
+    const queryParts = [];
+    if (selectedProfileId) queryParts.push(`profileId=${encodeURIComponent(selectedProfileId)}`);
+    queryParts.push("limit=20");
+    if (cursor) queryParts.push(`cursor=${encodeURIComponent(cursor)}`);
+    const query = `?${queryParts.join("&")}`;
+
+    if (!append) {
+      const snapshot = historyCache.get(cacheKey);
+      if (!force && snapshot && Date.now() - snapshot.savedAt < HISTORY_CLIENT_CACHE_MS) {
+        if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
+        state.matchHistory = snapshot.rows;
+        state.matchHistoryHasMore = snapshot.hasMore || false;
+        state.nextCursorMatchHistory = snapshot.nextCursor || null;
+        renderHistory();
+        if (announce) {
+          setLoadStatus(
+            "match-history-status",
+            state.matchHistory.length ? successMessage : "Nenhuma analise encontrada no historico.",
+            "loaded",
+            5000
+          );
+        }
+        return state.matchHistory;
+      }
+    }
+
+    if (announce) setLoadStatus("match-history-status", append ? "Carregando mais..." : "Carregando histórico...", "loading");
 
     let request = null;
     try {
-      request = !force ? historyRequests.get(cacheKey) : null;
+      request = (!force && !append) ? historyRequests.get(cacheKey) : null;
       if (!request) {
         request = api(`/optimized-resumes${query}`, {}, state.token);
-        historyRequests.set(cacheKey, request);
+        if (!append) historyRequests.set(cacheKey, request);
       }
-      const history = await request;
-      if (historyRequests.get(cacheKey) === request) historyRequests.delete(cacheKey);
+      const result = await request;
+      if (!append && historyRequests.get(cacheKey) === request) historyRequests.delete(cacheKey);
       if (revision !== historyRevision) return null;
       if (!isCurrentProfileRequest(requestId, selectedProfileId)) return null;
-      state.matchHistory = Array.isArray(history) ? history : [];
-      historyCache.set(cacheKey, { rows: state.matchHistory, savedAt: Date.now() });
+
+      const newItems = result?.items ? result.items : (Array.isArray(result) ? result : []);
+      const nextCursor = result?.nextCursor || null;
+
+      if (append) {
+        state.matchHistory = [...(state.matchHistory || []), ...newItems];
+      } else {
+        state.matchHistory = newItems;
+        historyCache.set(cacheKey, { rows: newItems, savedAt: Date.now(), nextCursor, hasMore: Boolean(nextCursor) });
+      }
+      state.nextCursorMatchHistory = nextCursor;
+      state.matchHistoryHasMore = Boolean(nextCursor);
+
       renderHistory();
       if (announce) {
         setLoadStatus(
@@ -937,7 +968,7 @@ export const career = {
       }
       return state.matchHistory;
     } catch (err) {
-      if (historyRequests.get(cacheKey) === request) historyRequests.delete(cacheKey);
+      if (!append && historyRequests.get(cacheKey) === request) historyRequests.delete(cacheKey);
       if (announce && isCurrentProfileRequest(requestId, selectedProfileId)) {
         setLoadStatus("match-history-status", "Não foi possível carregar o histórico.", "error");
       }
@@ -968,9 +999,21 @@ export const career = {
 
   async loadSharedMatchedJobs() {
     const period = state.sharedMatchedJobsPeriod || "month";
-    const rows = await api(`/shared-matched-jobs?period=${encodeURIComponent(period)}`, {}, state.token);
-    state.sharedMatchedJobs = Array.isArray(rows) ? rows : [];
-    renderSharedMatchedJobs();
+    setLoadStatus("shared-jobs-status", "Carregando vagas compartilhadas...", "loading");
+    try {
+      const rows = await api(`/shared-matched-jobs?period=${encodeURIComponent(period)}`, {}, state.token);
+      state.sharedMatchedJobs = Array.isArray(rows) ? rows : [];
+      renderSharedMatchedJobs();
+      setLoadStatus(
+        "shared-jobs-status",
+        state.sharedMatchedJobs.length ? "Vagas carregadas." : "Nenhuma vaga compartilhada neste periodo.",
+        "loaded",
+        5000
+      );
+    } catch (err) {
+      setLoadStatus("shared-jobs-status", "Nao foi possivel carregar as vagas compartilhadas.", "error");
+      throw err;
+    }
   },
 
   async saveProfile() {

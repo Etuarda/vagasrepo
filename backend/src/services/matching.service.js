@@ -346,7 +346,7 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
   };
 }
 
-async function listHistory(userId, profileId = null) {
+async function listHistory(userId, profileId = null, { cursor = null, limit = 20 } = {}) {
   const history = await cache.remember("match-history", userId, profileId || "default", async () => {
     const selectedSubprofileId = profileId || (await profileService.resolveProfile(userId)).id;
     const rows = await prisma.jobAnalysis.findMany({
@@ -443,7 +443,18 @@ async function listHistory(userId, profileId = null) {
       createdAt: row.createdAt,
     }));
   }, 2 * 60);
-  return history;
+
+  let items = history;
+  if (cursor) {
+    const idx = items.findIndex((item) => item.analysisId === cursor);
+    items = idx >= 0 ? items.slice(idx + 1) : [];
+  }
+  const safeLimit = Math.min(Math.max(1, limit), 100);
+  const page = items.slice(0, safeLimit);
+  const nextCursor = (page.length === safeLimit && items.length > safeLimit)
+    ? page[page.length - 1].analysisId
+    : null;
+  return { items: page, nextCursor };
 }
 
 async function updateAnalysis(userId, id, data) {

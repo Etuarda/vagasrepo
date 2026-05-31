@@ -10,6 +10,8 @@ export const state = {
   profiles: [],
   activeProfileId: "",
   matchHistory: [],
+  nextCursorMatchHistory: null,
+  matchHistoryHasMore: false,
   sharedMatchedJobs: [],
   sharedMatchedJobsPeriod: "month",
   pendingApplicationAnalysis: null,
