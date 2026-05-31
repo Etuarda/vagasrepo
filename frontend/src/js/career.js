@@ -2,6 +2,7 @@ import { api } from "./http.js";
 import { state } from "./state.js";
 import { ui } from "./ui.js";
 import { jobs } from "./jobs.js";
+import { normalizeSharedMatchDisplay, normalizeHistoryItemDisplay } from "./match-display.utils.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -502,55 +503,62 @@ function renderHistory() {
   }
 
   root.innerHTML = rows.map((item) => {
-    const available = isScoreAvailable(item);
-    const gaps = (item.missingSkills || []).slice(0, 4);
-    const warnings = compactWarnings(item.warnings);
-    const courseCount = (item.selectedCourseIds || []).length + (item.selectedCertificationIds || []).length;
+    const d = normalizeHistoryItemDisplay(item);
     return `
       <article class="contrast-surface border border-borderLight rounded-2xl p-4">
         <div class="flex items-start justify-between gap-3">
           <div class="w-full">
             <button type="button" data-open-analysis="${item.analysisId}" class="font-bold text-sm underline text-left">${escapeHtml(item.targetTitle)}</button>
             <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">
-              ${escapeHtml(item.company || "")} ${item.company ? "|" : ""} ${formatDateTime(item.createdAt)} | ${escapeHtml(analysisStatusText(item.analysisStatus))} | v${item.version || 1}
+              ${escapeHtml(item.company || "")}${item.company ? " | " : ""}${formatDateTime(item.createdAt)} | ${escapeHtml(analysisStatusText(item.analysisStatus))} | v${item.version || 1}
             </p>
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-              <div class="border border-borderLight rounded-2xl p-3 bg-white">
-                <span class="block text-[9px] uppercase tracking-widest text-stone">Aderencia final</span>
-                <strong class="block text-xl mt-1">${available ? `${Number(item.overallScore || item.score || 0)}%` : "Indisponivel"}</strong>
+
+            <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              <div class="border border-borderLight rounded-2xl p-3 bg-white col-span-2 md:col-span-1">
+                <span class="block text-[9px] uppercase tracking-widest text-stone">${d.isComplete ? "Aderência final" : "Análise"}</span>
+                <strong class="block text-xl mt-1 ${d.isComplete ? "" : "text-stone"}">${escapeHtml(d.scoreLabel)}</strong>
               </div>
               <div class="border border-borderLight rounded-2xl p-3 bg-white">
-                <span class="block text-[9px] uppercase tracking-widest text-stone">Perfil usado</span>
-                <strong class="block mt-1">${escapeHtml(item.selectedProfileName || "Perfil")}</strong>
+                <span class="block text-[9px] uppercase tracking-widest text-stone">Perfil</span>
+                <strong class="block mt-1 text-xs">${escapeHtml(item.selectedProfileName || "Global")}</strong>
               </div>
               <div class="border border-borderLight rounded-2xl p-3 bg-white">
-                <span class="block text-[9px] uppercase tracking-widest text-stone">Comparativo</span>
-                <strong class="block mt-1">Global ${scoreLabel(item.globalScore, { score: item.globalScore, analysisStatus: item.globalAnalysisStatus })} | Atual ${scoreLabel(item.selectedProfileScore, item)}</strong>
+                <span class="block text-[9px] uppercase tracking-widest text-stone">Global</span>
+                <strong class="block mt-1 text-xs">${escapeHtml(d.globalScoreLabel)}</strong>
               </div>
               <div class="border border-borderLight rounded-2xl p-3 bg-white">
                 <span class="block text-[9px] uppercase tracking-widest text-stone">Senioridade</span>
-                <strong class="block mt-1">${escapeHtml(seniorityLabel(item.confirmedSeniority || item.inferredSeniority))}</strong>
+                <strong class="block mt-1 text-xs">${escapeHtml(seniorityLabel(item.confirmedSeniority || item.inferredSeniority))}</strong>
               </div>
             </div>
-            <p class="text-xs text-taupe mt-3">
-              Skills encontradas: ${(item.matchedSkills || []).length} |
-              Gaps principais: ${gaps.length ? escapeHtml(gaps.join(", ")) : "nenhum gap principal"} |
-              Projetos: ${(item.selectedProjectIds || []).length} |
-              Cursos/certificacoes: ${courseCount}
-            </p>
-            ${warnings.length ? `<ul class="mt-2 list-disc pl-5 text-xs text-red-700">${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : ""}
-            ${item.linkVaga ? `<a href="${escapeHtml(item.linkVaga)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest underline">Link da vaga</a>` : ""}
-            ${item.application ? `<p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-2">Candidatura: ${escapeHtml(item.application.status)} | ${escapeHtml(item.application.fase)}${item.appliedAt ? ` | aplicada em ${escapeHtml(formatDateTime(item.appliedAt))}` : ""}</p>` : ""}
+
+            <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-taupe">
+              <span>Skills compatíveis: <strong>${escapeHtml(d.skillsLabel)}</strong></span>
+              <span>Projetos: <strong>${d.projectsCount}</strong></span>
+              <span>Gaps principais: <strong>${escapeHtml(d.gapsLabel)}</strong></span>
+              <span>Cursos/certificações: <strong>${d.courseCount}</strong></span>
+            </div>
+
+            ${d.visibleWarnings.length ? `
+              <ul class="mt-3 space-y-1">
+                ${d.visibleWarnings.map((w) => `<li class="text-xs text-red-700 leading-snug">⚠ ${escapeHtml(w)}</li>`).join("")}
+              </ul>
+              ${d.hiddenWarningsCount > 0 ? `<button type="button" data-open-analysis="${item.analysisId}" class="mt-1 text-[10px] font-bold uppercase tracking-widest text-stone underline">+${d.hiddenWarningsCount} alerta${d.hiddenWarningsCount > 1 ? "s" : ""}</button>` : ""}
+            ` : ""}
+
+            ${item.application ? `<p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-3">Candidatura: ${escapeHtml(item.application.status)} | ${escapeHtml(item.application.fase)}${item.appliedAt ? ` | aplicada em ${escapeHtml(formatDateTime(item.appliedAt))}` : ""}</p>` : ""}
+
             <div class="mt-3 flex flex-wrap gap-3">
-              ${item.generatedFileName ? `<a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF otimizado</a>` : ""}
+              ${item.generatedFileName ? `<a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF</a>` : ""}
               ${item.resumeFileId ? `<a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>` : ""}
               ${item.application ? `<button type="button" data-open-linked-job="${item.application.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Abrir candidatura</button>` : ""}
-              ${!item.application && available ? `<button type="button" data-register-history-application="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Cadastrar acompanhamento</button>` : ""}
-              ${item.status !== "applied" && item.status !== "Aplicada" && available ? `<button type="button" data-mark-applied="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Marcar aplicado</button>` : ""}
+              ${!item.application && d.isComplete ? `<button type="button" data-register-history-application="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Cadastrar acompanhamento</button>` : ""}
+              ${item.status !== "applied" && item.status !== "Aplicada" && d.isComplete ? `<button type="button" data-mark-applied="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Marcar aplicado</button>` : ""}
               <button type="button" data-recalculate-analysis="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Refazer com outro subperfil</button>
+              ${item.linkVaga ? `<a href="${escapeHtml(item.linkVaga)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Ver vaga</a>` : ""}
             </div>
           </div>
-          <button type="button" data-remove-match="${item.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+          <button type="button" data-remove-match="${item.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700 shrink-0">Remover</button>
         </div>
       </article>
     `;
@@ -568,38 +576,49 @@ function renderSharedMatchedJobs() {
   }
 
   root.innerHTML = rows.map((item) => {
-    const match = item.profileMatch || {};
-    const available = isScoreAvailable(match);
-    const best = item.bestSubprofileMatch;
-    const warnings = compactWarnings(match.warnings);
+    const d = normalizeSharedMatchDisplay(item);
     return `
-      <article class="editorial-card rounded-2xl p-5">
-        <h3 class="font-bold text-lg">${escapeHtml(item.jobTitle)}</h3>
-        <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-2">${escapeHtml(item.company)}</p>
-        <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))} | ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
-        <div class="mt-4 rounded-2xl border border-borderLight p-4 bg-white">
-          <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">${available ? "Aderencia final" : "Analise incompleta"}</p>
-          <p class="font-serif text-4xl mt-2">${available ? `${Number(match.score || 0)}%` : "Indisponivel"}</p>
-          <p class="text-xs text-taupe mt-2">
-            Perfil usado: ${escapeHtml(match.profileName || best?.profileName || "Perfil Global")}
-          </p>
-          <p class="text-xs text-taupe mt-2">
-            Comparativo: Global ${scoreLabel(item.globalMatch?.score, item.globalMatch || {})}
-            ${best && isScoreAvailable(best) ? ` | ${escapeHtml(best.profileName)} ${Number(best.score || 0)}%` : ""}
-          </p>
-          ${available ? `
-            <p class="text-xs text-taupe mt-2">
-              Skills compativeis: ${Number(match.matchedSkillsCount || 0)}/${Number(match.requiredSkillsCount || 0)} |
-              Gaps: ${(match.missingSkills || []).slice(0, 4).join(", ") || "nenhum gap principal"} |
-              Projetos relevantes: ${Number(match.matchedProjectsCount || 0)} |
-              Cursos/certificacoes: ${Number(match.relevantLearningCount || 0)}
-            </p>
-          ` : `
-            <p class="text-xs text-taupe mt-2">Preencha pendencias do perfil antes de confiar no percentual de matching.</p>
-          `}
-          ${warnings.length ? `<ul class="mt-2 list-disc pl-5 text-xs text-red-700">${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : ""}
+      <article class="editorial-card rounded-2xl p-5 flex flex-col gap-3">
+        <div>
+          <h3 class="font-bold text-base leading-snug">${escapeHtml(item.jobTitle)}</h3>
+          <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(item.company)}</p>
+          <p class="text-xs text-taupe mt-1">${escapeHtml(formatDateTime(item.createdAt))} · ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
         </div>
-        <a href="${escapeHtml(item.jobUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 text-[10px] font-bold uppercase tracking-widest underline">Abrir vaga</a>
+
+        <div class="rounded-2xl border border-borderLight p-4 bg-white space-y-2">
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="text-[9px] font-bold uppercase tracking-[0.3em] text-stone">${d.canShowScore ? "Aderência" : "Análise"}</p>
+            <strong class="font-serif text-3xl ${d.canShowScore ? "" : "text-stone text-xl"}">${escapeHtml(d.scoreLabel)}</strong>
+          </div>
+
+          ${!d.canShowScore ? `<p class="text-xs text-taupe">Não foi possível calcular uma aderência confiável. Complete os dados do perfil.</p>` : ""}
+
+          <div class="text-xs text-taupe space-y-1 pt-1 border-t border-borderLight">
+            <p>${escapeHtml(d.globalScoreLabel)}</p>
+            ${d.bestSubprofileLabel
+              ? `<p>${escapeHtml(d.bestSubprofileLabel)}</p>`
+              : `<p class="text-stone">Nenhum subperfil cadastrado</p>`}
+          </div>
+
+          ${d.canShowScore ? `
+            <div class="text-xs text-taupe space-y-1 pt-1 border-t border-borderLight">
+              <p>Skills compatíveis: <strong>${escapeHtml(d.matchedSkillsLabel)}</strong></p>
+              <p>Gaps principais: <strong>${escapeHtml(d.gapsLabel)}</strong></p>
+              <p>Projetos relevantes: <strong>${escapeHtml(d.projectsLabel)}</strong> · Cursos/certificações: <strong>${escapeHtml(d.coursesCertificationsLabel)}</strong></p>
+            </div>
+          ` : ""}
+
+          ${d.visibleWarnings.length ? `
+            <ul class="space-y-1 pt-1 border-t border-borderLight">
+              ${d.visibleWarnings.map((w) => `<li class="text-xs text-red-700 leading-snug">⚠ ${escapeHtml(w)}</li>`).join("")}
+            </ul>
+            ${d.hiddenWarningsCount > 0 ? `<p class="text-[10px] font-bold uppercase tracking-widest text-stone">+${d.hiddenWarningsCount} alerta${d.hiddenWarningsCount > 1 ? "s" : ""} — veja nos detalhes</p>` : ""}
+          ` : ""}
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <a href="${escapeHtml(item.jobUrl)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-widest underline">Abrir vaga</a>
+        </div>
       </article>
     `;
   }).join("");
