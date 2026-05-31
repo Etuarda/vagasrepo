@@ -93,9 +93,9 @@ describe("subscription plans and quotas", () => {
     expect(db.careerProfile.count).toHaveBeenCalledWith({ where: { userId: "user", isGlobal: false } });
   });
 
-  it.each([PLAN_KEYS.FREE, PLAN_KEYS.BASIC])("nega subperfis para o plano %s por feature indisponivel", async (plan) => {
+  it.each([PLAN_KEYS.FREE, PLAN_KEYS.BASIC])("nega subperfis para o plano %s com limite atingido", async (plan) => {
     await expect(assertSubprofileLimit("user", dbFor(plan)))
-      .rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
+      .rejects.toMatchObject({ statusCode: 402, code: "SUBPROFILE_LIMIT_REACHED" });
   });
 
   it("nega acompanhamento de vagas no Free", async () => {
@@ -146,10 +146,10 @@ describe("subscription plans and quotas", () => {
 
   it("mantem regras Free quando o plano pago esta cancelado ou expirado", async () => {
     await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.PRO, { status: "canceled" })))
-      .rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
+      .rejects.toMatchObject({ statusCode: 402, code: "SUBPROFILE_LIMIT_REACHED" });
 
     await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.PRO, {
       currentPeriodEnd: new Date("2026-01-01T00:00:00.000Z"),
-    }))).rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
+    }))).rejects.toMatchObject({ statusCode: 402, code: "SUBPROFILE_LIMIT_REACHED" });
   });
 });
