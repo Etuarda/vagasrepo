@@ -135,6 +135,31 @@ describe("shared matched jobs", () => {
     expect(rows[0].profileMatch.matchedSkills).toContain("React");
   });
 
+  it("nao exibe 0% quando o perfil esta incompleto", async () => {
+    profileService.getProfile.mockResolvedValueOnce({
+      id: "global",
+      profileName: "Perfil Global",
+      isGlobal: true,
+      completion: { pending: ["adicione habilidades aprendidas"] },
+    });
+    prisma.sharedMatchedJob.findMany.mockResolvedValue([{
+      id: "shared",
+      jobTitle: "Backend Junior",
+      company: "Empresa",
+      jobUrl: "https://example.com/vaga",
+      jobDescription: "Node.js",
+      createdAt: new Date(),
+    }]);
+
+    const rows = await listSharedMatchedJobs("user", "month");
+
+    expect(rows[0].profileMatch).toEqual(expect.objectContaining({
+      score: null,
+      scoreAvailable: false,
+      analysisStatus: "incomplete",
+    }));
+  });
+
   it("nao duplica vaga compartilhada pelos dois fluxos", () => {
     const rows = dedupeLatestJobs([
       { id: "match", jobTitle: "Backend", company: "Empresa", jobUrl: "https://example.com/vaga", createdAt: new Date("2026-05-24"), origin: "matching" },

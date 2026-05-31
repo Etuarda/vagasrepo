@@ -12,6 +12,7 @@ const {
   matchSchema,
   sharedMatchedJobsQuerySchema,
   jobAnalysisUpdateSchema,
+  jobAnalysisRecalculateSchema,
   profileIdSchema,
   idParamSchema,
 } = require("../schemas/profile.schema");
@@ -326,6 +327,17 @@ async function getAnalysis(req, res, next) {
   }
 }
 
+async function recalculateAnalysis(req, res, next) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = jobAnalysisRecalculateSchema.parse(req.body);
+    const result = await matchingService.recalculateAnalysis(req.userId, id, payload);
+    return res.status(201).json(result);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function createApplication(req, res, next) {
   try {
     const { id } = idParamSchema.parse(req.params);
@@ -402,6 +414,7 @@ module.exports = {
   deleteOptimized,
   downloadOptimized,
   updateAnalysis,
+  recalculateAnalysis,
   getAnalysis,
   createApplication,
 };

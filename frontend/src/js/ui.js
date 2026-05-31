@@ -226,6 +226,27 @@ export const ui = {
     document.body.style.overflow = "auto";
   },
 
+  openRecalculateModal(analysis) {
+    const modal = document.getElementById("recalculate-modal");
+    const select = document.getElementById("recalculate-profile-id");
+    if (!modal || !select) return;
+    const profiles = state.profiles || [];
+    const currentId = analysis?.selectedSubprofileId || analysis?.selectedProfileId || "";
+    select.innerHTML = profiles
+      .map((profile) => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.isGlobal ? "Perfil Global" : `Subperfil ${profile.profileName}`)}</option>`)
+      .join("");
+    if (profiles.some((profile) => profile.id === currentId)) select.value = currentId;
+    document.getElementById("recalculate-analysis-id").value = analysis?.analysisId || analysis?.id || "";
+    document.getElementById("recalculate-context").textContent = `${analysis?.targetTitle || analysis?.jobTitle || "Analise"} | versao atual preservada`;
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  },
+
+  closeRecalculateModal() {
+    document.getElementById("recalculate-modal")?.classList.add("hidden");
+    document.body.style.overflow = "auto";
+  },
+
   syncApplicationConditionalFields() {
     const needsAction = !!document.getElementById("application-action-bool")?.checked;
     const hasFeedback = !!document.getElementById("application-feedback-bool")?.checked;

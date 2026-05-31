@@ -16,12 +16,22 @@ jest.mock("../../lib/cache", () => ({
 }));
 jest.mock("../profile.service", () => ({}));
 jest.mock("../pdf-output.service", () => ({ generateOptimizedResumePdf: jest.fn() }));
+jest.mock("../subscription.service", () => ({
+  consumeMatchingQuota: jest.fn().mockResolvedValue({}),
+}));
 
 const { prisma } = require("../../lib/prisma");
 const cache = require("../../lib/cache");
-const { updateAnalysis } = require("../matching.service");
+const profileService = require("../profile.service");
+const { updateAnalysis, recalculateAnalysis } = require("../matching.service");
 
 describe("job analysis status", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    delete prisma.$transaction;
+    profileService.getProfile = jest.fn();
+  });
+
   it("registra appliedAt somente para analise pertencente ao usuario", async () => {
     prisma.jobAnalysis.findFirst.mockResolvedValue({ id: "analysis", userId: "user", appliedAt: null });
     prisma.jobAnalysis.update.mockResolvedValue({ status: "Aplicada" });
@@ -58,5 +68,72 @@ describe("job analysis status", () => {
       data: expect.objectContaining({ parentAnalysisId: "analysis", version: 2, notes: "Revisada", jobUrl: "https://example.com/nova-vaga" }),
     });
     expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
+  });
+
+  it("recalcula com outro subperfil criando nova versao sem sobrescrever a anterior", async () => {
+    prisma.jobAnalysis.findFirst.mockResolvedValue({
+      id: "analysis",
+      userId: "user",
+      jobTitle: "Backend Junior",
+      company: "Empresa",
+      jobUrl: "https://example.com/vaga",
+      jobDescription: "Vaga junior com Node.js PostgreSQL Docker API REST.",
+      confirmedSeniority: "junior",
+      inferredSeniority: "junior",
+      version: 1,
+      jobOrigin: "individual",
+    });
+    const profile = {
+      id: "backend",
+      userId: "user",
+      isGlobal: false,
+      profileName: "Backend",
+      name: "Pessoa",
+      emailContact: "pessoa@example.com",
+      objective: "Backend",
+      summary: "Resumo profissional cadastrado.",
+      seniority: "junior",
+      skillItems: [{ name: "Node.js" }, { name: "PostgreSQL" }, { name: "Docker" }, { name: "API REST" }],
+      projects: [{
+        id: "project",
+        title: "API de vagas",
+        shortDescription: "API REST com Node.js, PostgreSQL e Docker.",
+        learnedSkills: ["Node.js", "PostgreSQL", "Docker"],
+        repositoryUrl: "https://github.com/example/api",
+        deployUrl: "https://api.example.com",
+      }],
+      educations: [{ id: "education", title: "ADS", institution: "Faculdade", learnedSkills: ["SQL"] }],
+      languages: [{ name: "Ingles", level: "B1" }],
+      courses: [{ id: "course", title: "Node", learnedSkills: ["Node.js"], workload: "120h" }],
+      certifications: [],
+    };
+    const global = { ...profile, id: "global", isGlobal: true, profileName: "Perfil Global" };
+    profileService.getProfile = jest.fn()
+      .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce(global);
+    const tx = {
+      optimizedResume: {
+        create: jest.fn().mockResolvedValue({ id: "resume", generatedFileName: "curriculo.pdf" }),
+      },
+      jobAnalysis: {
+        create: jest.fn().mockResolvedValue({ id: "analysis-v2", version: 2, status: "Currículo gerado" }),
+      },
+    };
+    prisma.$transaction = jest.fn((work) => work(tx));
+
+    await expect(recalculateAnalysis("user", "analysis", { profileId: "backend" }))
+      .resolves.toMatchObject({ analysis: { id: "analysis-v2" } });
+
+    expect(tx.jobAnalysis.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        parentAnalysisId: "analysis",
+        sourceAnalysisId: "analysis",
+        recalculationReason: "manual_subprofile_change",
+        selectedProfileName: "Backend",
+        version: 2,
+      }),
+    });
+    expect(prisma.jobAnalysis.update).not.toHaveBeenCalled();
+    delete prisma.$transaction;
   });
 });

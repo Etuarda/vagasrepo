@@ -9,6 +9,11 @@ const linkedJobInclude = {
     select: {
       id: true,
       matchScore: true,
+      globalScore: true,
+      selectedProfileScore: true,
+      selectedProfileName: true,
+      analysisStatus: true,
+      warnings: true,
       matchedSkills: true,
       missingSkills: true,
       selectedProjectIds: true,

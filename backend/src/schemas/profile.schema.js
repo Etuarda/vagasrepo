@@ -162,6 +162,20 @@ const jobAnalysisUpdateSchema = z.object({
   jobDescription: z.string().trim().min(30).max(15000).optional(),
 });
 
+const jobAnalysisRecalculateSchema = z.object({
+  profileType: z.enum(["global", "subprofile"]).optional().default("global"),
+  profileId: optionalUuid("Perfil invalido"),
+  subprofileId: optionalUuid("Subperfil invalido"),
+  force: z.boolean().optional().default(false),
+}).superRefine((data, ctx) => {
+  if (data.profileType === "subprofile" && !(data.subprofileId || data.profileId)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["subprofileId"], message: "Informe o subperfil para recalcular" });
+  }
+}).transform((data) => ({
+  ...data,
+  profileId: data.profileType === "global" ? undefined : (data.subprofileId || data.profileId),
+}));
+
 module.exports = {
   profileSchema,
   createProfileSchema,
@@ -178,4 +192,5 @@ module.exports = {
   matchSchema,
   sharedMatchedJobsQuerySchema,
   jobAnalysisUpdateSchema,
+  jobAnalysisRecalculateSchema,
 };

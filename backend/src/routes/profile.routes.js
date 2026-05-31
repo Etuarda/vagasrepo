@@ -36,6 +36,7 @@ router.get("/optimized-resumes/:id/download", profileController.downloadOptimize
 router.delete("/optimized-resumes/:id", profileController.deleteOptimized);
 router.patch("/job-analyses/:id", profileController.updateAnalysis);
 router.get("/job-analyses/:id", profileController.getAnalysis);
+router.post("/job-analyses/:id/recalculate", profileController.recalculateAnalysis);
 router.post("/job-analyses/:id/create-application", profileController.createApplication);
 
 module.exports = router;

@@ -588,8 +588,14 @@ model JobAnalysis {
   company              String    @default("")
   jobUrl               String    @default("")
   jobDescription       String
+  jobOrigin            String    @default("individual")
+  selectedProfileType  String    @default("global")
+  selectedProfileName  String    @default("")
   selectedSubprofileId String?
   matchScore           Int
+  globalScore          Int       @default(0)
+  globalAnalysisStatus String    @default("complete")
+  selectedProfileScore Int       @default(0)
   jobCategory          String    @default("unknown")
   matchedSkills        String[]  @default([])
   missingSkills        String[]  @default([])
@@ -597,6 +603,9 @@ model JobAnalysis {
   selectedProjectIds   String[]  @default([])
   selectedCourseIds    String[]  @default([])
   selectedCertificationIds String[] @default([])
+  selectedProjectsSnapshot Json?
+  selectedCoursesSnapshot Json?
+  selectedCertificationsSnapshot Json?
   generatedResumeId    String?
   confirmedSeniority   String    @default("unknown")
   inferredSeniority    String    @default("unknown")
@@ -607,6 +616,9 @@ model JobAnalysis {
   seniorityPenalty     Int       @default(0)
   warnings             String[]  @default([])
   scoringVersion       String    @default("deterministic-v1")
+  analysisStatus       String    @default("complete")
+  recalculationReason  String    @default("initial")
+  sourceAnalysisId     String?
   status               String    @default("draft")
   appliedAt            DateTime?
   notes                String    @default("")
@@ -625,6 +637,8 @@ model JobAnalysis {
   @@index([userId, createdAt])
   @@index([userId, selectedSubprofileId, createdAt(sort: Desc)], map: "JobAnalysis_user_profile_created_desc_idx")
   @@index([selectedSubprofileId])
+  @@index([sourceAnalysisId])
+  @@index([analysisStatus])
   @@index([status])
 }
 

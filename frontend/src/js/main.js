@@ -237,6 +237,9 @@ function wireEvents() {
   document.querySelectorAll("[data-close-application]").forEach((el) =>
     el.addEventListener("click", () => ui.closeApplicationModal())
   );
+  document.querySelectorAll("[data-close-recalculate]").forEach((el) =>
+    el.addEventListener("click", () => ui.closeRecalculateModal())
+  );
   const applicationActionBool = document.getElementById("application-action-bool");
   if (applicationActionBool) applicationActionBool.addEventListener("change", ui.syncApplicationConditionalFields);
   const applicationFeedbackBool = document.getElementById("application-feedback-bool");
@@ -261,6 +264,20 @@ function wireEvents() {
         getSubmitButton(e, formApplication),
         { busyText: "Salvando...", notice: "Registrando candidatura..." },
         () => career.createApplication(analysisId, payload)
+      );
+    });
+  }
+
+  const formRecalculate = document.getElementById("form-recalculate");
+  if (formRecalculate) {
+    formRecalculate.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const analysisId = document.getElementById("recalculate-analysis-id")?.value || "";
+      const profileId = document.getElementById("recalculate-profile-id")?.value || "";
+      await runWithFeedback(
+        getSubmitButton(e, formRecalculate),
+        { busyText: "Recalculando...", notice: "Criando nova versao da analise..." },
+        () => career.recalculateAnalysis(analysisId, profileId)
       );
     });
   }
@@ -776,6 +793,11 @@ function wireEvents() {
         career.newMatching();
         return;
       }
+      const recalculateBtn = e.target.closest("[data-recalculate-analysis]");
+      if (recalculateBtn) {
+        ui.openRecalculateModal(state.lastMatchResult || { analysisId: recalculateBtn.dataset.recalculateAnalysis });
+        return;
+      }
       const registrationBtn = e.target.closest("[data-register-application]");
       if (registrationBtn) {
         ui.openApplicationForm(state.lastMatchResult || {
@@ -886,6 +908,12 @@ function wireEvents() {
           { busyText: "Salvando...", notice: "Registrando aplicacao..." },
           () => career.markAnalysisApplied(appliedBtn.dataset.markApplied)
         );
+      }
+      const recalculateBtn = e.target.closest("[data-recalculate-analysis]");
+      if (recalculateBtn) {
+        const analysis = (state.matchHistory || []).find((item) => item.analysisId === recalculateBtn.dataset.recalculateAnalysis);
+        ui.openRecalculateModal(analysis || { analysisId: recalculateBtn.dataset.recalculateAnalysis });
+        return;
       }
       const optimizedLink = e.target.closest("[data-download-optimized]");
       if (optimizedLink) {

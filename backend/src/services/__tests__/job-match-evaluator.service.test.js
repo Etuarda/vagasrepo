@@ -74,6 +74,34 @@ describe("job match evaluator", () => {
     expect(withProject.overallScore).toBeGreaterThan(withoutProject.overallScore);
   });
 
+  it("usa formula base exata de 70% habilidades e 30% projetos antes da senioridade", () => {
+    const result = evaluateJobMatch({
+      profile: baseProfile({ seniority: "junior" }),
+      jobTitle: "Backend Junior",
+      jobDescription: "Node.js PostgreSQL Docker API REST.",
+      confirmedSeniority: "junior",
+    });
+
+    const expectedBase = Math.round(
+      result.scores.skills * 0.70 +
+      result.scores.projects * 0.30
+    );
+    expect(result.aderenciaBase).toBe(expectedBase);
+    expect(result.scoreDetails.weightedBeforePenalty).toBe(expectedBase);
+  });
+
+  it("gera warning quando encontra menos de 10 habilidades compativeis", () => {
+    const result = evaluateJobMatch({
+      profile: baseProfile(),
+      jobTitle: "Backend Junior",
+      jobDescription: "Node.js PostgreSQL Docker API REST.",
+      confirmedSeniority: "junior",
+    });
+
+    expect(result.riskFlags).toContain("insufficient_matched_skills");
+    expect(result.warnings.join(" ")).toContain("habilidades compativeis");
+  });
+
   it("cursos e certificacoes complementam sem inflar artificialmente o score", () => {
     const result = evaluateJobMatch({
       profile: baseProfile({

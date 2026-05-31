@@ -456,6 +456,41 @@ function renderMatchProfileOptions() {
   }
 }
 
+function isScoreAvailable(item = {}) {
+  return item.scoreAvailable !== false &&
+    item.analysisStatus !== "incomplete" &&
+    item.analysisStatus !== "pending_review" &&
+    item.score !== null &&
+    item.overallScore !== null &&
+    item.score !== undefined;
+}
+
+function scoreLabel(score, item = {}) {
+  return isScoreAvailable({ ...item, score }) ? `${Number(score || 0)}%` : "Indisponivel";
+}
+
+function analysisStatusText(status) {
+  if (status === "complete") return "Completa";
+  if (status === "pending_review") return "Pendente de revisao";
+  if (status === "incomplete") return "Incompleta";
+  return "Completa";
+}
+
+function seniorityLabel(value) {
+  return ({
+    internship: "Estagio",
+    junior: "Junior",
+    mid: "Pleno",
+    senior: "Senior",
+    lead: "Lead",
+    unknown: "Nao informada",
+  })[value] || value || "Nao informada";
+}
+
+function compactWarnings(warnings = [], limit = 3) {
+  return (warnings || []).filter(Boolean).slice(0, limit);
+}
+
 function renderHistory() {
   const root = document.getElementById("match-history");
   if (!root) return;
@@ -498,6 +533,72 @@ function renderHistory() {
     .join("");
 }
 
+function renderHistory() {
+  const root = document.getElementById("match-history");
+  if (!root) return;
+
+  const rows = state.matchHistory || [];
+  if (!rows.length) {
+    root.innerHTML = "";
+    return;
+  }
+
+  root.innerHTML = rows.map((item) => {
+    const available = isScoreAvailable(item);
+    const gaps = (item.missingSkills || []).slice(0, 4);
+    const warnings = compactWarnings(item.warnings);
+    const courseCount = (item.selectedCourseIds || []).length + (item.selectedCertificationIds || []).length;
+    return `
+      <article class="contrast-surface border border-borderLight rounded-2xl p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="w-full">
+            <button type="button" data-open-analysis="${item.analysisId}" class="font-bold text-sm underline text-left">${escapeHtml(item.targetTitle)}</button>
+            <p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-1">
+              ${escapeHtml(item.company || "")} ${item.company ? "|" : ""} ${formatDateTime(item.createdAt)} | ${escapeHtml(analysisStatusText(item.analysisStatus))} | v${item.version || 1}
+            </p>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+              <div class="border border-borderLight rounded-2xl p-3 bg-white">
+                <span class="block text-[9px] uppercase tracking-widest text-stone">Aderencia final</span>
+                <strong class="block text-xl mt-1">${available ? `${Number(item.overallScore || item.score || 0)}%` : "Indisponivel"}</strong>
+              </div>
+              <div class="border border-borderLight rounded-2xl p-3 bg-white">
+                <span class="block text-[9px] uppercase tracking-widest text-stone">Perfil usado</span>
+                <strong class="block mt-1">${escapeHtml(item.selectedProfileName || "Perfil")}</strong>
+              </div>
+              <div class="border border-borderLight rounded-2xl p-3 bg-white">
+                <span class="block text-[9px] uppercase tracking-widest text-stone">Comparativo</span>
+                <strong class="block mt-1">Global ${scoreLabel(item.globalScore, { score: item.globalScore, analysisStatus: item.globalAnalysisStatus })} | Atual ${scoreLabel(item.selectedProfileScore, item)}</strong>
+              </div>
+              <div class="border border-borderLight rounded-2xl p-3 bg-white">
+                <span class="block text-[9px] uppercase tracking-widest text-stone">Senioridade</span>
+                <strong class="block mt-1">${escapeHtml(seniorityLabel(item.confirmedSeniority || item.inferredSeniority))}</strong>
+              </div>
+            </div>
+            <p class="text-xs text-taupe mt-3">
+              Skills encontradas: ${(item.matchedSkills || []).length} |
+              Gaps principais: ${gaps.length ? escapeHtml(gaps.join(", ")) : "nenhum gap principal"} |
+              Projetos: ${(item.selectedProjectIds || []).length} |
+              Cursos/certificacoes: ${courseCount}
+            </p>
+            ${warnings.length ? `<ul class="mt-2 list-disc pl-5 text-xs text-red-700">${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : ""}
+            ${item.linkVaga ? `<a href="${escapeHtml(item.linkVaga)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest underline">Link da vaga</a>` : ""}
+            ${item.application ? `<p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-2">Candidatura: ${escapeHtml(item.application.status)} | ${escapeHtml(item.application.fase)}${item.appliedAt ? ` | aplicada em ${escapeHtml(formatDateTime(item.appliedAt))}` : ""}</p>` : ""}
+            <div class="mt-3 flex flex-wrap gap-3">
+              ${item.generatedFileName ? `<a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF otimizado</a>` : ""}
+              ${item.resumeFileId ? `<a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>` : ""}
+              ${item.application ? `<button type="button" data-open-linked-job="${item.application.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Abrir candidatura</button>` : ""}
+              ${!item.application && available ? `<button type="button" data-register-history-application="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Cadastrar acompanhamento</button>` : ""}
+              ${item.status !== "applied" && item.status !== "Aplicada" && available ? `<button type="button" data-mark-applied="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Marcar aplicado</button>` : ""}
+              <button type="button" data-recalculate-analysis="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Refazer com outro subperfil</button>
+            </div>
+          </div>
+          <button type="button" data-remove-match="${item.id}" class="text-[10px] font-bold uppercase tracking-widest text-red-700">Remover</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 function renderSharedMatchedJobs() {
   const root = document.getElementById("shared-jobs-list");
   if (!root) return;
@@ -534,6 +635,54 @@ function renderSharedMatchedJobs() {
     )
     .join("");
 }
+function renderSharedMatchedJobs() {
+  const root = document.getElementById("shared-jobs-list");
+  if (!root) return;
+
+  const rows = state.sharedMatchedJobs || [];
+  if (!rows.length) {
+    root.innerHTML = `<p class="text-sm text-taupe">Nenhuma vaga compartilhada neste periodo.</p>`;
+    return;
+  }
+
+  root.innerHTML = rows.map((item) => {
+    const match = item.profileMatch || {};
+    const available = isScoreAvailable(match);
+    const best = item.bestSubprofileMatch;
+    const warnings = compactWarnings(match.warnings);
+    return `
+      <article class="editorial-card rounded-2xl p-5">
+        <h3 class="font-bold text-lg">${escapeHtml(item.jobTitle)}</h3>
+        <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-2">${escapeHtml(item.company)}</p>
+        <p class="text-xs text-taupe mt-3">${escapeHtml(formatDateTime(item.createdAt))} | ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
+        <div class="mt-4 rounded-2xl border border-borderLight p-4 bg-white">
+          <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">${available ? "Aderencia final" : "Analise incompleta"}</p>
+          <p class="font-serif text-4xl mt-2">${available ? `${Number(match.score || 0)}%` : "Indisponivel"}</p>
+          <p class="text-xs text-taupe mt-2">
+            Perfil usado: ${escapeHtml(match.profileName || best?.profileName || "Perfil Global")}
+          </p>
+          <p class="text-xs text-taupe mt-2">
+            Comparativo: Global ${scoreLabel(item.globalMatch?.score, item.globalMatch || {})}
+            ${best && isScoreAvailable(best) ? ` | ${escapeHtml(best.profileName)} ${Number(best.score || 0)}%` : ""}
+          </p>
+          ${available ? `
+            <p class="text-xs text-taupe mt-2">
+              Skills compativeis: ${Number(match.matchedSkillsCount || 0)}/${Number(match.requiredSkillsCount || 0)} |
+              Gaps: ${(match.missingSkills || []).slice(0, 4).join(", ") || "nenhum gap principal"} |
+              Projetos relevantes: ${Number(match.matchedProjectsCount || 0)} |
+              Cursos/certificacoes: ${Number(match.relevantLearningCount || 0)}
+            </p>
+          ` : `
+            <p class="text-xs text-taupe mt-2">Preencha pendencias do perfil antes de confiar no percentual de matching.</p>
+          `}
+          ${warnings.length ? `<ul class="mt-2 list-disc pl-5 text-xs text-red-700">${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : ""}
+        </div>
+        <a href="${escapeHtml(item.jobUrl)}" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 text-[10px] font-bold uppercase tracking-widest underline">Abrir vaga</a>
+      </article>
+    `;
+  }).join("");
+}
+
 function renderResumeFiles() {
   const list = document.getElementById("resume-files-list");
   const files = state.resumeFiles || [];
@@ -641,6 +790,85 @@ function renderMatchResult(result) {
             `
           )
           .join("") || `<p class="text-sm text-taupe">Cadastre projetos para melhorar a seleção automática.</p>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderMatchResult(result) {
+  const root = document.getElementById("match-result");
+  if (!root) return;
+
+  const available = isScoreAvailable({ ...result, score: result.overallScore, analysisStatus: result.analysisStatus });
+  const block = (title, items, positive = false) => `
+    <section class="editorial-card rounded-2xl p-5">
+      <h4 class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone mb-3">${title}</h4>
+      ${
+        (items || []).length
+          ? `<div class="flex flex-wrap gap-2">${items.map((item) => `<span class="tag-pill contrast-chip ${positive ? "text-green-800" : "text-red-800"}">${escapeHtml(item)}</span>`).join("")}</div>`
+          : `<p class="text-sm text-taupe">Nenhum item encontrado.</p>`
+      }
+    </section>
+  `;
+
+  root.className = "lg:col-span-7 space-y-4 sm:space-y-6";
+  root.innerHTML = `
+    <section class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">${available ? "Relatorio de aderencia" : "Analise incompleta"}</p>
+          <h3 class="font-serif text-4xl sm:text-5xl mt-3">${available ? `${Number(result.overallScore || result.scoreDetails?.totalScore || 0)}%` : "Indisponivel"}</h3>
+          <p class="text-xs text-taupe mt-2">Status: ${escapeHtml(analysisStatusText(result.analysisStatus))}</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${Number(result.scoreDetails?.skillsMatchScore || 0)}%</span><span class="text-[9px] uppercase tracking-widest">Skills</span></div>
+          <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${Number(result.scoreDetails?.projectsMatchScore || 0)}%</span><span class="text-[9px] uppercase tracking-widest">Projetos</span></div>
+        </div>
+      </div>
+      <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        <div class="border border-borderLight rounded-2xl p-3 bg-white">
+          <span class="block text-[9px] uppercase tracking-widest text-stone">Perfil usado</span>
+          <strong class="block mt-1">${escapeHtml(result.selectedProfileName || result.selectedSubprofileName || "Perfil")}</strong>
+        </div>
+        <div class="border border-borderLight rounded-2xl p-3 bg-white">
+          <span class="block text-[9px] uppercase tracking-widest text-stone">Comparativo</span>
+          <strong class="block mt-1">Global ${scoreLabel(result.globalScore, { score: result.globalScore, analysisStatus: result.globalAnalysisStatus })} | Atual ${scoreLabel(result.selectedProfileScore, result)}</strong>
+        </div>
+        <div class="border border-borderLight rounded-2xl p-3 bg-white">
+          <span class="block text-[9px] uppercase tracking-widest text-stone">Senioridade</span>
+          <strong class="block mt-1">${escapeHtml(seniorityLabel(result.confirmedSeniority || result.inferredSeniority))}</strong>
+        </div>
+      </div>
+      <p class="text-sm text-taupe leading-relaxed mt-6">${escapeHtml(result.semanticFeedback || "")}</p>
+      <p class="text-sm font-bold mt-3">${escapeHtml(result.message || "")}</p>
+      <div class="mt-6 flex flex-wrap gap-3">
+        ${result.generatedPdfAvailable ? `<button type="button" data-download-current-optimized="${result.id}" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Baixar curriculo atualizado</button>` : ""}
+        ${available ? `<button type="button" data-register-application="${result.analysisId}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Cadastrar acompanhamento</button>` : ""}
+        <button type="button" data-recalculate-analysis="${result.analysisId}" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Refazer com outro subperfil</button>
+        <button type="button" data-new-matching class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">Novo matching</button>
+      </div>
+    </section>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      ${block("Skills aderentes", result.matchedSkills || [], true)}
+      ${block("Skills ausentes", result.missingSkills || [])}
+      ${block("Keywords reconhecidas", result.jobKeywords || [], true)}
+      ${block("Avisos", result.warnings || [])}
+    </div>
+    <section class="editorial-card rounded-2xl sm:rounded-3xl p-4 sm:p-8">
+      <h4 class="font-serif text-3xl mb-4">Projetos mais fortes.</h4>
+      <div class="space-y-4">
+        ${(result.projectScores || [])
+          .slice(0, 2)
+          .map((item) => `
+            <article class="contrast-surface border border-borderLight rounded-2xl p-5">
+              <div class="flex justify-between gap-4">
+                <h5 class="font-bold">${escapeHtml(item.project.title)}</h5>
+                <span class="font-bold">${item.score}%</span>
+              </div>
+              <p class="text-sm text-taupe mt-2">${escapeHtml(item.reason)}</p>
+            </article>
+          `)
+          .join("") || `<p class="text-sm text-taupe">Nenhum projeto aderente suficiente foi encontrado.</p>`}
       </div>
     </section>
   `;
@@ -1093,8 +1321,15 @@ export const career = {
     state.lastMatchResult = {
       analysisId: analysis.id,
       targetTitle: analysis.jobTitle,
-      selectedSubprofileName: analysis.selectedSubprofile?.profileName || "",
+      selectedSubprofileId: analysis.selectedSubprofileId,
+      selectedSubprofileName: analysis.selectedProfileName || analysis.selectedSubprofile?.profileName || "",
+      selectedProfileName: analysis.selectedProfileName || analysis.selectedSubprofile?.profileName || "",
       score: analysis.matchScore,
+      overallScore: analysis.matchScore,
+      globalScore: analysis.globalScore,
+      globalAnalysisStatus: analysis.globalAnalysisStatus,
+      selectedProfileScore: analysis.selectedProfileScore,
+      analysisStatus: analysis.analysisStatus,
       linkVaga: analysis.jobUrl || "",
     };
     renderAnalysisEditor(analysis);
@@ -1105,6 +1340,45 @@ export const career = {
     ui.notify(out.message);
     invalidateHistoryCache();
     await Promise.all([jobs.load(), career.loadHistory({ force: true, successMessage: "Histórico atualizado." }), career.openAnalysis(out.analysis.id)]);
+  },
+
+  async recalculateAnalysis(id, profileId, force = false) {
+    let out;
+    const profile = (state.profiles || []).find((item) => item.id === profileId);
+    const payload = {
+      profileType: profile?.isGlobal ? "global" : "subprofile",
+      profileId,
+      subprofileId: profile?.isGlobal ? undefined : profileId,
+      force,
+    };
+    try {
+      out = await api(`/job-analyses/${id}/recalculate`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }, state.token);
+    } catch (err) {
+      if (err.code !== "PROFILE_INCOMPLETE" || force) throw err;
+      const missing = (err.details?.missing || []).join("\n- ");
+      const ok = window.confirm(`Este perfil esta incompleto:\n- ${missing}\n\nDeseja recalcular mesmo assim? O historico marcara a analise como incompleta.`);
+      if (!ok) return null;
+      return career.recalculateAnalysis(id, profileId, true);
+    }
+
+    ui.closeRecalculateModal();
+    state.lastMatchResult = out.result;
+    renderMatchResult(out.result);
+    if (out.result?.selectedSubprofileId) {
+      state.activeProfileId = out.result.selectedSubprofileId;
+      renderProfileCards();
+    }
+    invalidateHistoryCache();
+    await Promise.all([
+      jobs.load(),
+      career.loadHistory({ force: true, successMessage: "Historico atualizado." }),
+      career.loadSharedMatchedJobs(),
+    ]);
+    ui.notify(out.message || "Analise recalculada com sucesso.");
+    return out;
   },
 
   async createApplication(analysisId, payload) {

@@ -107,6 +107,145 @@ function analyzeProfile(profile, jobDescription, metadata = {}) {
     confirmedSeniority: metadata.confirmedSeniority,
   });
 }
+
+function profileAudit(profile) {
+  return {
+    selectedProfileType: profile?.isGlobal ? "global" : "subprofile",
+    selectedProfileName: profile?.profileName || (profile?.isGlobal ? "Perfil Global" : "Subperfil"),
+    selectedSubprofileId: profile?.id || null,
+  };
+}
+
+function snapshotProjects(projects = []) {
+  return projects.map((project) => ({
+    id: project.id,
+    title: project.title,
+    score: project.score,
+    matchedKeywords: project.matchedKeywords || [],
+    repositoryUrl: project.repositoryUrl || "",
+    deployUrl: project.deployUrl || "",
+  }));
+}
+
+function snapshotLearning(items = []) {
+  return items.map((item) => ({
+    id: item.id,
+    title: item.title,
+    issuer: item.issuer || item.institution || "",
+    itemType: item.itemType,
+    matchedKeywords: item.matchedKeywords || [],
+    workload: item.workload || "",
+    period: item.period || "",
+  }));
+}
+
+async function compareWithGlobalProfile(userId, selectedProfile, jobDescription, metadata, selectedResult) {
+  const globalProfile = selectedProfile?.isGlobal ? selectedProfile : await profileService.getProfile(userId);
+  const globalMissing = getMissingResumeFields(globalProfile);
+  if (globalMissing.length) {
+    return {
+      globalScore: 0,
+      globalAnalysisStatus: "incomplete",
+      globalWarnings: globalMissing.map((field) => `Perfil Global incompleto: ${field}`),
+    };
+  }
+  const globalResult = globalProfile.id === selectedProfile.id
+    ? selectedResult
+    : analyzeProfile(globalProfile, jobDescription, metadata);
+  return {
+    globalScore: globalResult.overallScore,
+    globalAnalysisStatus: "complete",
+    globalWarnings: [],
+  };
+}
+
+function buildAnalysisData({
+  userId,
+  profile,
+  result,
+  targetTitle,
+  metadata,
+  jobDescription,
+  generatedResumeId = null,
+  globalScore = 0,
+  globalAnalysisStatus = "complete",
+  warnings = [],
+  analysisStatus = "complete",
+  recalculationReason = "initial",
+  sourceAnalysisId = null,
+  parentAnalysisId = null,
+  version = 1,
+  jobOrigin = "individual",
+}) {
+  const audit = profileAudit(profile);
+  return {
+    userId,
+    jobTitle: targetTitle,
+    company: metadata.company || "",
+    jobUrl: metadata.linkVaga || metadata.jobUrl || "",
+    jobDescription,
+    jobOrigin,
+    selectedProfileType: audit.selectedProfileType,
+    selectedProfileName: audit.selectedProfileName,
+    selectedSubprofileId: audit.selectedSubprofileId,
+    matchScore: result.overallScore,
+    globalScore,
+    globalAnalysisStatus,
+    selectedProfileScore: result.overallScore,
+    jobCategory: result.jobCategory,
+    matchedSkills: result.matchedSkills,
+    missingSkills: result.missingSkills,
+    selectedProjectIds: result.selectedProjects.map((project) => project.id).filter(Boolean),
+    selectedCourseIds: result.selectedCourses.map((course) => course.id).filter(Boolean),
+    selectedCertificationIds: result.selectedCertifications.map((certification) => certification.id).filter(Boolean),
+    selectedProjectsSnapshot: snapshotProjects(result.selectedProjects),
+    selectedCoursesSnapshot: snapshotLearning(result.selectedCourses),
+    selectedCertificationsSnapshot: snapshotLearning(result.selectedCertifications),
+    extraRelevantSkills: result.extraRelevantSkills,
+    confirmedSeniority: result.confirmedSeniority,
+    inferredSeniority: result.inferredSeniority,
+    aderenciaBase: result.aderenciaBase,
+    aderenciaFinal: result.aderenciaFinal,
+    skillsScore: result.scoreDetails.skillsMatchScore,
+    projectsScore: result.scoreDetails.projectsMatchScore,
+    seniorityPenalty: result.seniorityPenalty,
+    warnings: [...new Set([...(result.warnings || []), ...(warnings || [])])],
+    scoringVersion: result.scoringVersion,
+    analysisStatus,
+    recalculationReason,
+    sourceAnalysisId,
+    parentAnalysisId,
+    version,
+    generatedResumeId,
+    status: "Currículo gerado",
+  };
+}
+
+function buildResultPayload({ result, profile, targetTitle, metadata, savedResume, jobAnalysis, globalScore, globalAnalysisStatus = "complete", analysisStatus }) {
+  return {
+    ...result,
+    targetTitle,
+    selectedSubprofileId: profile.id,
+    selectedSubprofileName: profile.profileName,
+    selectedProfileType: profile.isGlobal ? "global" : "subprofile",
+    selectedProfileName: profile.profileName,
+    selectedProfileScore: result.overallScore,
+    globalScore,
+    globalAnalysisStatus,
+    analysisStatus,
+    linkVaga: metadata.linkVaga || metadata.jobUrl || "",
+    suggestedSummary: profile.summary,
+    semanticFeedback: `Matching deterministico: score base por habilidades 70% e projetos 30%, com senioridade aplicada como teto ou penalidade. Perfil usado: ${profile.profileName}.`,
+    id: savedResume?.id || jobAnalysis.id,
+    analysisId: jobAnalysis.id,
+    status: jobAnalysis.status,
+    generatedPdfAvailable: Boolean(savedResume?.generatedPdf || savedResume?.generatedFileName),
+    generatedFileName: savedResume?.generatedFileName,
+    message: analysisStatus === "complete"
+      ? `Curriculo gerado com ${result.overallScore}% de aderencia. Status: ainda nao aplicado. Revise antes de enviar.`
+      : "Analise salva como incompleta. Complete o perfil antes de confiar no percentual.",
+  };
+}
 async function selectProfile(userId, jobDescription, requestedProfileId, metadata = {}) {
   if (requestedProfileId) return profileService.getProfile(userId, requestedProfileId);
   const listed = await profileService.listProfiles(userId);
@@ -124,15 +263,18 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
 
   const analysis = analyzeProfile(profile, text, normalizedMetadata);
   const targetTitle = metadata.jobTitle || inferTitle(text);
-  const result = {
-    ...analysis,
+  const comparison = await compareWithGlobalProfile(userId, profile, text, normalizedMetadata, analysis);
+  const result = buildResultPayload({
+    result: analysis,
+    profile,
     targetTitle,
-    selectedSubprofileId: profile.id,
-    selectedSubprofileName: profile.profileName,
-    linkVaga: metadata.linkVaga || "",
-    suggestedSummary: profile.summary,
-    semanticFeedback: `Matching deterministico: score base por habilidades 70% e projetos 30%, com senioridade aplicada como teto ou penalidade. Resumo, formacao, experiencias e idiomas permanecem conforme cadastrados. Categoria: ${analysis.jobCategory}.`,
-  };
+    metadata,
+    savedResume: null,
+    jobAnalysis: { id: "", status: "Currículo gerado" },
+    globalScore: comparison.globalScore,
+    globalAnalysisStatus: comparison.globalAnalysisStatus,
+    analysisStatus: "complete",
+  });
   const compiledResume = compileResume({ profile, matchResult: result });
   const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: result, compiledResume });
   const { saved, jobAnalysis } = await prisma.$transaction(async (tx) => {
@@ -180,6 +322,18 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
         warnings: result.warnings,
         scoringVersion: result.scoringVersion,
         generatedResumeId: savedResume.id,
+        ...buildAnalysisData({
+          userId,
+          profile,
+          result,
+          targetTitle,
+          metadata,
+          jobDescription: text,
+          generatedResumeId: savedResume.id,
+          globalScore: comparison.globalScore,
+          globalAnalysisStatus: comparison.globalAnalysisStatus,
+          warnings: comparison.globalWarnings,
+        }),
         status: "Currículo gerado",
       },
     });
@@ -199,14 +353,18 @@ async function executeMatch(userId, jobDescription, profileId = null, metadata =
   ]);
 
   return {
-    ...result,
-    id: saved.id,
-    analysisId: jobAnalysis.id,
-    status: jobAnalysis.status,
+    ...buildResultPayload({
+      result,
+      profile,
+      targetTitle,
+      metadata,
+      savedResume: saved,
+      jobAnalysis,
+      globalScore: comparison.globalScore,
+      globalAnalysisStatus: comparison.globalAnalysisStatus,
+      analysisStatus: "complete",
+    }),
     resume: compiledResume,
-    generatedPdfAvailable: true,
-    generatedFileName: saved.generatedFileName,
-    message: `Curriculo gerado com ${result.overallScore}% de aderencia. Status: ainda nao aplicado. Revise antes de enviar.`,
   };
 }
 
@@ -221,11 +379,39 @@ async function listHistory(userId, profileId = null) {
         jobTitle: true,
         company: true,
         jobUrl: true,
+        jobOrigin: true,
+        selectedProfileType: true,
+        selectedProfileName: true,
+        selectedSubprofileId: true,
         matchScore: true,
+        globalScore: true,
+        globalAnalysisStatus: true,
+        selectedProfileScore: true,
+        skillsScore: true,
+        projectsScore: true,
+        matchedSkills: true,
+        missingSkills: true,
+        extraRelevantSkills: true,
+        selectedProjectIds: true,
+        selectedCourseIds: true,
+        selectedCertificationIds: true,
+        selectedProjectsSnapshot: true,
+        selectedCoursesSnapshot: true,
+        selectedCertificationsSnapshot: true,
+        confirmedSeniority: true,
+        inferredSeniority: true,
+        analysisStatus: true,
+        warnings: true,
+        scoringVersion: true,
+        recalculationReason: true,
+        sourceAnalysisId: true,
+        parentAnalysisId: true,
+        version: true,
         status: true,
         jobCategory: true,
         appliedAt: true,
         createdAt: true,
+        selectedSubprofile: { select: { id: true, profileName: true, isGlobal: true } },
         generatedResume: { select: { id: true, generatedFileName: true, resumeFileId: true } },
         applications: {
           where: { userId },
@@ -242,6 +428,34 @@ async function listHistory(userId, profileId = null) {
       company: row.company,
       linkVaga: row.jobUrl,
       score: row.matchScore,
+      overallScore: row.matchScore,
+      globalScore: row.globalScore,
+      globalAnalysisStatus: row.globalAnalysisStatus,
+      selectedProfileScore: row.selectedProfileScore,
+      selectedProfileType: row.selectedProfileType,
+      selectedProfileName: row.selectedProfileName || row.selectedSubprofile?.profileName || "",
+      selectedSubprofileId: row.selectedSubprofileId,
+      selectedSubprofileName: row.selectedSubprofile?.profileName || row.selectedProfileName || "",
+      skillsScore: row.skillsScore,
+      projectsScore: row.projectsScore,
+      matchedSkills: row.matchedSkills || [],
+      missingSkills: row.missingSkills || [],
+      extraRelevantSkills: row.extraRelevantSkills || [],
+      selectedProjectIds: row.selectedProjectIds || [],
+      selectedCourseIds: row.selectedCourseIds || [],
+      selectedCertificationIds: row.selectedCertificationIds || [],
+      selectedProjects: row.selectedProjectsSnapshot || [],
+      selectedCourses: row.selectedCoursesSnapshot || [],
+      selectedCertifications: row.selectedCertificationsSnapshot || [],
+      confirmedSeniority: row.confirmedSeniority,
+      inferredSeniority: row.inferredSeniority,
+      analysisStatus: row.analysisStatus || "complete",
+      warnings: row.warnings || [],
+      scoringVersion: row.scoringVersion,
+      recalculationReason: row.recalculationReason,
+      sourceAnalysisId: row.sourceAnalysisId || row.parentAnalysisId,
+      version: row.version,
+      jobOrigin: row.jobOrigin,
       status: row.status,
       jobCategory: row.jobCategory,
       generatedFileName: row.generatedResume?.generatedFileName,
@@ -274,12 +488,36 @@ async function updateAnalysis(userId, id, data) {
         company: data.company ?? existing.company,
         jobUrl: data.linkVaga ?? existing.jobUrl,
         jobDescription: data.jobDescription ?? existing.jobDescription,
+        jobOrigin: existing.jobOrigin,
+        selectedProfileType: existing.selectedProfileType,
+        selectedProfileName: existing.selectedProfileName,
         selectedSubprofileId: existing.selectedSubprofileId,
         matchScore: existing.matchScore,
+        globalScore: existing.globalScore,
+        globalAnalysisStatus: existing.globalAnalysisStatus,
+        selectedProfileScore: existing.selectedProfileScore,
         jobCategory: existing.jobCategory,
         matchedSkills: existing.matchedSkills,
         missingSkills: existing.missingSkills,
+        extraRelevantSkills: existing.extraRelevantSkills,
         selectedProjectIds: existing.selectedProjectIds,
+        selectedCourseIds: existing.selectedCourseIds,
+        selectedCertificationIds: existing.selectedCertificationIds,
+        selectedProjectsSnapshot: existing.selectedProjectsSnapshot,
+        selectedCoursesSnapshot: existing.selectedCoursesSnapshot,
+        selectedCertificationsSnapshot: existing.selectedCertificationsSnapshot,
+        confirmedSeniority: existing.confirmedSeniority,
+        inferredSeniority: existing.inferredSeniority,
+        aderenciaBase: existing.aderenciaBase,
+        aderenciaFinal: existing.aderenciaFinal,
+        skillsScore: existing.skillsScore,
+        projectsScore: existing.projectsScore,
+        seniorityPenalty: existing.seniorityPenalty,
+        warnings: existing.warnings,
+        scoringVersion: existing.scoringVersion,
+        analysisStatus: existing.analysisStatus,
+        recalculationReason: existing.recalculationReason,
+        sourceAnalysisId: existing.sourceAnalysisId,
         generatedResumeId: existing.generatedResumeId,
         status: data.status ?? existing.status ?? "Currículo gerado",
         notes: data.notes ?? existing.notes,
@@ -328,12 +566,137 @@ async function updateAnalysis(userId, id, data) {
   return updated;
 }
 
+async function recalculateAnalysis(userId, id, data = {}) {
+  const existing = await prisma.jobAnalysis.findFirst({ where: { id, userId } });
+  if (!existing) {
+    const err = new Error("Analise nao encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const profileId = data.subprofileId || data.profileId || null;
+  const profile = profileId ? await profileService.getProfile(userId, profileId) : await profileService.getProfile(userId);
+  const missing = getMissingResumeFields(profile);
+  if (missing.length && !data.force) {
+    const err = new Error("Este perfil nao possui dados suficientes para uma analise confiavel.");
+    err.statusCode = 422;
+    err.code = "PROFILE_INCOMPLETE";
+    err.details = { missing, canForce: true };
+    throw err;
+  }
+
+  const metadata = {
+    jobTitle: existing.jobTitle,
+    company: existing.company,
+    linkVaga: existing.jobUrl,
+    confirmedSeniority: existing.confirmedSeniority && existing.confirmedSeniority !== "unknown"
+      ? existing.confirmedSeniority
+      : existing.inferredSeniority,
+  };
+  const result = analyzeProfile(profile, existing.jobDescription, metadata);
+  const comparison = await compareWithGlobalProfile(userId, profile, existing.jobDescription, metadata, result);
+  const analysisStatus = missing.length ? "incomplete" : "complete";
+  const profileWarnings = missing.map((field) => `Perfil usado incompleto: ${field}`);
+  const targetTitle = existing.jobTitle || inferTitle(existing.jobDescription);
+  const resultPayload = buildResultPayload({
+    result,
+    profile,
+    targetTitle,
+    metadata,
+    savedResume: null,
+    jobAnalysis: { id: "", status: "Currículo gerado" },
+    globalScore: comparison.globalScore,
+    globalAnalysisStatus: comparison.globalAnalysisStatus,
+    analysisStatus,
+  });
+
+  let compiledResume = null;
+  let generatedPdf = null;
+  if (analysisStatus === "complete") {
+    compiledResume = compileResume({ profile, matchResult: resultPayload });
+    generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: resultPayload, compiledResume });
+  }
+
+  const { savedResume, analysisRow } = await prisma.$transaction(async (tx) => {
+    await subscriptionService.consumeMatchingQuota(userId, tx);
+    const saved = analysisStatus === "complete"
+      ? await tx.optimizedResume.create({
+        data: {
+          userId,
+          targetTitle,
+          jobDescription: existing.jobDescription,
+          score: result.overallScore,
+          suggestedSummary: profile.summary || "",
+          selectedProjects: result.selectedProjects,
+          matchedSkills: result.matchedSkills,
+          missingSkills: result.missingSkills,
+          matchedTechnologies: result.matchedTechnologies,
+          missingTechnologies: result.missingTechnologies,
+          profileId: profile.id,
+          generatedPdf,
+          generatedFileName: `curriculo-otimizado-${Date.now()}.pdf`,
+        },
+      })
+      : null;
+    const row = await tx.jobAnalysis.create({
+      data: buildAnalysisData({
+        userId,
+        profile,
+        result,
+        targetTitle,
+        metadata,
+        jobDescription: existing.jobDescription,
+        generatedResumeId: saved?.id || null,
+        globalScore: comparison.globalScore,
+        globalAnalysisStatus: comparison.globalAnalysisStatus,
+        warnings: [...comparison.globalWarnings, ...profileWarnings],
+        analysisStatus,
+        recalculationReason: "manual_subprofile_change",
+        sourceAnalysisId: existing.id,
+        parentAnalysisId: existing.id,
+        version: (existing.version || 1) + 1,
+        jobOrigin: existing.jobOrigin || "individual",
+      }),
+    });
+    return { savedResume: saved, analysisRow: row };
+  });
+
+  await Promise.all([
+    cache.invalidate("match-history", userId),
+    cache.invalidate("shared-jobs-board", "global"),
+  ]);
+
+  return {
+    message: "Analise recalculada com sucesso.",
+    analysis: analysisRow,
+    result: {
+      ...buildResultPayload({
+        result,
+        profile,
+        targetTitle,
+        metadata,
+        savedResume,
+        jobAnalysis: analysisRow,
+        globalScore: comparison.globalScore,
+        globalAnalysisStatus: comparison.globalAnalysisStatus,
+        analysisStatus,
+      }),
+      resume: compiledResume,
+    },
+  };
+}
+
 async function getAnalysis(userId, id) {
   const row = await prisma.jobAnalysis.findFirst({
     where: { id, userId },
     include: {
       selectedSubprofile: { select: { id: true, profileName: true } },
       generatedResume: { select: { id: true, generatedFileName: true } },
+      parentAnalysis: { select: { id: true, version: true, matchScore: true, selectedProfileName: true, createdAt: true } },
+      versions: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, version: true, matchScore: true, selectedProfileName: true, analysisStatus: true, createdAt: true },
+      },
       applications: {
         where: { userId },
         orderBy: { data: "desc" },
@@ -363,6 +726,11 @@ async function getGeneratedPdf(userId, id) {
 }
 
 async function deleteHistory(userId, id) {
+  const removedAnalysis = await prisma.jobAnalysis.deleteMany({ where: { id, userId, generatedResumeId: null } });
+  if (removedAnalysis.count) {
+    await cache.invalidate("match-history", userId);
+    return { message: "Removido" };
+  }
   await prisma.jobAnalysis.deleteMany({ where: { generatedResumeId: id, userId } });
   const result = await prisma.optimizedResume.deleteMany({ where: { id, userId } });
   if (!result.count) {
@@ -381,6 +749,7 @@ module.exports = {
   getGeneratedPdf,
   getAnalysis,
   updateAnalysis,
+  recalculateAnalysis,
   analyzeProfile,
   getMissingResumeFields,
   assertProfileReadyForResume,

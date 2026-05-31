@@ -42,36 +42,78 @@ function calculateProfileMatch(job, profile) {
   });
 }
 
-function summarizeMatch(match) {
-  if (!match) return null;
+function profileMissing(profile) {
+  return profile?.completion?.pending || [];
+}
+
+function unavailableMatch(profile) {
+  const missing = profileMissing(profile);
+  return {
+    score: null,
+    overallScore: null,
+    scoreAvailable: false,
+    analysisStatus: "incomplete",
+    profileId: profile?.id,
+    profileName: profile?.profileName || "",
+    profileType: profile?.isGlobal ? "global" : "subprofile",
+    matchedSkills: [],
+    missingSkills: [],
+    matchedSkillsCount: 0,
+    requiredSkillsCount: 0,
+    matchedProjectsCount: 0,
+    relevantLearningCount: 0,
+    warnings: missing.length
+      ? missing.map((item) => `Perfil incompleto: ${item}`)
+      : ["Perfil insuficiente para calculo confiavel."],
+    riskFlags: ["profile_incomplete"],
+  };
+}
+
+function summarizeMatch(match, profile) {
+  if (!match) return unavailableMatch(profile);
   return {
     overallScore: match.overallScore,
     score: match.overallScore,
+    scoreAvailable: true,
+    analysisStatus: "complete",
+    profileId: profile?.id,
+    profileName: profile?.profileName || "",
+    profileType: profile?.isGlobal ? "global" : "subprofile",
     matchedSkills: (match.matchedSkills || []).slice(0, 8),
     missingSkills: (match.missingSkills || []).slice(0, 8),
+    matchedSkillsCount: (match.matchedSkills || []).length,
+    requiredSkillsCount: (match.jobKeywords || []).length,
+    matchedProjectsCount: (match.selectedProjects || []).length,
+    relevantLearningCount: (match.selectedCourses || []).length + (match.selectedCertifications || []).length,
     seniorityMatch: match.seniorityMatch,
     seniorityPenalty: match.seniorityPenalty,
+    warnings: match.warnings || [],
     riskFlags: match.riskFlags || [],
   };
 }
 
 async function calculateSharedJobMatches(job, profiles) {
   const globalProfile = profiles.find((profile) => profile.isGlobal) || profiles[0];
-  const globalMatch = globalProfile ? calculateProfileMatch(job, globalProfile) : null;
+  const globalReady = globalProfile && !profileMissing(globalProfile).length;
+  const globalMatch = globalReady ? calculateProfileMatch(job, globalProfile) : null;
   const subprofileMatches = profiles
     .filter((profile) => !profile.isGlobal)
-    .map((profile) => ({ profile, match: calculateProfileMatch(job, profile) }))
+    .map((profile) => ({
+      profile,
+      match: profileMissing(profile).length ? null : calculateProfileMatch(job, profile),
+    }))
+    .filter((item) => item.match)
     .sort((a, b) => b.match.overallScore - a.match.overallScore);
   const best = subprofileMatches[0] || null;
 
   return {
-    globalMatch: summarizeMatch(globalMatch),
+    globalMatch: summarizeMatch(globalMatch, globalProfile),
     bestSubprofileMatch: best ? {
       profileId: best.profile.id,
       profileName: best.profile.profileName,
-      ...summarizeMatch(best.match),
+      ...summarizeMatch(best.match, best.profile),
     } : null,
-    profileMatch: summarizeMatch(best?.match || globalMatch),
+    profileMatch: best ? summarizeMatch(best.match, best.profile) : summarizeMatch(globalMatch, globalProfile),
   };
 }
 
