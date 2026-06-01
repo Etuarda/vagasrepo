@@ -96,6 +96,14 @@ function rateLimit({ windowMs, max, keyPrefix = "default" }) {
 }
 
 function metricsEndpoint(req, res) {
+  const expectedToken = process.env.METRICS_TOKEN;
+  if (expectedToken) {
+    const providedToken = req.headers["x-metrics-token"] || req.query?.token;
+    if (providedToken !== expectedToken) {
+      return res.status(401).type("text/plain").send("Unauthorized\n");
+    }
+  }
+
   const averageDuration = metrics.requests ? metrics.durationMs / metrics.requests : 0;
   res.type("text/plain").send([
     "# HELP vagas_http_requests_total Total HTTP requests.",

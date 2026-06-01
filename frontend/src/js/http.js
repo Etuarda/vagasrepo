@@ -1,11 +1,10 @@
 import { API_URL } from "./config.js";
 import { toast } from "./toast.js";
 
-export async function api(endpoint, options = {}, token = null) {
+export async function api(endpoint, options = {}) {
   const isFormData = options.body instanceof FormData;
   const hasBody = options.body !== undefined && options.body !== null;
   const headers = { ...(!isFormData && hasBody ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) };
-  if (token) headers.Authorization = `Bearer ${token}`;
 
   const { silent, ...requestOptions } = options;
   const res = await fetch(`${API_URL}${endpoint}`, { ...requestOptions, headers, credentials: "include" });

@@ -28,7 +28,7 @@ Toda informacao exibida no curriculo vem do Perfil Global ou de um Subperfil do 
 
 ## Stack
 
-- Frontend: HTML, Tailwind via CDN e JavaScript modular.
+- Frontend: HTML, Tailwind compilado e JavaScript modular.
 - Backend: Node.js, Express e CommonJS.
 - Banco: PostgreSQL.
 - ORM e migrations: Prisma.
@@ -81,7 +81,7 @@ Dados legados de subperfis clonados continuam legiveis. Novos subperfis usam vin
 
 Dados de negocio sao persistidos no PostgreSQL via Prisma. Perfil, subperfis, itens estruturados, PDFs de referencia, analises, curriculos otimizados e candidaturas sao lidos e alterados por endpoints autenticados; o estado do frontend existe apenas para renderizar a resposta atual da API.
 
-O navegador mantem somente o token Bearer do MVP e a preferencia visual de contraste em `localStorage`. Selecoes de perfil, historico de matching e arquivos PDF nao sao armazenados localmente. O token possui expiracao, a sessao e registrada em `AuthSession` e o logout revoga a sessao no backend.
+O navegador usa sessao em cookie `HttpOnly` e mantem localmente apenas preferencias visuais, como contraste. Selecoes de perfil, historico de matching, arquivos PDF e tokens de API nao sao armazenados em `localStorage` ou `sessionStorage`. A sessao e registrada em `AuthSession` e o logout revoga a sessao no backend.
 
 As rotas de perfil, matching, curriculos, anexos e candidaturas exigem JWT ativo. Os servicos aplicam `userId` nas consultas de leitura e alteracao, evitando acesso entre usuarios.
 
@@ -98,11 +98,11 @@ A descricao da vaga e normalizada por dicionario tecnico, por exemplo: `Node.js`
 A formula do score final no modo otimizado por vaga e:
 
 ```text
-60% skills compativeis
-40% projetos compativeis
+70% skills compativeis
+30% projetos compativeis
 ```
 
-O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme alocados no perfil selecionado, sem ranking, reescrita ou truncamento. Habilidades tecnicas especificas sao selecionadas pela vaga; competencias transversais previamente cadastradas, como Git, GitHub, Scrum, Kanban, metodologias ageis e versionamento de codigo, permanecem no curriculo independentemente da area. Para projetos, a aderencia usa titulo, categoria/area, resumo curto e stack textual cadastrados; a stack serve somente como parametro de matching e nao e impressa no curriculo otimizado. Dados legados ocultos nao alimentam o calculo. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos e informa a justificativa do ranking.
+O score base usa habilidades e projetos. Senioridade e aplicada depois como teto ou penalidade, preservando a auditoria do calculo. O matching altera apenas a selecao e a ordenacao de habilidades e projetos. Resumo, formacao, experiencias, cursos, certificacoes e idiomas sao exibidos conforme alocados no perfil selecionado, sem ranking, reescrita ou truncamento. Habilidades tecnicas especificas sao selecionadas pela vaga; competencias transversais previamente cadastradas, como Git, GitHub, Scrum, Kanban, metodologias ageis e versionamento de codigo, permanecem no curriculo independentemente da area. Para projetos, a aderencia usa titulo, categoria/area, resumo curto e stack textual cadastrados; a stack serve somente como parametro de matching e nao e impressa no curriculo otimizado. Dados legados ocultos nao alimentam o calculo. O resultado separa `matchedSkills` de `missingSkills`, limita o curriculo otimizado a dois projetos e informa a justificativa do ranking.
 
 O formulario de analise salva cargo, empresa, link e descricao da vaga em `JobAnalysis`. A analise e o curriculo otimizado permanecem acessiveis no historico sem expiracao por plano; atingir um limite bloqueia somente novas acoes. Quando disponivel, o link salvo e preenchido automaticamente no cadastro de acompanhamento.
 
@@ -148,6 +148,7 @@ CORS_ORIGIN="http://localhost:5500"
 PORT=3000
 NODE_ENV=development
 REDIS_URL="rediss://default:senha@host:porta"
+METRICS_TOKEN="token-forte-para-metricas-em-producao"
 # RESUME_FONT_PATH="/caminho/para/arial.ttf"
 # RESUME_BOLD_FONT_PATH="/caminho/para/arialbd.ttf"
 ```
@@ -162,6 +163,15 @@ npm test
 ```
 
 A suite cobre normalizacao, classificacao, matching sem invencao de skills, ranking/limites de projetos, compilacao compacta, layout, status/versionamento e sessao autenticada.
+
+## Documentacao operacional
+
+- [Arquitetura](docs/architecture.md)
+- [Regras de matching](docs/matching-rules.md)
+- [Billing e Asaas](docs/billing-asaas.md)
+- [Deploy](docs/deploy.md)
+- [Checklist de QA e producao](docs/qa-production-checklist.md)
+- [Roadmap de produto](docs/product-roadmap.md)
 
 ## Roadmap
 

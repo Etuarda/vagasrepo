@@ -1,4 +1,4 @@
-# Vagas.io - Backend (Node.js + Express + Prisma + Zod + JWT)
+# Vagas.io - Backend (Node.js + Express + Prisma + Zod)
 
 ## Requisitos
 
@@ -28,6 +28,7 @@ npm install
 - `ASAAS_WEBHOOK_TOKEN`: token forte usado para autenticar eventos de pagamento.
 - `ASAAS_SUCCESS_URL` e `ASAAS_FAILURE_URL`: URLs do frontend apos pagamento.
 - `SLOW_QUERY_MS`: limiar para log estruturado de consultas Prisma lentas; padrao `500`.
+- `METRICS_TOKEN`: opcional. Quando configurado, protege `GET /metrics` por header `x-metrics-token` ou query `token`.
 
 3. Rode migrations e gere o client:
 
@@ -67,7 +68,7 @@ Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` 
 
 - `GET /health`
 - `GET /ready`; verifica conexao com o banco e informa se o cache esta em `redis_ready`, `local_only` ou `degraded_local`.
-- `GET /metrics`; metricas HTTP basicas em formato Prometheus.
+- `GET /metrics`; metricas HTTP basicas em formato Prometheus. Em producao, configure `METRICS_TOKEN`.
 - `GET /billing/me` autenticado; retorna plano efetivo, funcionalidades e consumo/limites atuais.
 - `PUT /billing/customer` autenticado; salva o CPF/CNPJ necessario para cobranca.
 - `POST /billing/checkout` autenticado; inicia assinatura paga com `{ "plan": "basic|pro|premium", "couponCode": "OPCIONAL" }`.
@@ -76,32 +77,32 @@ Consultas Prisma acima de `SLOW_QUERY_MS` geram evento estruturado `slow_query` 
 - `POST /auth/login`
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`
-- `GET /auth/me` com Bearer token
+- `GET /auth/me` autenticado por cookie `HttpOnly` ou Bearer legado
 - `GET /jobs` autenticado; filtros: `q`, `status`, `period`, `dateFrom`, `dateTo`, `cursor`, `limit`. Use `cursor` com o ultimo `id` retornado para listas extensas.
-- `POST /jobs` com Bearer token
-- `PUT /jobs/:id` com Bearer token
-- `DELETE /jobs/:id` com Bearer token
-- `GET /profile` com Bearer token
-- `GET /profiles` com Bearer token
-- `POST /profiles` com Bearer token
-- `PUT /profile` com Bearer token
-- `PUT /profile/skills` com Bearer token
-- `POST /profile/projects` com Bearer token
-- `DELETE /profile/projects/:id` com Bearer token
-- `POST /profile/experiences` com Bearer token
-- `DELETE /profile/experiences/:id` com Bearer token
-- `POST /profile/courses` com Bearer token
-- `DELETE /profile/courses/:id` com Bearer token
-- `POST /profile/certifications` com Bearer token
-- `DELETE /profile/certifications/:id` com Bearer token
-- `POST /match` com Bearer token
-- `GET /shared-matched-jobs?period=day|week|month` com Bearer token; retorna cargo, empresa e link das vagas pesquisadas no matching ou cadastradas em acompanhamento, sem identificar usuarios
-- `GET /optimized-resumes` com Bearer token
-- `DELETE /optimized-resumes/:id` com Bearer token
-- `GET /resume-files` com Bearer token
-- `POST /resume-files` com Bearer token e `multipart/form-data` no campo `resume`
-- `GET /resume-files/:id/download` com Bearer token
-- `DELETE /resume-files/:id` com Bearer token
+- `POST /jobs` autenticado
+- `PUT /jobs/:id` autenticado
+- `DELETE /jobs/:id` autenticado
+- `GET /profile` autenticado
+- `GET /profiles` autenticado
+- `POST /profiles` autenticado
+- `PUT /profile` autenticado
+- `PUT /profile/skills` autenticado
+- `POST /profile/projects` autenticado
+- `DELETE /profile/projects/:id` autenticado
+- `POST /profile/experiences` autenticado
+- `DELETE /profile/experiences/:id` autenticado
+- `POST /profile/courses` autenticado
+- `DELETE /profile/courses/:id` autenticado
+- `POST /profile/certifications` autenticado
+- `DELETE /profile/certifications/:id` autenticado
+- `POST /match` autenticado
+- `GET /shared-matched-jobs?period=day|week|month` autenticado; retorna cargo, empresa e link das vagas pesquisadas no matching ou cadastradas em acompanhamento, sem identificar usuarios
+- `GET /optimized-resumes` autenticado
+- `DELETE /optimized-resumes/:id` autenticado
+- `GET /resume-files` autenticado
+- `POST /resume-files` autenticado e `multipart/form-data` no campo `resume`
+- `GET /resume-files/:id/download` autenticado
+- `DELETE /resume-files/:id` autenticado
 
 O historico de matching (`JobAnalysis` e PDFs otimizados associados) e permanente em todos os planos. Atingir uma quota impede somente novas acoes; consultas e downloads historicos continuam disponiveis.
 

@@ -29,7 +29,7 @@ Na Vercel, o frontend chama `/api`, que e encaminhado para a API da Render pelo 
 
 Em desenvolvimento servido diretamente por `localhost`, `src/js/config.js` usa a API publicada. Para testar o comportamento de cookie de producao e os headers CSP, execute pelo ambiente da Vercel.
 
-Durante a promocao do backend, tokens devolvidos por uma API antiga sao aceitos somente na aba atual (`sessionStorage`) para nao interromper usuarios conectados; o novo backend nao devolve token ao JavaScript e opera apenas com cookie `HttpOnly`.
+O backend atual nao devolve token ao JavaScript. A autenticacao do navegador opera por cookie `HttpOnly` com `credentials: "include"` nas chamadas da API.
 
 ## Deploy na Vercel
 

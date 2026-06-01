@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test & Validate
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/vagas_test"
+      JWT_SECRET: "test-secret-with-at-least-thirty-two-characters"
+      NODE_ENV: "test"
+      PORT: "3001"
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vagas_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Check backend JavaScript syntax
+        run: find src -name "*.js" -print0 | xargs -0 -n1 node --check
+        working-directory: backend
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+        working-directory: backend
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: backend
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+        working-directory: backend
+
+      - name: Run tests
+        run: npm test -- --runInBand --forceExit
+        working-directory: backend
+
+  lint-frontend:
+    name: Build & Check Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Verify critical frontend files
+        run: |
+          for f in \
+            frontend/src/js/ui.js \
+            frontend/src/js/auth.js \
+            frontend/src/js/http.js \
+            frontend/src/js/state.js \
+            frontend/src/js/career.js \
+            frontend/src/js/match-display.utils.js; do
+            [ -f "$f" ] || { echo "MISSING: $f"; exit 1; }
+          done
+          echo "All critical frontend files present."
+
+      - name: Check frontend JavaScript syntax
+        run: find src/js -name "*.js" -print0 | xargs -0 -n1 node --check
+        working-directory: frontend
+
+      - name: Build Tailwind CSS
+        run: npm run build:css
+        working-directory: frontend

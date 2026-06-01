@@ -5,10 +5,8 @@ import { ui } from "./ui.js";
 export const auth = {
   async init(onLoggedIn) {
     ui.renderNav();
-    localStorage.removeItem("vagas_token");
-
     try {
-      const user = await api("/auth/me", { silent: true }, state.token);
+      const user = await api("/auth/me", { silent: true });
       state.user = user;
       ui.renderNav();
       ui.navigate("dashboard");
@@ -19,15 +17,13 @@ export const auth = {
   },
 
   async login(email, password, onLoggedIn) {
-    const { token, user } = await api(
+    const { user } = await api(
       "/auth/login",
       { method: "POST", body: JSON.stringify({ email, password }) },
       null
     );
 
-    state.token = token || null;
-    if (token) sessionStorage.setItem("vagas_legacy_token", token);
-    else sessionStorage.removeItem("vagas_legacy_token");
+    state.token = null;
     state.user = user;
 
     ui.closeAuthModal();
@@ -72,9 +68,7 @@ export const auth = {
   },
 
   logout() {
-  api("/auth/logout", { method: "POST", silent: true }, state.token).catch(() => {});
-    localStorage.removeItem("vagas_token");
-    sessionStorage.removeItem("vagas_legacy_token");
+    api("/auth/logout", { method: "POST", silent: true }).catch(() => {});
     state.token = null;
     state.user = null;
     state.billing = null;

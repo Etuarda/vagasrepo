@@ -1424,7 +1424,6 @@ export const career = {
     const { API_URL } = await import("./config.js");
     const response = await fetch(`${API_URL}/resume-files/${id}/download`, {
       credentials: "include",
-      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
     });
 
     if (!response.ok) {
@@ -1448,7 +1447,6 @@ export const career = {
     const previewWindow = window.open("", "_blank");
     const response = await fetch(`${API_URL}/resume-files/${id}/view`, {
       credentials: "include",
-      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
     });
     if (!response.ok) {
       previewWindow?.close();
@@ -1465,7 +1463,6 @@ export const career = {
     const { API_URL } = await import("./config.js");
     const response = await fetch(`${API_URL}/optimized-resumes/${id}/download`, {
       credentials: "include",
-      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
     });
 
     if (!response.ok) {
