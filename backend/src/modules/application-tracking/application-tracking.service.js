@@ -12,11 +12,17 @@ const linkedJobInclude = {
       globalScore: true,
       selectedProfileScore: true,
       selectedProfileName: true,
+      selectedProfileType: true,
+      skillsScore: true,
+      projectsScore: true,
       analysisStatus: true,
       warnings: true,
       matchedSkills: true,
       missingSkills: true,
       selectedProjectIds: true,
+      selectedCourseIds: true,
+      selectedCertificationIds: true,
+      scoringVersion: true,
       status: true,
       appliedAt: true,
       selectedSubprofile: { select: { id: true, profileName: true } },
@@ -34,6 +40,28 @@ function phaseToAnalysisUpdate(fase, appliedAt) {
   return {
     status: fase,
     ...(fase === "Aplicada" ? { appliedAt: appliedAt || new Date() } : {}),
+  };
+}
+
+function matchingSnapshotFromAnalysis(analysis) {
+  if (!analysis) return null;
+  return {
+    analysisId: analysis.id,
+    overallScore: analysis.matchScore,
+    globalScore: analysis.globalScore,
+    selectedProfileScore: analysis.selectedProfileScore,
+    selectedProfileName: analysis.selectedProfileName,
+    selectedProfileType: analysis.selectedProfileType,
+    skillsScore: analysis.skillsScore,
+    projectsScore: analysis.projectsScore,
+    analysisStatus: analysis.analysisStatus,
+    matchedSkills: analysis.matchedSkills || [],
+    missingSkills: analysis.missingSkills || [],
+    selectedProjectIds: analysis.selectedProjectIds || [],
+    selectedCourseIds: analysis.selectedCourseIds || [],
+    selectedCertificationIds: analysis.selectedCertificationIds || [],
+    warnings: analysis.warnings || [],
+    scoringVersion: analysis.scoringVersion,
   };
 }
 
@@ -78,6 +106,7 @@ async function createFromAnalysis(userId, analysisId, payload) {
         jobDescription: analysis.jobDescription,
         jobAnalysisId: analysis.id,
         optimizedResumeId: analysis.generatedResume.id,
+        matchingSnapshot: matchingSnapshotFromAnalysis(analysis),
         linkVaga,
         linkCV: payload.linkCV,
         data: new Date(),
@@ -122,4 +151,4 @@ async function createFromAnalysis(userId, analysisId, payload) {
   };
 }
 
-module.exports = { createFromAnalysis, linkedJobInclude };
+module.exports = { createFromAnalysis, linkedJobInclude, matchingSnapshotFromAnalysis };

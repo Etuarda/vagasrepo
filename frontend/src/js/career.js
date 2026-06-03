@@ -533,6 +533,7 @@ function renderHistory() {
             ${item.application ? `<p class="text-[10px] uppercase tracking-[0.2em] text-stone mt-3">Candidatura: ${escapeHtml(item.application.status)} | ${escapeHtml(item.application.fase)}${item.appliedAt ? ` | aplicada em ${escapeHtml(formatDateTime(item.appliedAt))}` : ""}</p>` : ""}
 
             <div class="mt-3 flex flex-wrap gap-3">
+              <button type="button" data-open-analysis="${item.analysisId}" class="text-[10px] font-bold uppercase tracking-widest underline">Editar campos e baixar depois</button>
               ${item.generatedFileName ? `<a href="#" data-download-optimized="${item.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Baixar PDF</a>` : ""}
               ${item.resumeFileId ? `<a href="#" data-download-resume="${item.resumeFileId}" class="text-[10px] font-bold uppercase tracking-widest underline">PDF original</a>` : ""}
               ${item.application ? `<button type="button" data-open-linked-job="${item.application.id}" class="text-[10px] font-bold uppercase tracking-widest underline">Abrir candidatura</button>` : ""}
@@ -697,6 +698,32 @@ function renderAnalysisEditor(analysis) {
   root.className = "lg:col-span-7 space-y-4 sm:space-y-6";
   root.innerHTML = `
     <form data-analysis-edit-form="${analysis.id}" class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 space-y-5">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+        <div class="border border-borderLight rounded-2xl p-3 bg-white">
+          <span class="block text-[9px] uppercase tracking-widest text-stone">Aderencia</span>
+          <strong class="block text-xl mt-1">${Number(analysis.matchScore ?? analysis.aderenciaFinal ?? 0)}%</strong>
+        </div>
+        <div class="border border-borderLight rounded-2xl p-3 bg-white">
+          <span class="block text-[9px] uppercase tracking-widest text-stone">Skills</span>
+          <strong class="block text-xl mt-1">${Number(analysis.skillsScore || 0)}%</strong>
+        </div>
+        <div class="border border-borderLight rounded-2xl p-3 bg-white">
+          <span class="block text-[9px] uppercase tracking-widest text-stone">Projetos</span>
+          <strong class="block text-xl mt-1">${Number(analysis.projectsScore || 0)}%</strong>
+        </div>
+        <div class="border border-borderLight rounded-2xl p-3 bg-white">
+          <span class="block text-[9px] uppercase tracking-widest text-stone">Perfil</span>
+          <strong class="block mt-1">${escapeHtml(analysis.selectedProfileName || analysis.selectedSubprofile?.profileName || "Global")}</strong>
+        </div>
+      </div>
+      ${analysis.applications?.length ? `
+        <div class="border border-borderLight rounded-2xl p-4 bg-white text-xs text-taupe">
+          <p class="text-[9px] font-bold uppercase tracking-widest text-stone mb-2">Candidatura vinculada</p>
+          <p>Status: <strong>${escapeHtml(analysis.applications[0].status)}</strong> | Fase: <strong>${escapeHtml(analysis.applications[0].fase)}</strong></p>
+          <p class="mt-1">Registrada em: ${escapeHtml(formatDateTime(analysis.applications[0].data))}</p>
+          ${analysis.applications[0].linkVaga ? `<p class="mt-1">Vaga: <a href="${escapeHtml(analysis.applications[0].linkVaga)}" target="_blank" rel="noopener noreferrer" class="underline">${escapeHtml(analysis.applications[0].linkVaga)}</a></p>` : ""}
+        </div>
+      ` : ""}
       <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Análise versionada · v${analysis.version}</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <input name="jobTitle" value="${escapeHtml(analysis.jobTitle)}" required class="editorial-input text-sm" />

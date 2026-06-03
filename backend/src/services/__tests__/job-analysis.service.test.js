@@ -58,16 +58,69 @@ describe("job analysis status", () => {
       id: "analysis", userId: "user", jobTitle: "Backend", company: "", jobDescription: "Descricao de vaga suficientemente longa para teste.",
       jobUrl: "https://example.com/vaga",
       selectedSubprofileId: "profile", matchScore: 80, jobCategory: "backend", matchedSkills: [], missingSkills: [],
-      selectedProjectIds: [], generatedResumeId: "resume", status: "draft", notes: "", appliedAt: null, version: 1,
+      selectedProjectIds: [], selectedCourseIds: [], selectedCertificationIds: [], generatedResumeId: "resume", status: "draft", notes: "", appliedAt: null, version: 1,
+      confirmedSeniority: "unknown", inferredSeniority: "unknown", jobOrigin: "individual", sourceAnalysisId: null,
     });
-    prisma.jobAnalysis.create.mockResolvedValue({ version: 2 });
+    const profile = {
+      id: "profile",
+      userId: "user",
+      isGlobal: false,
+      profileName: "Backend",
+      name: "Pessoa",
+      emailContact: "pessoa@example.com",
+      objective: "Backend",
+      summary: "Resumo profissional cadastrado.",
+      skillItems: [{ name: "Node.js" }, { name: "PostgreSQL" }, { name: "Docker" }, { name: "API REST" }],
+      projects: [{
+        id: "project",
+        title: "API de vagas",
+        shortDescription: "API REST com Node.js, PostgreSQL e Docker.",
+        learnedSkills: ["Node.js", "PostgreSQL", "Docker"],
+        repositoryUrl: "https://github.com/example/api",
+        deployUrl: "https://api.example.com",
+      }],
+      educations: [{ id: "education", title: "ADS", institution: "Faculdade", learnedSkills: ["SQL"] }],
+      languages: [{ name: "Ingles", level: "B1" }],
+      courses: [{ id: "course", title: "Node", learnedSkills: ["Node.js"], workload: "120h" }],
+      certifications: [],
+    };
+    const global = { ...profile, id: "global", isGlobal: true, profileName: "Perfil Global" };
+    profileService.getProfile = jest.fn()
+      .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce(global);
+    const tx = {
+      optimizedResume: {
+        create: jest.fn().mockResolvedValue({ id: "resume-v2", generatedFileName: "curriculo-v2.pdf" }),
+      },
+      jobAnalysis: {
+        create: jest.fn().mockResolvedValue({ id: "analysis-v2", version: 2, status: "Curriculo gerado" }),
+      },
+      job: {
+        findMany: jest.fn().mockResolvedValue([{ id: "job", status: "Ativa", fase: "Curriculo gerado" }]),
+        updateMany: jest.fn(),
+      },
+    };
+    prisma.$transaction = jest.fn((work) => work(tx));
 
     await updateAnalysis("user", "analysis", { notes: "Revisada", linkVaga: "https://example.com/nova-vaga" });
 
-    expect(prisma.jobAnalysis.create).toHaveBeenCalledWith({
+    expect(tx.optimizedResume.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ userId: "user", targetTitle: "Backend" }),
+    });
+    expect(tx.jobAnalysis.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ parentAnalysisId: "analysis", version: 2, notes: "Revisada", jobUrl: "https://example.com/nova-vaga" }),
     });
+    expect(tx.job.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user", jobAnalysisId: "analysis" },
+      data: expect.objectContaining({
+        jobAnalysisId: "analysis-v2",
+        optimizedResumeId: "resume-v2",
+        matchingSnapshot: expect.objectContaining({ analysisId: "analysis-v2" }),
+      }),
+    });
     expect(cache.invalidate).toHaveBeenCalledWith("match-history", "user");
+    expect(cache.invalidate).toHaveBeenCalledWith("jobs", "user");
+    delete prisma.$transaction;
   });
 
   it("recalcula com outro subperfil criando nova versao sem sobrescrever a anterior", async () => {

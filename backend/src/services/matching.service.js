@@ -11,6 +11,7 @@ const {
 const { compileResume, collectLearnedSkillItems } = require("../modules/resume/resume-compiler.service");
 const { createSharedMatchedJob } = require("../modules/matching/shared-matched-jobs.service");
 const { recordApplicationStatusHistory } = require("../modules/application-tracking/application-history.service");
+const { matchingSnapshotFromAnalysis } = require("../modules/application-tracking/application-tracking.service");
 const subscriptionService = require("./subscription.service");
 
 function inferTitle(text) {
@@ -395,7 +396,16 @@ async function listHistory(userId, profileId = null, { cursor = null, limit = 20
           where: { userId },
           orderBy: { data: "desc" },
           take: 1,
-          select: { id: true, status: true, fase: true, data: true, linkCV: true },
+          select: {
+            id: true,
+            status: true,
+            fase: true,
+            data: true,
+            linkVaga: true,
+            linkCV: true,
+            optimizedResumeId: true,
+            matchingSnapshot: true,
+          },
         },
       },
     });
@@ -457,7 +467,7 @@ async function listHistory(userId, profileId = null, { cursor = null, limit = 20
   return { items: page, nextCursor };
 }
 
-async function updateAnalysis(userId, id, data) {
+async function updateAnalysisLegacy(userId, id, data) {
   const existing = await prisma.jobAnalysis.findFirst({
     where: { id, userId },
   });
@@ -551,6 +561,166 @@ async function updateAnalysis(userId, id, data) {
   await Promise.all([
     cache.invalidate("match-history", userId),
     ...(linkedJobUpdate ? [cache.invalidate("jobs", userId)] : []),
+  ]);
+  return updated;
+}
+
+async function updateAnalysis(userId, id, data) {
+  const existing = await prisma.jobAnalysis.findFirst({ where: { id, userId } });
+  if (!existing) {
+    const err = new Error("Analise nao encontrada");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const appliedAt = isAppliedAnalysisStatus(data.status) ? (existing.appliedAt || new Date()) : existing.appliedAt;
+  const createsVersion = ["notes", "jobTitle", "company", "linkVaga", "jobDescription"].some((key) => data[key] !== undefined);
+
+  if (!createsVersion) {
+    const { linkVaga, ...updates } = data;
+    const updated = await prisma.jobAnalysis.update({
+      where: { id },
+      data: { ...updates, ...(linkVaga !== undefined ? { jobUrl: linkVaga } : {}), appliedAt },
+    });
+    const linkedJobUpdate = analysisStatusToJobUpdate(data.status);
+    if (linkedJobUpdate) {
+      const runInTransaction = typeof prisma.$transaction === "function"
+        ? prisma.$transaction.bind(prisma)
+        : async (work) => work(prisma);
+      await runInTransaction(async (tx) => {
+        const linkedJobs = tx.job?.findMany
+          ? await tx.job.findMany({ where: { userId, jobAnalysisId: id } })
+          : [];
+        if (tx.job?.updateMany) {
+          await tx.job.updateMany({
+            where: { userId, jobAnalysisId: id },
+            data: linkedJobUpdate,
+          });
+        }
+        await Promise.all(linkedJobs.map((job) => recordApplicationStatusHistory(tx, {
+          userId,
+          jobId: job.id,
+          statusAnterior: job.status,
+          novoStatus: linkedJobUpdate.status,
+          faseAnterior: job.fase,
+          novaFase: linkedJobUpdate.fase,
+          observacao: "Atualizacao sincronizada pelo historico de matching.",
+        })));
+      });
+    }
+    await Promise.all([
+      cache.invalidate("match-history", userId),
+      ...(linkedJobUpdate ? [cache.invalidate("jobs", userId)] : []),
+    ]);
+    return updated;
+  }
+
+  const targetTitle = data.jobTitle ?? existing.jobTitle;
+  const jobDescription = data.jobDescription ?? existing.jobDescription;
+  const metadata = {
+    jobTitle: targetTitle,
+    company: data.company ?? existing.company,
+    linkVaga: data.linkVaga ?? existing.jobUrl,
+    jobUrl: data.linkVaga ?? existing.jobUrl,
+    confirmedSeniority: existing.confirmedSeniority && existing.confirmedSeniority !== "unknown"
+      ? existing.confirmedSeniority
+      : existing.inferredSeniority,
+  };
+  const profile = existing.selectedSubprofileId
+    ? await profileService.getProfile(userId, existing.selectedSubprofileId)
+    : await profileService.getProfile(userId);
+  const result = analyzeProfile(profile, jobDescription, metadata);
+  const comparison = await compareWithGlobalProfile(userId, profile, jobDescription, metadata, result);
+  const resultPayload = buildResultPayload({
+    result,
+    profile,
+    targetTitle,
+    metadata,
+    savedResume: null,
+    jobAnalysis: { id: existing.id, status: data.status ?? existing.status },
+    globalScore: comparison.globalScore,
+    globalAnalysisStatus: comparison.globalAnalysisStatus,
+    analysisStatus: "complete",
+  });
+  const compiledResume = compileResume({ profile, matchResult: resultPayload });
+  const generatedPdf = await generateOptimizedResumePdf({ profile, matchResult: resultPayload, compiledResume });
+  const linkedJobUpdate = analysisStatusToJobUpdate(data.status);
+  const runInTransaction = typeof prisma.$transaction === "function"
+    ? prisma.$transaction.bind(prisma)
+    : async (work) => work(prisma);
+
+  const updated = await runInTransaction(async (tx) => {
+    const savedResume = await tx.optimizedResume.create({
+      data: {
+        userId,
+        targetTitle,
+        jobDescription,
+        score: result.overallScore,
+        suggestedSummary: profile.summary || "",
+        selectedProjects: result.selectedProjects,
+        matchedSkills: result.matchedSkills,
+        missingSkills: result.missingSkills,
+        matchedTechnologies: result.matchedTechnologies,
+        missingTechnologies: result.missingTechnologies,
+        profileId: profile.id,
+        generatedPdf,
+        generatedFileName: `curriculo-otimizado-${Date.now()}.pdf`,
+      },
+    });
+    const analysisData = {
+      ...buildAnalysisData({
+        userId,
+        profile,
+        result,
+        targetTitle,
+        metadata,
+        jobDescription,
+        generatedResumeId: savedResume.id,
+        globalScore: comparison.globalScore,
+        globalAnalysisStatus: comparison.globalAnalysisStatus,
+        warnings: comparison.globalWarnings,
+        recalculationReason: "manual_edit",
+        sourceAnalysisId: existing.sourceAnalysisId || existing.id,
+        parentAnalysisId: existing.id,
+        version: (existing.version || 1) + 1,
+        jobOrigin: existing.jobOrigin || "individual",
+      }),
+      status: data.status ?? existing.status ?? "draft",
+      notes: data.notes ?? existing.notes,
+      appliedAt,
+    };
+    const analysisRow = await tx.jobAnalysis.create({ data: analysisData });
+    const linkedJobs = tx.job?.findMany
+      ? await tx.job.findMany({ where: { userId, jobAnalysisId: existing.id } })
+      : [];
+    if (tx.job?.updateMany) {
+      await tx.job.updateMany({
+        where: { userId, jobAnalysisId: existing.id },
+        data: {
+          jobAnalysisId: analysisRow.id,
+          optimizedResumeId: savedResume.id,
+          matchingSnapshot: matchingSnapshotFromAnalysis({ ...analysisData, id: analysisRow.id }),
+          ...(linkedJobUpdate || {}),
+        },
+      });
+    }
+    if (linkedJobUpdate) {
+      await Promise.all(linkedJobs.map((job) => recordApplicationStatusHistory(tx, {
+        userId,
+        jobId: job.id,
+        statusAnterior: job.status,
+        novoStatus: linkedJobUpdate.status,
+        faseAnterior: job.fase,
+        novaFase: linkedJobUpdate.fase,
+        observacao: "Atualizacao sincronizada pela nova versao do historico de matching.",
+      })));
+    }
+    return analysisRow;
+  });
+
+  await Promise.all([
+    cache.invalidate("match-history", userId),
+    cache.invalidate("jobs", userId),
   ]);
   return updated;
 }
@@ -689,7 +859,16 @@ async function getAnalysis(userId, id) {
       applications: {
         where: { userId },
         orderBy: { data: "desc" },
-        select: { id: true, status: true, fase: true, linkVaga: true, linkCV: true, data: true },
+        select: {
+          id: true,
+          status: true,
+          fase: true,
+          linkVaga: true,
+          linkCV: true,
+          optimizedResumeId: true,
+          matchingSnapshot: true,
+          data: true,
+        },
       },
     },
   });

@@ -177,6 +177,8 @@ export const jobs = {
       const empresa = safe(job.empresa);
       const fase = safe(job.fase);
       const status = safe(job.status);
+      const matching = job.jobAnalysis || job.matchingSnapshot || null;
+      const matchingScore = matching?.matchScore ?? matching?.overallScore ?? matching?.selectedProfileScore ?? null;
 
       const dataVaga = job.data;
       const createdAt = job.createdAt;
@@ -206,6 +208,8 @@ export const jobs = {
         `Empresa: ${empresa || "—"}`,
         `Fase: ${fase || "—"}`,
         `Status: ${status || "—"}`,
+        `Aderencia: ${matchingScore == null ? "nao vinculada" : `${matchingScore}%`}`,
+        `Perfil usado: ${safe(matching?.selectedProfileName || matching?.selectedSubprofile?.profileName || "—")}`,
         `Data (vaga): ${formatPtBRDate(dataVaga)}`,
         `Criado em: ${formatPtBRDateTime(createdAt)}`,
       ];

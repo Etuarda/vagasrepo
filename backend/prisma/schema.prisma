@@ -209,6 +209,7 @@ model Job {
   notes             String  @default("")
   jobAnalysisId     String?
   optimizedResumeId String?
+  matchingSnapshot  Json?
 
   data   DateTime
   status String

@@ -16,6 +16,24 @@ function firstName(value) {
   return name.split(/\s+/)[0];
 }
 
+function matchingInfo(job) {
+  const source = job.jobAnalysis || job.matchingSnapshot || null;
+  if (!source) return null;
+  const score = source.matchScore ?? source.overallScore ?? source.selectedProfileScore ?? null;
+  const profileName = source.selectedProfileName ||
+    source.selectedSubprofile?.profileName ||
+    job.matchingSnapshot?.selectedProfileName ||
+    "";
+  return {
+    score,
+    profileName,
+    skillsScore: source.skillsScore,
+    projectsScore: source.projectsScore,
+    matchedSkills: source.matchedSkills || [],
+    missingSkills: source.missingSkills || [],
+  };
+}
+
 export const ui = {
   navigate(view) {
     ["landing", "dashboard"].forEach((v) => {
