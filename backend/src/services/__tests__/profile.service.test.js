@@ -57,7 +57,6 @@ describe("subprofile deletion", () => {
       lattes: "",
       summary: "",
       objective: "",
-      seniority: "junior",
       category: "unknown",
       skills: [],
       projects: [],
@@ -115,7 +114,6 @@ describe("subprofile deletion", () => {
     expect(tx.careerProfile.create.mock.calls[0][0].data).toEqual(expect.objectContaining({
       summary: "",
       objective: "",
-      seniority: "",
     }));
     expect(tx.subprofileSkill.createMany).not.toHaveBeenCalled();
     expect(cache.invalidate).toHaveBeenCalledWith("profiles", "user");

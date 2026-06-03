@@ -2,7 +2,7 @@ import { api } from "./http.js";
 import { state } from "./state.js";
 import { ui } from "./ui.js";
 import { jobs } from "./jobs.js";
-import { normalizeSharedMatchDisplay, normalizeHistoryItemDisplay } from "./match-display.utils.js";
+import { normalizeHistoryItemDisplay } from "./match-display.utils.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -363,7 +363,6 @@ function renderCoursesAndCertifications() {
 function renderProfileForm() {
   const profile = state.profile;
   if (!profile) return;
-  const seniorityAliases = { estagiario: "internship", pleno: "mid", specialist: "lead" };
 
   setValue("profile-profile-name", profile.profileName);
   setValue("profile-name", profile.name);
@@ -375,7 +374,6 @@ function renderProfileForm() {
   setValue("profile-github", profile.github);
   setValue("profile-lattes", profile.lattes);
   setValue("profile-objective", profile.objective);
-  setValue("profile-seniority", seniorityAliases[profile.seniority] || profile.seniority);
   setValue("profile-summary", profile.summary);
   updateSummaryCounter();
   renderProfileCompletion(profile.completion);
@@ -478,17 +476,6 @@ function analysisStatusText(status) {
   return "Completa";
 }
 
-function seniorityLabel(value) {
-  return ({
-    internship: "Estagio",
-    junior: "Junior",
-    mid: "Pleno",
-    senior: "Senior",
-    lead: "Lead",
-    unknown: "Nao informada",
-  })[value] || value || "Nao informada";
-}
-
 function compactWarnings(warnings = [], limit = 3) {
   return (warnings || []).filter(Boolean).slice(0, limit);
 }
@@ -514,7 +501,7 @@ function renderHistory() {
               ${escapeHtml(item.company || "")}${item.company ? " | " : ""}${formatDateTime(item.createdAt)} | ${escapeHtml(analysisStatusText(item.analysisStatus))} | v${item.version || 1}
             </p>
 
-            <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
               <div class="border border-borderLight rounded-2xl p-3 bg-white col-span-2 md:col-span-1">
                 <span class="block text-[9px] uppercase tracking-widest text-stone">${d.isComplete ? "Aderência final" : "Análise"}</span>
                 <strong class="block text-xl mt-1 ${d.isComplete ? "" : "text-stone"}">${escapeHtml(d.scoreLabel)}</strong>
@@ -526,10 +513,6 @@ function renderHistory() {
               <div class="border border-borderLight rounded-2xl p-3 bg-white">
                 <span class="block text-[9px] uppercase tracking-widest text-stone">Global</span>
                 <strong class="block mt-1 text-xs">${escapeHtml(d.globalScoreLabel)}</strong>
-              </div>
-              <div class="border border-borderLight rounded-2xl p-3 bg-white">
-                <span class="block text-[9px] uppercase tracking-widest text-stone">Senioridade</span>
-                <strong class="block mt-1 text-xs">${escapeHtml(seniorityLabel(item.confirmedSeniority || item.inferredSeniority))}</strong>
               </div>
             </div>
 
@@ -580,44 +563,12 @@ function renderSharedMatchedJobs() {
   }
 
   root.innerHTML = rows.map((item) => {
-    const d = normalizeSharedMatchDisplay(item);
     return `
       <article class="editorial-card rounded-2xl p-5 flex flex-col gap-3">
         <div>
           <h3 class="font-bold text-base leading-snug">${escapeHtml(item.jobTitle)}</h3>
           <p class="text-[10px] uppercase tracking-[0.25em] text-stone mt-1">${escapeHtml(item.company)}</p>
-          <p class="text-xs text-taupe mt-1">${escapeHtml(formatDateTime(item.createdAt))} · ${item.origin === "tracking" ? "Cadastrada" : "Matching"}</p>
-        </div>
-
-        <div class="rounded-2xl border border-borderLight p-4 bg-white space-y-2">
-          <div class="flex items-baseline justify-between gap-2">
-            <p class="text-[9px] font-bold uppercase tracking-[0.3em] text-stone">${d.canShowScore ? "Aderência" : "Análise"}</p>
-            <strong class="font-serif text-3xl ${d.canShowScore ? "" : "text-stone text-xl"}">${escapeHtml(d.scoreLabel)}</strong>
-          </div>
-
-          ${!d.canShowScore ? `<p class="text-xs text-taupe">Não foi possível calcular uma aderência confiável.</p>` : ""}
-
-          <div class="text-xs text-taupe space-y-1 pt-1 border-t border-borderLight">
-            <p>${escapeHtml(d.globalScoreLabel)}</p>
-            ${d.bestSubprofileLabel
-              ? `<p>${escapeHtml(d.bestSubprofileLabel)}</p>`
-              : `<p class="text-stone">Nenhum subperfil cadastrado</p>`}
-          </div>
-
-          ${d.canShowScore ? `
-            <div class="text-xs text-taupe space-y-1 pt-1 border-t border-borderLight">
-              <p>Skills compatíveis: <strong>${escapeHtml(d.matchedSkillsLabel)}</strong></p>
-              <p>Gaps principais: <strong>${escapeHtml(d.gapsLabel)}</strong></p>
-              <p>Projetos relevantes: <strong>${escapeHtml(d.projectsLabel)}</strong> · Cursos/certificações: <strong>${escapeHtml(d.coursesCertificationsLabel)}</strong></p>
-            </div>
-          ` : ""}
-
-          ${d.visibleWarnings.length ? `
-            <ul class="space-y-1 pt-1 border-t border-borderLight">
-              ${d.visibleWarnings.map((w) => `<li class="text-xs text-red-700 leading-snug">⚠ ${escapeHtml(w)}</li>`).join("")}
-            </ul>
-            ${d.hiddenWarningsCount > 0 ? `<p class="text-[10px] font-bold uppercase tracking-widest text-stone">+${d.hiddenWarningsCount} alerta${d.hiddenWarningsCount > 1 ? "s" : ""} — veja nos detalhes</p>` : ""}
-          ` : ""}
+          <p class="text-xs text-taupe mt-1">${escapeHtml(formatDateTime(item.createdAt))} · ${item.origin === "tracking" ? "Cadastrada" : "Compartilhada"}</p>
         </div>
 
         <div class="flex flex-wrap gap-3">
@@ -694,7 +645,7 @@ function renderMatchResult(result) {
           <div class="border border-borderLight rounded-2xl p-4"><span class="block text-xl font-bold">${Number(result.scoreDetails?.projectsMatchScore || 0)}%</span><span class="text-[9px] uppercase tracking-widest">Projetos</span></div>
         </div>
       </div>
-      <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+      <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
         <div class="border border-borderLight rounded-2xl p-3 bg-white">
           <span class="block text-[9px] uppercase tracking-widest text-stone">Perfil usado</span>
           <strong class="block mt-1">${escapeHtml(result.selectedProfileName || result.selectedSubprofileName || "Perfil")}</strong>
@@ -702,10 +653,6 @@ function renderMatchResult(result) {
         <div class="border border-borderLight rounded-2xl p-3 bg-white">
           <span class="block text-[9px] uppercase tracking-widest text-stone">Comparativo</span>
           <strong class="block mt-1">Global ${scoreLabel(result.globalScore, { score: result.globalScore, analysisStatus: result.globalAnalysisStatus })} | Atual ${scoreLabel(result.selectedProfileScore, result)}</strong>
-        </div>
-        <div class="border border-borderLight rounded-2xl p-3 bg-white">
-          <span class="block text-[9px] uppercase tracking-widest text-stone">Senioridade</span>
-          <strong class="block mt-1">${escapeHtml(seniorityLabel(result.confirmedSeniority || result.inferredSeniority))}</strong>
         </div>
       </div>
       <p class="text-sm text-taupe leading-relaxed mt-6">${escapeHtml(result.semanticFeedback || "")}</p>
@@ -1030,7 +977,6 @@ export const career = {
       github: document.getElementById("profile-github")?.value || "",
       lattes: document.getElementById("profile-lattes")?.value || "",
       objective: document.getElementById("profile-objective")?.value || "",
-      seniority: document.getElementById("profile-seniority")?.value || "",
       summary: document.getElementById("profile-summary")?.value || "",
     };
     const out = await api("/profile", { method: "PUT", body: JSON.stringify(payload) }, state.token);

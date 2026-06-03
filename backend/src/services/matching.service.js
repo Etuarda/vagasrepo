@@ -214,7 +214,7 @@ function buildResultPayload({ result, profile, targetTitle, metadata, savedResum
     analysisStatus,
     linkVaga: metadata.linkVaga || metadata.jobUrl || "",
     suggestedSummary: profile.summary,
-    semanticFeedback: `Matching deterministico: score base por habilidades 70% e projetos 30%, com senioridade aplicada como teto ou penalidade. Perfil usado: ${profile.profileName}.`,
+    semanticFeedback: `Matching deterministico: score por habilidades 70% e projetos 30%. Senioridade nao participa do calculo ATS. Perfil usado: ${profile.profileName}.`,
     id: savedResume?.id || jobAnalysis.id,
     analysisId: jobAnalysis.id,
     status: jobAnalysis.status,
@@ -745,4 +745,3 @@ module.exports = {
   inferSeniority,
   analysisStatusToJobUpdate,
 };
-

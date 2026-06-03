@@ -45,7 +45,7 @@
           <ul class="text-sm text-taupe space-y-2">
             <li>Matching ATS: 3 analises vitalicias para testar a aderencia entre perfil e vaga.</li>
             <li>Curriculo otimizado: gera PDF adaptado a vaga usando seu Perfil Global.</li>
-            <li>Perfil Global: concentra dados, objetivo, senioridade, skills, projetos, cursos e idiomas.</li>
+            <li>Perfil Global: concentra dados, objetivo, skills, projetos, cursos e idiomas.</li>
             <li>Ideal para validar a ferramenta antes de assinar. Nao inclui subperfis, vagas compartilhadas ou acompanhamento.</li>
           </ul>
           <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta Free</button>
@@ -66,7 +66,7 @@
           <p class="text-sm text-taupe">R$ 19,90/mes</p>
           <ul class="text-sm text-taupe space-y-2">
             <li>100 matchings por mes: mais volume para candidaturas ativas e testes de vaga.</li>
-            <li>Ate 5 subperfis: separe estrategias por area, senioridade, stack ou tipo de vaga.</li>
+            <li>Ate 5 subperfis: separe estrategias por area, stack ou tipo de vaga.</li>
             <li>Curriculos por subperfil: gere versoes mais alinhadas sem alterar seu Perfil Global.</li>
             <li>Inclui acompanhamento, vagas compartilhadas, historico e downloads de PDFs.</li>
           </ul>
@@ -78,7 +78,7 @@
           <ul class="text-sm text-taupe space-y-2">
             <li>500 matchings por mes: indicado para alto volume de candidaturas e comparacoes.</li>
             <li>Ate 10 subperfis: organize varias frentes profissionais com precisao.</li>
-            <li>Aderencia em vagas compartilhadas: veja compatibilidade por skills e senioridade antes de abrir a vaga.</li>
+            <li>Vagas compartilhadas: veja oportunidades cadastradas por outros usuarios autenticados.</li>
             <li>Inclui todos os recursos dos planos anteriores, com maior limite operacional.</li>
           </ul>
           <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button>
@@ -256,15 +256,6 @@
                 <input type="text" id="profile-name" required placeholder="Nome completo" class="editorial-input" />
                 <input type="text" id="profile-profile-name" required placeholder="Nome do perfil (ex: Frontend)" class="editorial-input" />
                 <input type="text" id="profile-objective" maxlength="500" placeholder="Objetivo no currículo (ex: Desenvolvedora Backend)" class="editorial-input md:col-span-2" />
-                <select id="profile-seniority" required class="editorial-input bg-white md:col-span-2">
-                  <option value="">Senioridade *</option>
-                  <option value="internship">Estagiario</option>
-                  <option value="junior">Junior</option>
-                  <option value="mid">Pleno</option>
-                  <option value="senior">Senior</option>
-                  <option value="lead">Lead</option>
-                  <option value="unknown">Nao informada</option>
-                </select>
                 <input type="email" id="profile-email-contact" placeholder="E-mail de contato" class="editorial-input" />
                 <input type="text" id="profile-phone" placeholder="Telefone" class="editorial-input" />
                 <input type="text" id="profile-location" placeholder="Cidade / Estado" class="editorial-input" />
@@ -294,7 +285,7 @@
               <input type="text" id="education-title-field" required placeholder="Curso / graduação" class="editorial-input text-sm" />
               <input type="text" id="education-institution" required placeholder="Instituição" class="editorial-input text-sm" />
               <input type="text" id="education-period" placeholder="Período" class="editorial-input text-sm" />
-              <input type="text" id="education-learned-skills" required placeholder="Habilidades aprendidas (ex: SQL, Java, Git)" class="editorial-input text-sm md:col-span-3" />
+              <input type="text" id="education-learned-skills" required placeholder="Habilidades aprendidas, separadas por virgula (ex: SQL, Java, Git)" class="editorial-input text-sm md:col-span-3" />
               <button type="submit" data-submit-label="Adicionar" class="bg-ink text-paper rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar</button>
               <button type="button" data-cancel-edit="education" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
             </form>
@@ -306,7 +297,7 @@
             <form id="form-project" class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input type="text" id="project-title" required placeholder="Título do projeto" class="editorial-input text-sm md:col-span-2" />
               <textarea id="project-short-description" required minlength="10" maxlength="500" rows="3" placeholder="Resumo curto para currículo" class="editorial-input text-sm md:col-span-2"></textarea>
-              <input type="text" id="project-learned-skills" required placeholder="Habilidades aprendidas para matching (ex: Node.js, PostgreSQL, Docker)" class="editorial-input text-sm md:col-span-2" />
+              <input type="text" id="project-learned-skills" required placeholder="Habilidades aprendidas, separadas por virgula (ex: Node.js, PostgreSQL, Docker)" class="editorial-input text-sm md:col-span-2" />
               <input type="url" id="project-repository-url" placeholder="Link do repositório" class="editorial-input text-sm" />
               <input type="url" id="project-deploy-url" placeholder="Link do deploy" class="editorial-input text-sm" />
               <div class="md:col-span-2 flex justify-end">
@@ -370,7 +361,7 @@
                 <input type="text" id="course-institution" placeholder="Instituição" class="editorial-input text-sm" />
                 <input type="text" id="course-period" placeholder="Período" class="editorial-input text-sm" />
                 <input type="text" id="course-workload" placeholder="Duração (ex: 360h)" class="editorial-input text-sm" />
-                <input type="text" id="course-learned-skills" required placeholder="Habilidades aprendidas" class="editorial-input text-sm" />
+                <input type="text" id="course-learned-skills" required placeholder="Habilidades aprendidas, separadas por virgula" class="editorial-input text-sm" />
                 <textarea id="course-description" rows="2" placeholder="Descrição curta" class="editorial-input text-sm"></textarea>
                 <button type="submit" data-submit-label="Adicionar curso" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar curso</button>
                 <button type="button" data-cancel-edit="course" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
@@ -381,7 +372,7 @@
                 <input type="text" id="certification-issuer" placeholder="Emissor" class="editorial-input text-sm" />
                 <input type="text" id="certification-period" placeholder="Data ou período" class="editorial-input text-sm" />
                 <input type="text" id="certification-workload" placeholder="Duração (ex: 80h)" class="editorial-input text-sm" />
-                <input type="text" id="certification-learned-skills" required placeholder="Habilidades aprendidas" class="editorial-input text-sm" />
+                <input type="text" id="certification-learned-skills" required placeholder="Habilidades aprendidas, separadas por virgula" class="editorial-input text-sm" />
                 <input type="url" id="certification-url" placeholder="Link da credencial" class="editorial-input text-sm" />
                 <button type="submit" data-submit-label="Adicionar certificação" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Adicionar certificação</button>
                 <button type="button" data-cancel-edit="certification" class="hidden text-[10px] font-bold uppercase tracking-widest">Cancelar edição</button>
@@ -488,7 +479,7 @@
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Painel global</p>
             <h2 id="shared-jobs-title" class="font-serif text-4xl sm:text-5xl tracking-tight mt-3">Vagas compartilhadas.</h2>
-            <p class="text-sm text-taupe leading-relaxed mt-4">Cargo, empresa e link das vagas cadastradas ou pesquisadas no matching por usuarios autenticados.</p>
+            <p class="text-sm text-taupe leading-relaxed mt-4">Cargo, empresa e link das vagas compartilhadas por usuarios autenticados, sem calculo ATS nesta tela.</p>
           </div>
           <label class="space-y-2 min-w-56">
             <span class="block text-[10px] font-bold uppercase tracking-[0.3em] text-stone">Periodo</span>

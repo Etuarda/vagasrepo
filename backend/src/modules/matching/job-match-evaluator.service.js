@@ -72,53 +72,6 @@ function weightedScore(scores) {
   );
 }
 
-function applySeniorityAdjustment(baseScore, profileSeniority, jobSeniority) {
-  const normalizedProfile = normalizeSeniorityLevel(profileSeniority);
-  const normalizedJob = normalizeSeniorityLevel(jobSeniority);
-  const flags = [];
-
-  if (normalizedProfile === "unknown" || normalizedJob === "unknown") {
-    flags.push("seniority_unknown");
-    const adjustedScore = Math.max(0, baseScore - 5);
-    return {
-      overallScore: adjustedScore,
-      seniorityPenalty: baseScore - adjustedScore,
-      ceiling: null,
-      flags,
-      profileSeniority: normalizedProfile,
-      jobSeniority: normalizedJob,
-    };
-  }
-
-  const profileLevel = SENIORITY_ORDER[normalizedProfile];
-  const jobLevel = SENIORITY_ORDER[normalizedJob];
-  const gap = jobLevel - profileLevel;
-  let ceiling = null;
-
-  if (gap >= 3) {
-    ceiling = 45;
-    flags.push("severe_seniority_mismatch");
-  } else if (gap === 2) {
-    ceiling = 55;
-    flags.push("severe_seniority_mismatch");
-  } else if (gap === 1) {
-    ceiling = normalizedProfile === "junior" && normalizedJob === "mid" ? 70 : 80;
-    flags.push("seniority_gap");
-  } else if (gap <= -2) {
-    flags.push("seniority_overqualified");
-  }
-
-  const overallScore = ceiling === null ? baseScore : Math.min(baseScore, ceiling);
-  return {
-    overallScore,
-    seniorityPenalty: baseScore - overallScore,
-    ceiling,
-    flags,
-    profileSeniority: normalizedProfile,
-    jobSeniority: normalizedJob,
-  };
-}
-
 function evaluateJobMatch(input = {}) {
   const profile = input.profile || {};
   const jobText = [input.jobTitle, input.company, input.jobDescription].filter(Boolean).join(" ");
@@ -165,8 +118,7 @@ function evaluateJobMatch(input = {}) {
     competencies: competenciesScore,
   };
   const aderenciaBase = weightedScore(scores);
-  const seniority = applySeniorityAdjustment(aderenciaBase, profile.seniority, confirmedSeniority);
-  const overallScore = seniority.overallScore;
+  const overallScore = aderenciaBase;
   const riskFlags = [];
   if (!required.length) riskFlags.push("no_job_keywords_detected");
   if (matchedSkills.length < 10) riskFlags.push("insufficient_matched_skills");
@@ -174,7 +126,6 @@ function evaluateJobMatch(input = {}) {
   if (validProjects.length && !matchedProjects.length) riskFlags.push("no_compatible_projects");
   if (validProjects.length !== (profile.projects || []).length) riskFlags.push("invalid_projects_ignored");
   if (learningItems.length < 5) riskFlags.push("insufficient_learning_items");
-  riskFlags.push(...seniority.flags);
 
   return {
     overallScore,
@@ -189,7 +140,6 @@ function evaluateJobMatch(input = {}) {
       weightedBeforePenalty: aderenciaBase,
       aderenciaBase,
       totalScore: overallScore,
-      seniorityCeiling: seniority.ceiling,
     },
     matchedSkills,
     missingSkills,
@@ -205,19 +155,14 @@ function evaluateJobMatch(input = {}) {
     matchedTechnologies: matchedSkills,
     missingTechnologies: missingSkills,
     projectScores: matchedProjects.map((project) => ({ project, score: project.score, reason: project.reason })),
-    seniorityPenalty: seniority.seniorityPenalty,
+    seniorityPenalty: 0,
     aderenciaBase,
     aderenciaFinal: overallScore,
-    scoringVersion: "ats-v4-skills-projects-seniority",
+    scoringVersion: "ats-v5-skills-projects",
     inferredSeniority,
     confirmedSeniority,
-    seniorityMatch: {
-      profileSeniority: seniority.profileSeniority,
-      jobSeniority: seniority.jobSeniority,
-      ceiling: seniority.ceiling,
-      compatible: seniority.seniorityPenalty === 0 && !seniority.flags.includes("severe_seniority_mismatch"),
-    },
-    explanation: "Score base calculado por habilidades 70% e projetos 30%. Senioridade e aplicada depois como teto ou penalidade.",
+    seniorityMatch: null,
+    explanation: "Score calculado por habilidades 70% e projetos 30%. Senioridade nao participa do calculo ATS.",
     riskFlags,
     warnings: riskFlags.map((flag) => ({
       no_job_keywords_detected: "Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.",
@@ -226,10 +171,6 @@ function evaluateJobMatch(input = {}) {
       no_compatible_projects: "Nenhum projeto compatível com a vaga foi encontrado.",
       insufficient_learning_items: `Foram encontrados apenas ${learningItems.length} cursos ou certificações compatíveis com a vaga.`,
       invalid_projects_ignored: "Projetos sem estrutura valida foram ignorados; revise os dados cadastrados no perfil.",
-      seniority_unknown: "Senioridade do perfil ou da vaga nao informada; foi aplicada penalidade leve.",
-      severe_seniority_mismatch: "A senioridade do perfil esta muito abaixo da senioridade da vaga; o score final foi limitado.",
-      seniority_gap: "A senioridade do perfil esta abaixo da senioridade da vaga; o score final foi limitado.",
-      seniority_overqualified: "A senioridade do perfil esta acima da senioridade da vaga; avalie se a vaga faz sentido para o momento profissional.",
     }[flag])).filter(Boolean),
   };
 }
@@ -237,7 +178,6 @@ function evaluateJobMatch(input = {}) {
 module.exports = {
   WEIGHTS,
   evaluateJobMatch,
-  applySeniorityAdjustment,
   inferSeniority,
   normalizeSeniorityLevel,
   validStructuredProject,

@@ -3,23 +3,11 @@ const { z } = require("zod");
 const cleanString = (max = 500) => z.string().trim().max(max).default("");
 const emptyToUndefined = (value) => (value === "" || value === null ? undefined : value);
 const optionalUuid = (message) => z.preprocess(emptyToUndefined, z.string().uuid(message).optional());
-const seniorityAliases = {
-  estagiario: "internship",
-  pleno: "mid",
-  specialist: "lead",
-};
-const senioritySchema = z
-  .string({ required_error: "Senioridade e obrigatoria" })
-  .trim()
-  .transform((value) => seniorityAliases[value] || value)
-  .pipe(z.enum(["internship", "junior", "mid", "senior", "lead", "unknown"], {
-    errorMap: () => ({ message: "Senioridade e obrigatoria" }),
-  }));
 const learnedSkillsSchema = z
-  .array(z.string().trim().min(1).max(2000))
-  .or(z.string().trim().max(2000).transform((value) => [value]))
+  .array(z.string().trim().min(1).max(20000))
+  .or(z.string().trim().max(20000).transform((value) => [value]))
   .transform((items) => items.flatMap((item) => item.split(",").map((skill) => skill.trim()).filter(Boolean)))
-  .pipe(z.array(z.string().min(1).max(80)).min(1, "Informe as habilidades aprendidas").max(80, "Informe no maximo 80 habilidades aprendidas"));
+  .pipe(z.array(z.string().min(1).max(120)).min(1, "Informe as habilidades aprendidas separadas por virgula"));
 
 const profileSchema = z.object({
   profileName: z.string().trim().min(2, "Nome do perfil deve ter pelo menos 2 caracteres").max(80),
@@ -34,7 +22,6 @@ const profileSchema = z.object({
   lattes: cleanString(300),
   summary: cleanString(3000),
   objective: z.string().trim().max(500).optional(),
-  seniority: senioritySchema,
   category: z.string().trim().max(40).optional(),
 });
 
@@ -53,9 +40,9 @@ const idParamSchema = z.object({
 const skillsSchema = z.object({
   profileId: optionalUuid("Perfil invalido"),
   skills: z
-    .array(z.string().trim().min(1).max(2000))
+    .array(z.string().trim().min(1).max(20000))
     .transform((items) => items.flatMap((item) => item.split(",").map((skill) => skill.trim()).filter(Boolean)))
-    .pipe(z.array(z.string().min(1).max(80)).max(80, "Informe no maximo 80 habilidades"))
+    .pipe(z.array(z.string().min(1).max(120)))
     .default([]),
 });
 
@@ -114,7 +101,7 @@ const educationSchema = z.object({
 
 const subprofileAllocationSchema = z.object({
   profileId: z.string().uuid("Subperfil invalido"),
-  skillIds: z.array(z.string().uuid()).max(80).default([]),
+  skillIds: z.array(z.string().uuid()).default([]),
   projectIds: z.array(z.string().uuid()).max(100).default([]),
   experienceIds: z.array(z.string().uuid()).max(100).default([]),
   courseIds: z.array(z.string().uuid()).max(100).default([]),
@@ -134,7 +121,6 @@ const matchSchema = z.object({
   jobTitle: z.string().trim().min(2, "Cargo da vaga e obrigatorio").max(160),
   company: z.string().trim().min(2, "Empresa e obrigatoria").max(160),
   linkVaga: z.string().trim().url("Link da vaga invalido"),
-  confirmedSeniority: z.preprocess(emptyToUndefined, senioritySchema.optional()),
 });
 
 const sharedMatchedJobsQuerySchema = z.object({

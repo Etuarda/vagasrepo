@@ -27,6 +27,20 @@ describe("project and subprofile inputs", () => {
     expect(payload.learnedSkills).toEqual(["Node.js", "TypeScript", "PostgreSQL"]);
   });
 
+  it("nao limita a quantidade de habilidades aprendidas separadas por virgula", () => {
+    const skills = Array.from({ length: 120 }, (_, index) => `Skill ${index + 1}`).join(", ");
+    const payload = projectSchema.parse({
+      title: "API",
+      category: "backend",
+      shortDescription: "Servico de assinaturas.",
+      learnedSkills: skills,
+      repositoryUrl: "",
+      deployUrl: "",
+    });
+
+    expect(payload.learnedSkills).toHaveLength(120);
+  });
+
   it("valida a alocacao selecionada para um subperfil", () => {
     const id = "11111111-1111-4111-8111-111111111111";
     const payload = subprofileAllocationSchema.parse({ profileId: id, projectIds: [id] });

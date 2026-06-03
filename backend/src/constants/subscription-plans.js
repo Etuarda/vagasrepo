@@ -69,7 +69,7 @@ const PLAN_DETAILS = Object.freeze({
     description: "Acesso completo sem subperfis.",
     benefits: [
       "30 analises de matching por mes",
-      "Vagas compartilhadas com percentual de aderencia ao perfil",
+      "Acesso ao mural de vagas compartilhadas",
       "Acompanhamento de candidaturas",
       "Geracao de curriculos otimizados",
     ],
@@ -81,7 +81,7 @@ const PLAN_DETAILS = Object.freeze({
     benefits: [
       "100 analises de matching por mes",
       "Ate 5 subperfis profissionais",
-      "Vagas compartilhadas com aderencia por skills e senioridade",
+      "Acesso ao mural de vagas compartilhadas",
       "Todas as funcionalidades de matching, curriculo e acompanhamento",
     ],
   }),
@@ -92,7 +92,7 @@ const PLAN_DETAILS = Object.freeze({
     benefits: [
       "500 analises de matching por mes",
       "Ate 10 subperfis profissionais",
-      "Vagas compartilhadas com aderencia por skills e senioridade",
+      "Acesso ao mural de vagas compartilhadas",
       "Todas as funcionalidades sem limite visivel de candidaturas acompanhadas",
     ],
   }),

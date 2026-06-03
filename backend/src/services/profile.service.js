@@ -76,7 +76,6 @@ function serializeProfile(profile) {
     lattes: profile.lattes || "",
     summary: profile.summary || "",
     objective: profile.objective || "",
-    seniority: profile.seniority || "",
     category: profile.category || "unknown",
     skillItems: skills.map((skill) => ({ id: skill.id, name: skill.name, normalizedName: skill.normalizedName || normalizeTerm(skill.name), category: skill.category || "other", relevanceWeight: skill.relevanceWeight || 50 })),
     skills: skills.map((skill) => skill.name),
@@ -207,7 +206,6 @@ function buildGlobalCatalog(global, subprofile) {
       lattes: global.lattes,
       summary: global.summary,
       objective: global.objective,
-      seniority: global.seniority,
     },
     skills: withSelection(global.skills, "skills"),
     projects: withSelection(global.projects, "projects"),
@@ -260,7 +258,6 @@ async function ensureDefaultProfile(userId, db = prisma) {
       lattes: user.lattes || "",
       summary: user.summary || "",
       objective: "",
-      seniority: "",
     },
   });
 }
@@ -339,7 +336,6 @@ async function createProfile(userId, { profileName }) {
         lattes: user.lattes || "",
         summary: "",
         objective: "",
-        seniority: "",
         category: normalizeTerm(profileName),
       },
       include: profileInclude,
@@ -495,7 +491,6 @@ async function updateSubprofileAllocation(userId, data) {
         lattes: catalog.lattes,
         summary: catalog.summary,
         objective: catalog.objective,
-        seniority: catalog.seniority,
       },
     }));
   }

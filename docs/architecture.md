@@ -29,7 +29,7 @@ Controllers should not implement billing, matching, profile ownership or persist
 - Profile ownership is enforced in backend services with `userId`.
 - Subprofile limits are enforced by `subscription.service.js`.
 - Matching calculations are centralized in `modules/matching/job-match-evaluator.service.js`.
-- Shared jobs call the same evaluator used by individual ATS analysis.
+- Shared jobs expose public job metadata only. They do not calculate or expose ATS scores.
 - Billing state is synchronized locally only through validated Asaas flows/webhooks.
 
 ## MVP decisions

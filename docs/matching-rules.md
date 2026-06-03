@@ -13,7 +13,6 @@ backend/src/modules/matching/job-match-evaluator.service.js
 The same evaluator must be used by:
 
 - individual ATS matching;
-- shared jobs;
 - optimized resume selection;
 - analysis history and recalculation.
 
@@ -29,27 +28,14 @@ aderenciaBase = (skillsScore * 0.70) + (projectsScore * 0.30)
 
 `projectsScore` is based on compatible learned skills, technical description, repository link, deploy link and category/stack evidence.
 
-## Seniority adjustment
+## Seniority
 
-Seniority does not replace the base formula. It is applied after the base score as a cap or light penalty.
-
-Examples:
-
-| Profile | Job | Result |
-| --- | --- | --- |
-| internship | senior | max score 45 |
-| junior | senior | max score 55 |
-| junior | mid | max score 70 |
-| mid | senior | max score 80 |
-| unknown | any | light penalty |
-| senior | junior | high score allowed, warning flag |
+Seniority is not part of the ATS score. The profile form must not require seniority, and the evaluator must not cap or penalize a score based on seniority.
 
 The response exposes:
 
 - `aderenciaBase`;
 - `overallScore`;
-- `seniorityPenalty`;
-- `seniorityMatch`;
 - `riskFlags`;
 - `warnings`;
 - `scoringVersion`.
@@ -65,12 +51,13 @@ The UI must not display `0%` when a score was not calculated. It must display an
 
 ## Shared jobs
 
-Shared jobs must not expose full `jobDescription` in public listing responses. The description can be used internally to calculate:
+Shared jobs must not expose full `jobDescription` in listing responses and must not calculate ATS score. The endpoint returns only public opportunity metadata:
 
-- global profile match;
-- best subprofile match;
-- matched skills;
-- main gaps.
+- title;
+- company;
+- link;
+- origin;
+- date.
 
 ## Regression tests
 

@@ -34,7 +34,7 @@ function baseProfile(overrides = {}) {
 }
 
 describe("job match evaluator", () => {
-  it("perfil com skills e senioridade aderentes a vaga gera score alto", () => {
+  it("perfil com skills aderentes a vaga gera score alto sem depender de senioridade", () => {
     const junior = evaluateJobMatch({
       profile: baseProfile({ seniority: "junior" }),
       jobTitle: "Desenvolvedor Backend Junior",
@@ -52,18 +52,17 @@ describe("job match evaluator", () => {
     expect(senior.seniorityPenalty).toBe(0);
   });
 
-  it("senioridade do perfil abaixo da vaga aplica teto decisivo", () => {
+  it("senioridade do perfil abaixo da vaga nao aplica teto no ATS", () => {
     const result = evaluateJobMatch({
       profile: baseProfile({ seniority: "internship" }),
       jobTitle: "Desenvolvedor Backend Senior",
       jobDescription: "Vaga senior com Node.js, PostgreSQL, Docker e APIs REST.",
     });
 
-    expect(result.aderenciaBase).toBeGreaterThan(45);
-    expect(result.overallScore).toBe(45);
-    expect(result.seniorityPenalty).toBe(result.aderenciaBase - 45);
-    expect(result.riskFlags).toContain("severe_seniority_mismatch");
-    expect(result.seniorityMatch.ceiling).toBe(45);
+    expect(result.overallScore).toBe(result.aderenciaBase);
+    expect(result.seniorityPenalty).toBe(0);
+    expect(result.riskFlags).not.toContain("severe_seniority_mismatch");
+    expect(result.seniorityMatch).toBeNull();
   });
 
   it("projetos compativeis aumentam o score", () => {
@@ -94,7 +93,7 @@ describe("job match evaluator", () => {
     expect(result.overallScore).toBe(expectedBase);
     expect(result.scoreDetails.totalScore).toBe(expectedBase);
     expect(result.scoreDetails.weightedBeforePenalty).toBe(expectedBase);
-    expect(result.scoringVersion).toBe("ats-v4-skills-projects-seniority");
+    expect(result.scoringVersion).toBe("ats-v5-skills-projects");
   });
 
   it("gera warning quando encontra menos de 10 habilidades compativeis", () => {
@@ -135,7 +134,7 @@ describe("job match evaluator", () => {
     );
   });
 
-  it("retorna senioridade inferida, confirmada e metadados de compatibilidade", () => {
+  it("retorna senioridade apenas como metadado neutro de compatibilidade legada", () => {
     const result = evaluateJobMatch({
       profile: baseProfile(),
       jobTitle: "Backend Junior",
@@ -144,7 +143,7 @@ describe("job match evaluator", () => {
 
     expect(result).toHaveProperty("inferredSeniority");
     expect(result).toHaveProperty("confirmedSeniority");
-    expect(result).toHaveProperty("seniorityMatch");
+    expect(result.seniorityMatch).toBeNull();
     expect(result.seniorityPenalty).toBe(0);
     expect(result.overallScore).toBe(result.aderenciaBase);
   });
