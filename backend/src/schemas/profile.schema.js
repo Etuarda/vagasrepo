@@ -4,10 +4,10 @@ const cleanString = (max = 500) => z.string().trim().max(max).default("");
 const emptyToUndefined = (value) => (value === "" || value === null ? undefined : value);
 const optionalUuid = (message) => z.preprocess(emptyToUndefined, z.string().uuid(message).optional());
 const learnedSkillsSchema = z
-  .array(z.string().trim().min(1).max(20000))
-  .or(z.string().trim().max(20000).transform((value) => [value]))
+  .array(z.string().trim().min(1))
+  .or(z.string().trim().transform((value) => [value]))
   .transform((items) => items.flatMap((item) => item.split(",").map((skill) => skill.trim()).filter(Boolean)))
-  .pipe(z.array(z.string().min(1).max(120)).min(1, "Informe as habilidades aprendidas separadas por virgula"));
+  .pipe(z.array(z.string().min(1)).min(1, "Informe as habilidades aprendidas separadas por virgula"));
 
 const profileSchema = z.object({
   profileName: z.string().trim().min(2, "Nome do perfil deve ter pelo menos 2 caracteres").max(80),

@@ -1,6 +1,9 @@
 const RESUME_LAYOUT_RULES = Object.freeze({
   maxPages: 2,
-  maxProjects: 3,
+  maxProjects: 2,
+  maxLearningItems: 5,
+  minSkills: 15,
+  maxSkills: 30,
   maxSkillLines: 3,
   maxSkillGroups: 4,
   titleFontSize: 23,
@@ -21,6 +24,16 @@ function compressResume(resume, rules = RESUME_LAYOUT_RULES) {
     ...resume,
     projects: (resume.projects || []).slice(0, rules.maxProjects),
   };
+  const learningItems = [
+    ...(resume.certifications || []).map((item) => ({ ...item, __type: "certification" })),
+    ...(resume.courses || []).map((item) => ({ ...item, __type: "course" })),
+  ].slice(0, rules.maxLearningItems);
+  compact.certifications = learningItems
+    .filter((item) => item.__type === "certification")
+    .map(({ __type, ...item }) => item);
+  compact.courses = learningItems
+    .filter((item) => item.__type === "course")
+    .map(({ __type, ...item }) => item);
 
   compact.layout = {
     rules,

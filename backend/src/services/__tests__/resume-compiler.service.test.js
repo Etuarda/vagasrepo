@@ -26,7 +26,7 @@ describe("resume compiler", () => {
       { id: "c2", title: "Docker", institution: "Academia", period: "2024", workload: "40h", description: "" },
     ],
     certifications: [{ id: "cert1", title: "PostgreSQL Professional", issuer: "Postgres", period: "2025", workload: "80h", credentialUrl: "https://example.com/cert" }],
-    educations: [{ title: "ADS", institution: "Universidade", period: "2024 - 2027" }],
+    educations: [{ title: "ADS", institution: "Universidade", period: "2024 - 2027", learnedSkills: ["SQL"] }],
     experiences: [{ role: "Desenvolvedora", company: "Empresa", period: "2023 - atual", description: "Atividade integral cadastrada pelo usuario." }],
     languages: [{ name: "Ingles", level: "Intermediario - B1" }],
   };
@@ -51,7 +51,7 @@ describe("resume compiler", () => {
     expect(resume.header.objective).toBe(profile.objective);
     expect(resume.header.cep).toBe(profile.cep);
     expect(resume.summary).toBe(profile.summary);
-    expect(resume.education).toEqual(profile.educations);
+    expect(resume.education).toEqual([{ title: "ADS", institution: "Universidade", period: "2024 - 2027" }]);
     expect(resume.experiences[0].description).toBe(profile.experiences[0].description);
     expect(resume.courses.map((item) => item.id)).toEqual(["c1", "c2"]);
     expect(resume.certifications.map((item) => item.id)).toEqual(["cert1"]);
@@ -63,6 +63,10 @@ describe("resume compiler", () => {
     expect(resume.projects[0].summary).toBe("Resumo curto exatamente cadastrado pelo usuario.");
     expect(resume.projects[0]).not.toHaveProperty("stack");
     expect(resume.projects[0]).not.toHaveProperty("bullets");
+    expect(resume.education[0]).not.toHaveProperty("learnedSkills");
+    expect(resume.experiences[0]).not.toHaveProperty("learnedSkills");
+    expect(resume.courses[0]).not.toHaveProperty("learnedSkills");
+    expect(resume.certifications[0]).not.toHaveProperty("learnedSkills");
   });
 
   it("nao usa descricao legada como resumo de projeto", () => {
@@ -122,6 +126,18 @@ describe("resume compiler", () => {
     expect(resume.header.objective).toBe("Desenvolvedora Backend");
   });
 
+  it("mantem a ordem estrutural do curriculo otimizado", () => {
+    const resume = compileResume({ profile, matchResult: match });
+    const keys = Object.keys(resume);
+    expect(keys.indexOf("header")).toBeLessThan(keys.indexOf("summary"));
+    expect(keys.indexOf("summary")).toBeLessThan(keys.indexOf("education"));
+    expect(keys.indexOf("education")).toBeLessThan(keys.indexOf("projects"));
+    expect(keys.indexOf("projects")).toBeLessThan(keys.indexOf("experiences"));
+    expect(keys.indexOf("experiences")).toBeLessThan(keys.indexOf("skillsInline"));
+    expect(keys.indexOf("skillsInline")).toBeLessThan(keys.indexOf("courses"));
+    expect(keys.indexOf("courses")).toBeLessThan(keys.indexOf("languagesInline"));
+  });
+
   it("compileResume inclui cursos mesmo sem match perfeito com a vaga", () => {
     const profileWithUnmatchedCourse = {
       ...profile,
@@ -132,5 +148,49 @@ describe("resume compiler", () => {
     };
     const resume = compileResume({ profile: profileWithUnmatchedCourse, matchResult: { ...match, jobKeywords: ["nodejs"] } });
     expect(resume.courses.map((c) => c.id)).toContain("unmatched");
+  });
+
+  it("limita curriculo otimizado a 2 projetos, 5 cursos/certificacoes e 30 skills", () => {
+    const manySkills = Array.from({ length: 40 }, (_, index) => ({ name: `Skill ${index + 1}`, category: "other" }));
+    const manyProjects = Array.from({ length: 4 }, (_, index) => ({
+      id: `p${index + 1}`,
+      title: `Projeto ${index + 1}`,
+      shortDescription: "Projeto cadastrado pelo usuario.",
+    }));
+    const manyCourses = Array.from({ length: 6 }, (_, index) => ({
+      id: `c${index + 1}`,
+      title: `Curso ${index + 1}`,
+      period: "2025",
+      workload: "120h",
+      learnedSkills: [`Skill ${index + 1}`],
+    }));
+    const manyCertifications = Array.from({ length: 3 }, (_, index) => ({
+      id: `cert${index + 1}`,
+      title: `Certificacao ${index + 1}`,
+      period: "2025",
+      workload: "120h",
+      learnedSkills: [`Skill ${index + 10}`],
+    }));
+
+    const resume = compileResume({
+      profile: {
+        ...profile,
+        skillItems: manySkills,
+        courses: manyCourses,
+        certifications: manyCertifications,
+      },
+      matchResult: {
+        ...match,
+        matchedSkills: manySkills.map((skill) => skill.name),
+        jobKeywords: manySkills.map((skill) => skill.name),
+        selectedProjects: manyProjects,
+      },
+    });
+
+    const skillCount = resume.skillsInline.split(",").map((item) => item.trim()).filter(Boolean).length;
+    expect(resume.projects).toHaveLength(2);
+    expect(resume.courses.length + resume.certifications.length).toBeLessThanOrEqual(5);
+    expect(skillCount).toBeGreaterThanOrEqual(15);
+    expect(skillCount).toBeLessThanOrEqual(30);
   });
 });

@@ -29,6 +29,7 @@ function baseProfile(overrides = {}) {
     courses: [],
     certifications: [],
     educations: [],
+    experiences: [],
     ...overrides,
   };
 }
@@ -122,6 +123,28 @@ describe("job match evaluator", () => {
     expect(result.relevantCourses).toHaveLength(1);
     expect(result.relevantCertifications).toHaveLength(1);
     expect(result.overallScore).toBeLessThan(75);
+  });
+
+  it("nao usa habilidades aprendidas de experiencias no score de habilidades", () => {
+    const result = evaluateJobMatch({
+      profile: baseProfile({
+        skillItems: [],
+        projects: [],
+        experiences: [{
+          id: "exp",
+          role: "Backend",
+          company: "Empresa",
+          description: "Atuacao real cadastrada.",
+          learnedSkills: ["Redis", "Observabilidade"],
+        }],
+      }),
+      jobTitle: "Backend Junior",
+      jobDescription: "Vaga com Redis e observabilidade.",
+      jobKeywords: ["Redis", "Observabilidade"],
+    });
+
+    expect(result.matchedSkills).toEqual([]);
+    expect(result.scores.skills).toBe(0);
   });
 
   it("matching individual usa a mesma logica exposta pelo avaliador", () => {

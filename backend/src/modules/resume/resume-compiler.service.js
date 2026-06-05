@@ -29,7 +29,7 @@ function compileSkills(profile, matchResult, rules) {
   const targeted = matched.length || (matchResult.jobKeywords || []).length ? matched : [...catalog.values()];
   const ordered = uniqueByNormalized([...targeted, ...transversal, ...catalog.values()])
     .filter((skill) => !stackLabels.has(normalizeTerm(skill.name)))
-    .slice(0, 25);
+    .slice(0, rules.maxSkills);
   return ordered.map((skill) => skill.name).join(", ");
 }
 
@@ -81,10 +81,12 @@ function rankLearningItems({ courses = [], certifications = [] }, matchResult, l
     .slice(0, limit);
 }
 
-const MIN_PROJECTS = 2;
-const MIN_LEARNING_ITEMS = 5;
-const MIN_SKILLS = 10;
-const MAX_LEARNING_ITEMS = 10;
+const MIN_PROJECTS = RESUME_LAYOUT_RULES.maxProjects;
+const MIN_LEARNING_ITEMS = RESUME_LAYOUT_RULES.maxLearningItems;
+const MIN_SKILLS = RESUME_LAYOUT_RULES.minSkills;
+const MAX_PROJECTS = RESUME_LAYOUT_RULES.maxProjects;
+const MAX_SKILLS = RESUME_LAYOUT_RULES.maxSkills;
+const MAX_LEARNING_ITEMS = RESUME_LAYOUT_RULES.maxLearningItems;
 
 function toProjectShape(project) {
   return {
@@ -97,15 +99,46 @@ function toProjectShape(project) {
   };
 }
 
-function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
-  const projects = (matchResult.selectedProjects || []).map(toProjectShape);
+function toEducationShape(education) {
+  return {
+    id: education.id,
+    title: education.title,
+    institution: education.institution || "",
+    period: education.period || "",
+  };
+}
 
-  const learningItems = rankLearningItems(profile, matchResult, MAX_LEARNING_ITEMS, { includeUnmatched: true });
+function toCourseShape(course) {
+  return {
+    id: course.id,
+    title: course.title,
+    institution: course.institution || "",
+    period: course.period || "",
+    workload: course.workload || "",
+    description: course.description || "",
+  };
+}
+
+function toCertificationShape(certification) {
+  return {
+    id: certification.id,
+    title: certification.title,
+    issuer: certification.issuer || "",
+    period: certification.period || "",
+    workload: certification.workload || "",
+    credentialUrl: certification.credentialUrl || "",
+  };
+}
+
+function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
+  const projects = (matchResult.selectedProjects || []).map(toProjectShape).slice(0, rules.maxProjects);
+
+  const learningItems = rankLearningItems(profile, matchResult, rules.maxLearningItems, { includeUnmatched: true });
 
   const skillsInline = compileSkills(profile, matchResult, rules);
   const skillCount = skillsInline ? skillsInline.split(",").length : 0;
-  const courses = learningItems.filter((item) => item.itemType === "course");
-  const certifications = learningItems.filter((item) => item.itemType === "certification");
+  const courses = learningItems.filter((item) => item.itemType === "course").map(toCourseShape);
+  const certifications = learningItems.filter((item) => item.itemType === "certification").map(toCertificationShape);
   const learningCount = courses.length + certifications.length;
 
   const compilationWarnings = [];
@@ -132,15 +165,15 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
       lattes: profile.lattes || "",
     },
     summary: profile.summary || "",
-    education: profile.educations || [],
-    skillsInline,
+    education: (profile.educations || []).map(toEducationShape),
+    projects,
     experiences: (profile.experiences || []).map((experience) => ({
       title: `${experience.role} | ${experience.company}`,
       period: experience.period,
       workload: experience.workload || "",
       description: experience.description || "",
     })),
-    projects,
+    skillsInline,
     courses,
     certifications,
     languagesInline: (profile.languages || []).map((item) => [item.name, item.level].filter(Boolean).join(" - ")).join("; "),
@@ -159,4 +192,7 @@ module.exports = {
   MIN_PROJECTS,
   MIN_LEARNING_ITEMS,
   MIN_SKILLS,
+  MAX_PROJECTS,
+  MAX_SKILLS,
+  MAX_LEARNING_ITEMS,
 };

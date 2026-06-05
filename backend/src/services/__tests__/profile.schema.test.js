@@ -1,4 +1,4 @@
-const { skillsSchema, projectSchema, subprofileAllocationSchema, matchSchema, sharedMatchedJobsQuerySchema } = require("../../schemas/profile.schema");
+const { skillsSchema, projectSchema, experienceSchema, subprofileAllocationSchema, matchSchema, sharedMatchedJobsQuerySchema } = require("../../schemas/profile.schema");
 
 describe("profile skill input", () => {
   it("separa habilidades informadas em uma linha por virgulas", () => {
@@ -28,7 +28,7 @@ describe("project and subprofile inputs", () => {
   });
 
   it("nao limita a quantidade de habilidades aprendidas separadas por virgula", () => {
-    const skills = Array.from({ length: 120 }, (_, index) => `Skill ${index + 1}`).join(", ");
+    const skills = Array.from({ length: 250 }, (_, index) => `Skill ${index + 1}`).join(", ");
     const payload = projectSchema.parse({
       title: "API",
       category: "backend",
@@ -38,7 +38,21 @@ describe("project and subprofile inputs", () => {
       deployUrl: "",
     });
 
-    expect(payload.learnedSkills).toHaveLength(120);
+    expect(payload.learnedSkills).toHaveLength(250);
+  });
+
+  it("remove habilidades aprendidas do payload de experiencia", () => {
+    const longSkill = `Arquitetura ${"distribuida ".repeat(80)}`.trim();
+    const payload = experienceSchema.parse({
+      company: "Empresa",
+      role: "Backend",
+      period: "2025",
+      workload: "40h",
+      description: "Atividades reais suficientemente detalhadas.",
+      learnedSkills: `Node.js, ${longSkill}`,
+    });
+
+    expect(payload).not.toHaveProperty("learnedSkills");
   });
 
   it("valida a alocacao selecionada para um subperfil", () => {
