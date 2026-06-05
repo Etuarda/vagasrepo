@@ -7,6 +7,5 @@ router.use(authMiddleware);
 router.get("/me", billingController.me);
 router.put("/customer", billingController.saveCustomer);
 router.post("/checkout", billingController.checkout);
-router.post("/credits/checkout", billingController.creditsCheckout);
 
 module.exports = router;
