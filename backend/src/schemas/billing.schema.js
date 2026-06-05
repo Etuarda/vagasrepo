@@ -3,7 +3,7 @@ const { PLAN_KEYS } = require("../constants/subscription-plans");
 
 const planSchema = z.enum(Object.values(PLAN_KEYS));
 
-const paidPlanSchema = z.enum([PLAN_KEYS.BASIC, PLAN_KEYS.PRO, PLAN_KEYS.PREMIUM]);
+const paidPlanSchema = z.enum([PLAN_KEYS.PREMIUM]);
 
 const checkoutSchema = z.object({
   plan: paidPlanSchema,

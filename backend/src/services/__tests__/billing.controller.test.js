@@ -28,12 +28,12 @@ describe("billing controller", () => {
   });
 
   it("inicia checkout pago sem aceitar plano Free", async () => {
-    billingService.createCheckout.mockResolvedValue({ provider: "asaas", plan: "pro" });
+    billingService.createCheckout.mockResolvedValue({ provider: "asaas", plan: "premium" });
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
-    await checkout({ userId: "user", body: { plan: "pro", couponCode: "DUDA50" } }, res, jest.fn());
+    await checkout({ userId: "user", body: { plan: "premium", couponCode: "DUDA50" } }, res, jest.fn());
 
-    expect(billingService.createCheckout).toHaveBeenCalledWith("user", { plan: "pro", couponCode: "DUDA50" });
+    expect(billingService.createCheckout).toHaveBeenCalledWith("user", { plan: "premium", couponCode: "DUDA50" });
     expect(res.status).toHaveBeenCalledWith(201);
   });
 

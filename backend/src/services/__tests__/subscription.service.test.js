@@ -1,4 +1,5 @@
 jest.mock("../../lib/prisma", () => ({ prisma: {} }));
+jest.mock("../credits.service", () => ({ getCreditBalance: jest.fn() }));
 
 const { FEATURES, PLAN_KEYS, PLAN_RULES } = require("../../constants/subscription-plans");
 const {
@@ -19,6 +20,11 @@ function dbFor(plan, options = {}) {
         status: options.status || "active",
         currentPeriodEnd: options.currentPeriodEnd,
       }),
+      findUnique: jest.fn().mockResolvedValue({
+        userId: "user",
+        creditBalance: options.creditBalance ?? 0,
+      }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     usageCounter: {
       findUnique: jest.fn().mockResolvedValue(options.counter || null),
@@ -48,9 +54,14 @@ describe("subscription plans and quotas", () => {
       sharedMatchedJobs: false,
       applicationTracking: false,
     }));
-    expect(PLAN_RULES.basic).toEqual(expect.objectContaining({ matchingLimit: 30, maxSubprofiles: 0, applicationTracking: true }));
-    expect(PLAN_RULES.pro).toEqual(expect.objectContaining({ matchingLimit: 100, maxSubprofiles: 5 }));
-    expect(PLAN_RULES.premium).toEqual(expect.objectContaining({ matchingLimit: 500, maxSubprofiles: 10 }));
+    expect(PLAN_RULES.premium).toEqual(expect.objectContaining({
+      matchingLimit: 500,
+      matchingPeriod: "monthly",
+      maxSubprofiles: 10,
+      maxTrackedApplications: null,
+      sharedMatchedJobs: true,
+      applicationTracking: true,
+    }));
   });
 
   it("permite as tres analises vitalicias do Free e bloqueia a quarta", async () => {
@@ -60,16 +71,12 @@ describe("subscription plans and quotas", () => {
       data: expect.objectContaining({ count: 3, periodKey: "lifetime" }),
     }));
 
-    const exhausted = dbFor(PLAN_KEYS.FREE, { matchingUsed: 3 });
+    const exhausted = dbFor(PLAN_KEYS.FREE, { matchingUsed: 3, creditBalance: 0 });
     await expect(consumeMatchingQuota("user", exhausted)).rejects.toMatchObject({ statusCode: 402, code: "MATCHING_LIMIT_REACHED" });
   });
 
-  it.each([
-    [PLAN_KEYS.BASIC, 30],
-    [PLAN_KEYS.PRO, 100],
-    [PLAN_KEYS.PREMIUM, 500],
-  ])("bloqueia %s ao atingir %i analises mensais", async (plan, limit) => {
-    const db = dbFor(plan, { matchingUsed: limit });
+  it("bloqueia premium ao atingir 500 analises mensais sem creditos", async () => {
+    const db = dbFor(PLAN_KEYS.PREMIUM, { matchingUsed: 500, creditBalance: 0 });
 
     await expect(consumeMatchingQuota("user", db)).rejects.toMatchObject({ statusCode: 402 });
     expect(db.jobAnalysis.count).toHaveBeenCalledWith({
@@ -77,24 +84,40 @@ describe("subscription plans and quotas", () => {
     });
   });
 
-  it("nega vagas compartilhadas para Free com 403 e permite para Basic", async () => {
-    await expect(assertFeatureAccess("user", FEATURES.SHARED_MATCHED_JOBS, dbFor(PLAN_KEYS.FREE)))
-      .rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
-    await expect(assertFeatureAccess("user", FEATURES.SHARED_MATCHED_JOBS, dbFor(PLAN_KEYS.BASIC)))
-      .resolves.toMatchObject({ plan: PLAN_KEYS.BASIC });
+  it("consome 1 credito quando quota do plano esgota", async () => {
+    const db = dbFor(PLAN_KEYS.FREE, { matchingUsed: 3, creditBalance: 50 });
+
+    const result = await consumeMatchingQuota("user", db);
+
+    expect(result).toEqual(expect.objectContaining({ source: "credits" }));
+    expect(db.subscription.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId: "user", creditBalance: { gt: 0 } },
+      data: { creditBalance: { decrement: 1 } },
+    }));
   });
 
-  it.each([
-    [PLAN_KEYS.PRO, 5],
-    [PLAN_KEYS.PREMIUM, 10],
-  ])("bloqueia subperfis do plano %s no limite %i sem contar Perfil Global", async (plan, limit) => {
-    const db = dbFor(plan, { subprofilesUsed: limit });
+  it("bloqueia quando quota esgota e sem creditos disponiveis", async () => {
+    const db = dbFor(PLAN_KEYS.FREE, { matchingUsed: 3, creditBalance: 0 });
+
+    await expect(consumeMatchingQuota("user", db))
+      .rejects.toMatchObject({ statusCode: 402, code: "MATCHING_LIMIT_REACHED" });
+  });
+
+  it("nega vagas compartilhadas para Free com 403 e permite para Premium", async () => {
+    await expect(assertFeatureAccess("user", FEATURES.SHARED_MATCHED_JOBS, dbFor(PLAN_KEYS.FREE)))
+      .rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
+    await expect(assertFeatureAccess("user", FEATURES.SHARED_MATCHED_JOBS, dbFor(PLAN_KEYS.PREMIUM)))
+      .resolves.toMatchObject({ plan: PLAN_KEYS.PREMIUM });
+  });
+
+  it("bloqueia subperfis do plano premium no limite 10 sem contar Perfil Global", async () => {
+    const db = dbFor(PLAN_KEYS.PREMIUM, { subprofilesUsed: 10 });
     await expect(assertSubprofileLimit("user", db)).rejects.toMatchObject({ statusCode: 402, code: "SUBPROFILE_LIMIT_REACHED" });
     expect(db.careerProfile.count).toHaveBeenCalledWith({ where: { userId: "user", isGlobal: false } });
   });
 
-  it.each([PLAN_KEYS.FREE, PLAN_KEYS.BASIC])("nega subperfis para o plano %s com limite atingido", async (plan) => {
-    await expect(assertSubprofileLimit("user", dbFor(plan)))
+  it("nega subperfis para o plano free com limite atingido", async () => {
+    await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.FREE)))
       .rejects.toMatchObject({ statusCode: 402, code: "SUBPROFILE_LIMIT_REACHED" });
   });
 
@@ -103,17 +126,14 @@ describe("subscription plans and quotas", () => {
       .rejects.toMatchObject({ statusCode: 403, code: "FEATURE_NOT_INCLUDED" });
   });
 
-  it.each([PLAN_KEYS.BASIC, PLAN_KEYS.PRO, PLAN_KEYS.PREMIUM])(
-    "nao aplica limite visivel de acompanhamento no plano %s",
-    async (plan) => {
-      const db = dbFor(plan, { applicationsUsed: 10000 });
-      await expect(assertApplicationTrackingLimit("user", db)).resolves.toMatchObject({ plan, limit: null });
-      expect(db.job.count).not.toHaveBeenCalled();
-    }
-  );
+  it("nao aplica limite visivel de acompanhamento no plano premium", async () => {
+    const db = dbFor(PLAN_KEYS.PREMIUM, { applicationsUsed: 10000 });
+    await expect(assertApplicationTrackingLimit("user", db)).resolves.toMatchObject({ plan: PLAN_KEYS.PREMIUM, limit: null });
+    expect(db.job.count).not.toHaveBeenCalled();
+  });
 
   it("serializa a validacao de limite quando executada dentro de transacao", async () => {
-    const db = dbFor(PLAN_KEYS.BASIC, { applicationsUsed: 0 });
+    const db = dbFor(PLAN_KEYS.PREMIUM, { applicationsUsed: 0 });
     db.$executeRaw = jest.fn().mockResolvedValue(undefined);
 
     await assertApplicationTrackingLimit("user", db);
@@ -121,34 +141,38 @@ describe("subscription plans and quotas", () => {
     expect(db.$executeRaw).toHaveBeenCalledTimes(1);
   });
 
-  it("retorna contexto de billing com uso e saldo remanescente", async () => {
-    const context = await getPlanContext("user", dbFor(PLAN_KEYS.PRO, {
+  it("retorna contexto de billing com uso, creditos e saldo remanescente", async () => {
+    const db = dbFor(PLAN_KEYS.PREMIUM, {
       matchingUsed: 12,
       subprofilesUsed: 2,
       applicationsUsed: 4,
-    }));
+      creditBalance: 75,
+    });
+
+    const context = await getPlanContext("user", db);
 
     expect(context).toEqual(expect.objectContaining({
-      plan: "pro",
+      plan: "premium",
       usage: expect.objectContaining({
-        matching: expect.objectContaining({ used: 12, limit: 100, remaining: 88, period: "monthly" }),
-        subprofiles: expect.objectContaining({ used: 2, limit: 5, remaining: 3 }),
+        matching: expect.objectContaining({ used: 12, limit: 500, remaining: 488, period: "monthly" }),
+        subprofiles: expect.objectContaining({ used: 2, limit: 10, remaining: 8 }),
+        credits: expect.objectContaining({ balance: 75 }),
       }),
     }));
   });
 
   it("mantem regras Free enquanto o pagamento do plano pago esta pendente", async () => {
-    const context = await getPlanContext("user", dbFor(PLAN_KEYS.PRO, { status: "pending" }));
+    const context = await getPlanContext("user", dbFor(PLAN_KEYS.PREMIUM, { status: "pending" }));
 
     expect(context.plan).toBe(PLAN_KEYS.FREE);
     expect(context.rules.matchingLimit).toBe(3);
   });
 
   it("mantem regras Free quando o plano pago esta cancelado ou expirado", async () => {
-    await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.PRO, { status: "canceled" })))
+    await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.PREMIUM, { status: "canceled" })))
       .rejects.toMatchObject({ statusCode: 402, code: "SUBPROFILE_LIMIT_REACHED" });
 
-    await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.PRO, {
+    await expect(assertSubprofileLimit("user", dbFor(PLAN_KEYS.PREMIUM, {
       currentPeriodEnd: new Date("2026-01-01T00:00:00.000Z"),
     }))).rejects.toMatchObject({ statusCode: 402, code: "SUBPROFILE_LIMIT_REACHED" });
   });

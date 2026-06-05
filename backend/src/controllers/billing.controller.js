@@ -1,5 +1,6 @@
 const subscriptionService = require("../services/subscription.service");
 const billingService = require("../services/billing.service");
+const creditsService = require("../services/credits.service");
 const { checkoutSchema, billingCustomerSchema } = require("../schemas/billing.schema");
 
 async function me(req, res, next) {
@@ -41,4 +42,13 @@ async function asaasWebhook(req, res, next) {
   }
 }
 
-module.exports = { me, checkout, saveCustomer, asaasWebhook };
+async function creditsCheckout(req, res, next) {
+  try {
+    const result = await creditsService.createCreditsCheckout(req.userId);
+    return res.status(201).json(result);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { me, checkout, saveCustomer, asaasWebhook, creditsCheckout };

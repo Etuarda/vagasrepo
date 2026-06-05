@@ -62,9 +62,29 @@ function getSubscriptionPayments(subscriptionId) {
   return requestAsaas(`/subscriptions/${encodeURIComponent(subscriptionId)}/payments?offset=0&limit=1`);
 }
 
+function createPixCharge({ customerId, value, description, externalReference, dueDate }) {
+  return requestAsaas("/payments", {
+    method: "POST",
+    body: {
+      customer: customerId,
+      billingType: "PIX",
+      value,
+      dueDate: dueDate || new Date().toISOString().slice(0, 10),
+      description,
+      externalReference,
+    },
+  });
+}
+
+function getPixQrCode(chargeId) {
+  return requestAsaas(`/payments/${encodeURIComponent(chargeId)}/pixQrCode`);
+}
+
 module.exports = {
   requestAsaas,
   createCustomer,
   createSubscription,
   getSubscriptionPayments,
+  createPixCharge,
+  getPixQrCode,
 };

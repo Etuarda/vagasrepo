@@ -1,7 +1,5 @@
 const PLAN_KEYS = Object.freeze({
   FREE: "free",
-  BASIC: "basic",
-  PRO: "pro",
   PREMIUM: "premium",
 });
 
@@ -22,26 +20,8 @@ const PLAN_RULES = Object.freeze({
     sharedMatchedJobs: false,
     applicationTracking: false,
   }),
-  [PLAN_KEYS.BASIC]: Object.freeze({
-    priceCents: 990,
-    matchingLimit: 30,
-    matchingPeriod: "monthly",
-    maxSubprofiles: 0,
-    maxTrackedApplications: null,
-    sharedMatchedJobs: true,
-    applicationTracking: true,
-  }),
-  [PLAN_KEYS.PRO]: Object.freeze({
-    priceCents: 1990,
-    matchingLimit: 100,
-    matchingPeriod: "monthly",
-    maxSubprofiles: 5,
-    maxTrackedApplications: null,
-    sharedMatchedJobs: true,
-    applicationTracking: true,
-  }),
   [PLAN_KEYS.PREMIUM]: Object.freeze({
-    priceCents: 2990,
+    priceCents: 2490,
     matchingLimit: 500,
     matchingPeriod: "monthly",
     maxSubprofiles: 10,
@@ -63,37 +43,16 @@ const PLAN_DETAILS = Object.freeze({
       "Sem acesso a vagas compartilhadas, subperfis e acompanhamento de vagas",
     ],
   }),
-  [PLAN_KEYS.BASIC]: Object.freeze({
-    name: "Basic",
-    priceLabel: "R$ 9,90/mes",
-    description: "Acesso completo sem subperfis.",
-    benefits: [
-      "30 analises de matching por mes",
-      "Acesso ao mural de vagas compartilhadas",
-      "Acompanhamento de candidaturas",
-      "Geracao de curriculos otimizados",
-    ],
-  }),
-  [PLAN_KEYS.PRO]: Object.freeze({
-    name: "Pro",
-    priceLabel: "R$ 19,90/mes",
-    description: "Mais volume e ate 5 subperfis.",
-    benefits: [
-      "100 analises de matching por mes",
-      "Ate 5 subperfis profissionais",
-      "Acesso ao mural de vagas compartilhadas",
-      "Todas as funcionalidades de matching, curriculo e acompanhamento",
-    ],
-  }),
   [PLAN_KEYS.PREMIUM]: Object.freeze({
-    name: "Premium",
-    priceLabel: "R$ 29,90/mes",
-    description: "Maior limite operacional.",
+    name: "Pro",
+    priceLabel: "R$ 24,90/mes",
+    description: "Acesso completo com todas as funcionalidades.",
     benefits: [
       "500 analises de matching por mes",
       "Ate 10 subperfis profissionais",
       "Acesso ao mural de vagas compartilhadas",
-      "Todas as funcionalidades sem limite visivel de candidaturas acompanhadas",
+      "Acompanhamento de candidaturas sem limite visivel",
+      "Geracao de curriculos otimizados",
     ],
   }),
 });

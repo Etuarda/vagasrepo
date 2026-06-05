@@ -391,12 +391,14 @@ function wireEvents() {
         getSubmitButton(e, billingCheckoutForm),
         { busyText: "Aguarde...", notice: "Iniciando pagamento seguro..." },
         () => billing.checkout(
-          document.getElementById("billing-plan")?.value || "basic",
+          document.getElementById("billing-plan")?.value || "premium",
           document.getElementById("billing-coupon")?.value || ""
         )
       );
     });
   }
+
+  billing.initCreditsEvents();
 
   document.querySelectorAll("[data-cancel-edit]").forEach((button) => {
     button.addEventListener("click", () => career.cancelEdit(button.dataset.cancelEdit));

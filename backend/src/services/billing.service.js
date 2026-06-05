@@ -5,6 +5,7 @@ const { PLAN_KEYS, PLAN_RULES } = require("../constants/subscription-plans");
 const subscriptionService = require("./subscription.service");
 const couponService = require("./coupon.service");
 const asaasService = require("./asaas.service");
+const creditsService = require("./credits.service");
 
 const PAID_EVENTS = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]);
 const PROBLEM_EVENTS = Object.freeze({
@@ -190,12 +191,34 @@ async function processAsaasWebhook(payload, receivedToken) {
     if (previous) return { duplicated: true };
 
     const providerSubscriptionId = payload.payment?.subscription;
+    const chargeId = payload.payment?.id;
+
     if (providerSubscriptionId && typeof tx.$executeRaw === "function") {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"asaas-subscription:" + providerSubscriptionId}))`;
     }
+
     const subscription = providerSubscriptionId
       ? await tx.subscription.findFirst({ where: { providerSubscriptionId } })
       : null;
+
+    // One-time Pix charge: no subscription ID — check credit purchases
+    if (!providerSubscriptionId && PAID_EVENTS.has(eventType) && chargeId) {
+      const creditResult = await creditsService.activateCredits(chargeId, tx);
+      if (creditResult.found) {
+        await tx.billingEvent.create({
+          data: {
+            provider: "asaas",
+            eventId,
+            eventType,
+            userId: creditResult.userId || null,
+            payload,
+            processedAt: new Date(),
+          },
+        });
+        return { processed: true, creditPurchaseActivated: !creditResult.alreadyActive };
+      }
+    }
+
     const event = await tx.billingEvent.create({
       data: {
         provider: "asaas",

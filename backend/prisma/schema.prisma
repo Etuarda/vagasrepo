@@ -39,6 +39,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   subscription        Subscription?
   usageCounters       UsageCounter[]
+  creditPurchases     CreditPurchase[]
   billingEvents       BillingEvent[]
   couponRedemptions   CouponRedemption[]
   applicationStatusHistory ApplicationStatusHistory[]
@@ -64,6 +65,8 @@ model Subscription {
   discountCents          Int?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
+
+  creditBalance          Int       @default(0)
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   coupon            Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)
@@ -107,6 +110,26 @@ model BillingEvent {
   @@unique([provider, eventId])
   @@index([userId])
   @@index([eventType])
+}
+
+model CreditPurchase {
+  id              String    @id @default(uuid())
+  userId          String
+  asaasChargeId   String?   @unique
+  status          String    @default("pending") // pending, active, failed, refunded
+  credits         Int       @default(500)
+  priceCents      Int       @default(2490)
+  pixQrCodeImage  String?
+  pixCopyPaste    String?
+  chargeExpiresAt DateTime?
+  activatedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([asaasChargeId])
 }
 
 model Coupon {

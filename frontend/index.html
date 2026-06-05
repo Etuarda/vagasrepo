@@ -38,7 +38,7 @@
         <button data-open-auth="login" class="w-full sm:w-auto bg-ink text-paper px-8 sm:px-12 py-4 sm:py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-taupe transition-all editorial-shadow">Acessar Painel</button>
         <button data-open-auth="register" class="w-full sm:w-auto border border-borderLight px-8 sm:px-12 py-4 sm:py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-white transition-all">Criar Conta</button>
       </div>
-      <section class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 text-left" aria-label="Planos disponiveis">
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 text-left max-w-2xl mx-auto w-full" aria-label="Planos disponiveis">
         <article class="editorial-card rounded-2xl p-5 space-y-4">
           <h2 class="font-serif text-3xl">Free</h2>
           <p class="text-sm text-taupe">R$ 0,00</p>
@@ -51,35 +51,13 @@
           <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta Free</button>
         </article>
         <article class="editorial-card rounded-2xl p-5 space-y-4">
-          <h2 class="font-serif text-3xl">Basic</h2>
-          <p class="text-sm text-taupe">R$ 9,90/mes</p>
-          <ul class="text-sm text-taupe space-y-2">
-            <li>30 matchings por mes: analise a vaga, veja lacunas e gere curriculos otimizados.</li>
-            <li>Acompanhamento de vagas: registre status, fase, prazos, acoes e feedbacks do processo seletivo.</li>
-            <li>Vagas compartilhadas: veja oportunidades cadastradas por outros usuarios autenticados.</li>
-            <li>Historico permanente: mantenha analises e PDFs gerados para consultar e baixar depois.</li>
-          </ul>
-          <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button>
-        </article>
-        <article class="editorial-card rounded-2xl p-5 space-y-4">
           <h2 class="font-serif text-3xl">Pro</h2>
-          <p class="text-sm text-taupe">R$ 19,90/mes</p>
+          <p class="text-sm text-taupe">R$ 24,90/mes</p>
           <ul class="text-sm text-taupe space-y-2">
-            <li>100 matchings por mes: mais volume para candidaturas ativas e testes de vaga.</li>
-            <li>Ate 5 subperfis: separe estrategias por area, stack ou tipo de vaga.</li>
-            <li>Curriculos por subperfil: gere versoes mais alinhadas sem alterar seu Perfil Global.</li>
-            <li>Inclui acompanhamento, vagas compartilhadas, historico e downloads de PDFs.</li>
-          </ul>
-          <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button>
-        </article>
-        <article class="editorial-card rounded-2xl p-5 space-y-4">
-          <h2 class="font-serif text-3xl">Premium</h2>
-          <p class="text-sm text-taupe">R$ 29,90/mes</p>
-          <ul class="text-sm text-taupe space-y-2">
-            <li>500 matchings por mes: indicado para alto volume de candidaturas e comparacoes.</li>
-            <li>Ate 10 subperfis: organize varias frentes profissionais com precisao.</li>
-            <li>Vagas compartilhadas: veja oportunidades cadastradas por outros usuarios autenticados.</li>
-            <li>Inclui todos os recursos dos planos anteriores, com maior limite operacional.</li>
+            <li>500 matchings por mes: analise vagas em alto volume sem se preocupar com limite.</li>
+            <li>Ate 10 subperfis: organize estrategias por area, stack ou tipo de vaga.</li>
+            <li>Acompanhamento de vagas: registre status, fase, prazos, acoes e feedbacks.</li>
+            <li>Vagas compartilhadas, historico permanente e downloads de PDFs inclusos.</li>
           </ul>
           <button data-open-auth="register" class="border border-borderLight px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Criar conta para assinar</button>
         </article>
@@ -418,20 +396,42 @@
               <div id="billing-limits" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5"></div>
               <p id="billing-status" class="text-sm text-taupe mt-2">Carregando status da assinatura...</p>
             </div>
-            <div id="billing-plan-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+            <div id="billing-plan-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl"></div>
             <form id="form-billing-customer" class="flex flex-col sm:flex-row gap-3 max-w-xl">
               <input id="billing-cpf-cnpj" class="editorial-input text-sm" placeholder="CPF ou CNPJ para cobranca" required />
               <button type="submit" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Salvar CPF/CNPJ</button>
             </form>
             <form id="form-billing-checkout" class="flex flex-col sm:flex-row gap-3 max-w-3xl">
               <select id="billing-plan" class="editorial-input text-sm bg-white" aria-label="Selecionar plano">
-                <option value="basic">Basic - R$ 9,90/mes</option>
-                <option value="pro">Pro - R$ 19,90/mes</option>
-                <option value="premium">Premium - R$ 29,90/mes</option>
+                <option value="premium">Pro - R$ 24,90/mes</option>
               </select>
               <input id="billing-coupon" class="editorial-input text-sm" placeholder="Cupom (opcional)" maxlength="80" />
               <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Assinar plano</button>
             </form>
+          </section>
+
+          <section class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-label="Comprar matchings avulsos">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Creditos avulsos</p>
+              <h3 class="font-serif text-3xl mt-2">Matchings extras.</h3>
+              <p class="text-sm text-taupe mt-2">Compre 500 matchings adicionais via Pix, sem assinatura. Os creditos nao expiram e sao consumidos apos o limite do plano ser atingido.</p>
+              <p id="billing-credits-balance" class="text-sm text-taupe mt-1">Saldo: carregando...</p>
+            </div>
+            <button id="btn-buy-credits" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
+              Comprar 500 matchings — R$ 24,90
+            </button>
+            <div id="billing-pix-section" class="hidden space-y-4 border-t border-borderLight pt-4">
+              <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Pague via Pix</p>
+              <div class="flex flex-col sm:flex-row gap-6 items-start">
+                <img id="billing-pix-qrcode" src="" alt="QR Code Pix" class="w-40 h-40 border border-borderLight rounded-xl" />
+                <div class="flex-1 space-y-3">
+                  <p class="text-xs text-taupe">Copie o codigo Pix abaixo ou escaneie o QR Code:</p>
+                  <textarea id="billing-pix-copypaste" readonly class="editorial-input text-xs font-mono w-full h-20 resize-none" aria-label="Pix copia e cola"></textarea>
+                  <button id="btn-copy-pix" type="button" class="border border-borderLight px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">Copiar codigo Pix</button>
+                  <p class="text-xs text-taupe">Apos o pagamento, seus creditos serao ativados automaticamente em alguns instantes.</p>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
       </section>
