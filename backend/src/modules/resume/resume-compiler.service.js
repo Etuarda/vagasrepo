@@ -98,14 +98,7 @@ function toProjectShape(project) {
 }
 
 function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
-  // Projetos: matched primeiro, depois não-matched para atingir mínimo de 2
-  const matchedIds = new Set((matchResult.selectedProjects || []).map((p) => p.id));
-  const matchedProjects = (matchResult.selectedProjects || []).map(toProjectShape);
-  const unmatchedProjects = (profile.projects || [])
-    .filter((p) => !matchedIds.has(p.id))
-    .slice(0, Math.max(0, MIN_PROJECTS - matchedProjects.length))
-    .map(toProjectShape);
-  const projects = [...matchedProjects, ...unmatchedProjects];
+  const projects = (matchResult.selectedProjects || []).map(toProjectShape);
 
   const learningItems = rankLearningItems(profile, matchResult, MAX_LEARNING_ITEMS, { includeUnmatched: true });
 
