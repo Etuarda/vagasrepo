@@ -47,7 +47,7 @@ async function createCreditsCheckout(userId) {
   const charge = await asaasService.createPixCharge({
     customerId,
     value: CREDIT_PACKAGE.priceCents / 100,
-    description: `Vagas.io - ${CREDIT_PACKAGE.label}`,
+    description: "Vagas.io - Cobranças Pix",
     externalReference: `credits:${userId}`,
   });
 
