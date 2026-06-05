@@ -19,6 +19,6 @@ describe("resume layout", () => {
     expect(compact.experiences[0].description).toBe(experienceDescription);
     expect(compact.courses).toHaveLength(1);
     expect(compact.certifications).toHaveLength(1);
-    expect(compact.projects).toHaveLength(2);
+    expect(compact.projects).toHaveLength(3);
   });
 });

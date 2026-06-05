@@ -1,6 +1,6 @@
 const RESUME_LAYOUT_RULES = Object.freeze({
   maxPages: 2,
-  maxProjects: 2,
+  maxProjects: 3,
   maxSkillLines: 3,
   maxSkillGroups: 4,
   titleFontSize: 23,

@@ -81,17 +81,50 @@ function rankLearningItems({ courses = [], certifications = [] }, matchResult, l
     .slice(0, limit);
 }
 
-function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
-  const projects = (matchResult.selectedProjects || []).map((project) => ({
+const MIN_PROJECTS = 2;
+const MIN_LEARNING_ITEMS = 5;
+const MIN_SKILLS = 10;
+const MAX_LEARNING_ITEMS = 10;
+
+function toProjectShape(project) {
+  return {
     id: project.id,
     title: project.customTitle || project.title,
     category: project.category || "",
     repositoryUrl: project.repositoryUrl,
     deployUrl: project.deployUrl,
     summary: project.shortDescription || "",
-  }));
+  };
+}
 
-  const learningItems = rankLearningItems(profile, matchResult, 5, { includeUnmatched: true });
+function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
+  // Projetos: matched primeiro, depois não-matched para atingir mínimo de 2
+  const matchedIds = new Set((matchResult.selectedProjects || []).map((p) => p.id));
+  const matchedProjects = (matchResult.selectedProjects || []).map(toProjectShape);
+  const unmatchedProjects = (profile.projects || [])
+    .filter((p) => !matchedIds.has(p.id))
+    .slice(0, Math.max(0, MIN_PROJECTS - matchedProjects.length))
+    .map(toProjectShape);
+  const projects = [...matchedProjects, ...unmatchedProjects];
+
+  const learningItems = rankLearningItems(profile, matchResult, MAX_LEARNING_ITEMS, { includeUnmatched: true });
+
+  const skillsInline = compileSkills(profile, matchResult, rules);
+  const skillCount = skillsInline ? skillsInline.split(",").length : 0;
+  const courses = learningItems.filter((item) => item.itemType === "course");
+  const certifications = learningItems.filter((item) => item.itemType === "certification");
+  const learningCount = courses.length + certifications.length;
+
+  const compilationWarnings = [];
+  if (skillCount < MIN_SKILLS) {
+    compilationWarnings.push(`Curriculo com apenas ${skillCount} habilidade(s). Recomendado: no minimo ${MIN_SKILLS}. Adicione mais skills ao perfil.`);
+  }
+  if (learningCount < MIN_LEARNING_ITEMS) {
+    compilationWarnings.push(`Curriculo com apenas ${learningCount} curso(s)/certificado(s). Recomendado: no minimo ${MIN_LEARNING_ITEMS}. Adicione mais cursos ou certificacoes ao perfil.`);
+  }
+  if (projects.length < MIN_PROJECTS) {
+    compilationWarnings.push(`Curriculo com apenas ${projects.length} projeto(s). Recomendado: no minimo ${MIN_PROJECTS}. Adicione mais projetos ao perfil.`);
+  }
 
   return compressResume({
     header: {
@@ -107,7 +140,7 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
     },
     summary: profile.summary || "",
     education: profile.educations || [],
-    skillsInline: compileSkills(profile, matchResult, rules),
+    skillsInline,
     experiences: (profile.experiences || []).map((experience) => ({
       title: `${experience.role} | ${experience.company}`,
       period: experience.period,
@@ -115,10 +148,22 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
       description: experience.description || "",
     })),
     projects,
-    courses: learningItems.filter((item) => item.itemType === "course"),
-    certifications: learningItems.filter((item) => item.itemType === "certification"),
+    courses,
+    certifications,
     languagesInline: (profile.languages || []).map((item) => [item.name, item.level].filter(Boolean).join(" - ")).join("; "),
+    compilationWarnings,
   }, rules);
 }
 
-module.exports = { compileResume, compileSkills, uniqueByNormalized, rankLearningItems, parseHours, parseMostRecentYear, collectLearnedSkillItems };
+module.exports = {
+  compileResume,
+  compileSkills,
+  uniqueByNormalized,
+  rankLearningItems,
+  parseHours,
+  parseMostRecentYear,
+  collectLearnedSkillItems,
+  MIN_PROJECTS,
+  MIN_LEARNING_ITEMS,
+  MIN_SKILLS,
+};
