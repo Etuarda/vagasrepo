@@ -11,7 +11,7 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
   RESEND_TEST_RECIPIENT: z.string().trim().toLowerCase().email().optional(),
-  ASAAS_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+  ASAAS_ENV: z.enum(["sandbox", "production"]).default("production"),
   ASAAS_API_KEY: z.string().optional(),
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
   ASAAS_SUCCESS_URL: z.string().url().optional(),
