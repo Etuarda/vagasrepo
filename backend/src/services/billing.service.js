@@ -5,7 +5,6 @@ const { PLAN_KEYS, PLAN_RULES } = require("../constants/subscription-plans");
 const subscriptionService = require("./subscription.service");
 const couponService = require("./coupon.service");
 const asaasService = require("./asaas.service");
-const creditsService = require("./credits.service");
 
 const PAID_EVENTS = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]);
 const PROBLEM_EVENTS = Object.freeze({
@@ -43,11 +42,16 @@ function couponResponse(coupon, discountCents, finalPriceCents) {
   return coupon ? { code: coupon.code, discountCents, finalPriceCents } : null;
 }
 
-async function getInvoiceUrl(providerSubscription) {
-  if (providerSubscription.invoiceUrl) return providerSubscription.invoiceUrl;
-  const payments = await asaasService.getSubscriptionPayments(providerSubscription.id);
+async function getPixData(providerSubscriptionId) {
+  const payments = await asaasService.getSubscriptionPayments(providerSubscriptionId);
   const payment = payments.data?.[0];
-  return payment?.invoiceUrl || payment?.bankSlipUrl || null;
+  if (!payment?.id) return { pixQrCodeImage: null, pixCopyPaste: null, pixExpiresAt: null };
+  const qr = await asaasService.getPixQrCode(payment.id);
+  return {
+    pixQrCodeImage: qr.encodedImage || null,
+    pixCopyPaste: qr.payload || null,
+    pixExpiresAt: qr.expirationDate || null,
+  };
 }
 
 async function createCheckout(userId, { plan, couponCode }) {
@@ -109,7 +113,8 @@ async function createCheckout(userId, { plan, couponCode }) {
       status: activated.status,
       coupon: couponResponse(coupon, discountCents, finalPriceCents),
       provider: "coupon",
-      invoiceUrl: null,
+      pixQrCodeImage: null,
+      pixCopyPaste: null,
     };
   }
 
@@ -133,11 +138,13 @@ async function createCheckout(userId, { plan, couponCode }) {
     customerId: providerCustomerId,
     plan,
     value: finalPriceCents / 100,
-    description: `Vagas.io - plano ${plan}`,
-    billingType: "UNDEFINED",
+    description: "Vagas.io - Cobrancas Pix",
+    billingType: "PIX",
   });
   if (!providerSubscription.id) throw billingError("Asaas nao retornou a assinatura.", 502);
-  const invoiceUrl = await getInvoiceUrl(providerSubscription);
+
+  const pixData = await getPixData(providerSubscription.id);
+
   await prisma.subscription.update({
     where: { id: subscription.id },
     data: {
@@ -148,7 +155,7 @@ async function createCheckout(userId, { plan, couponCode }) {
       providerCustomerId,
       providerSubscriptionId: providerSubscription.id,
       providerPaymentId: null,
-      checkoutUrl: invoiceUrl,
+      checkoutUrl: null,
       lastPaymentStatus: "PENDING",
       couponId: coupon?.id || null,
       originalPriceCents,
@@ -157,12 +164,14 @@ async function createCheckout(userId, { plan, couponCode }) {
     },
   });
   return {
-    message: "Assinatura criada. Conclua o pagamento para ativar o plano.",
+    message: "Assinatura criada. Conclua o pagamento Pix para ativar o plano.",
     plan,
     coupon: couponResponse(coupon, discountCents, finalPriceCents),
     provider: "asaas",
     providerSubscriptionId: providerSubscription.id,
-    invoiceUrl,
+    pixQrCodeImage: pixData.pixQrCodeImage,
+    pixCopyPaste: pixData.pixCopyPaste,
+    pixExpiresAt: pixData.pixExpiresAt,
   };
 }
 
@@ -191,8 +200,6 @@ async function processAsaasWebhook(payload, receivedToken) {
     if (previous) return { duplicated: true };
 
     const providerSubscriptionId = payload.payment?.subscription;
-    const chargeId = payload.payment?.id;
-
     if (providerSubscriptionId && typeof tx.$executeRaw === "function") {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"asaas-subscription:" + providerSubscriptionId}))`;
     }
@@ -200,24 +207,6 @@ async function processAsaasWebhook(payload, receivedToken) {
     const subscription = providerSubscriptionId
       ? await tx.subscription.findFirst({ where: { providerSubscriptionId } })
       : null;
-
-    // One-time Pix charge: no subscription ID — check credit purchases
-    if (!providerSubscriptionId && PAID_EVENTS.has(eventType) && chargeId) {
-      const creditResult = await creditsService.activateCredits(chargeId, tx);
-      if (creditResult.found) {
-        await tx.billingEvent.create({
-          data: {
-            provider: "asaas",
-            eventId,
-            eventType,
-            userId: creditResult.userId || null,
-            payload,
-            processedAt: new Date(),
-          },
-        });
-        return { processed: true, creditPurchaseActivated: !creditResult.alreadyActive };
-      }
-    }
 
     const event = await tx.billingEvent.create({
       data: {

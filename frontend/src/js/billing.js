@@ -26,18 +26,12 @@ function renderLimitCards(context) {
   const matching = context.usage.matching;
   const subprofiles = context.usage.subprofiles;
   const tracking = context.usage.applicationTracking;
-  const credits = context.usage.credits;
   const periodLabel = matching.period === "lifetime" ? "vitalicias" : "neste mes";
   root.innerHTML = [
     {
       title: "Matching",
       value: `${matching.used}/${matching.limit}`,
       detail: `${matching.remaining} restantes ${periodLabel}`,
-    },
-    {
-      title: "Creditos",
-      value: String(credits?.balance ?? 0),
-      detail: credits?.balance > 0 ? "matchings avulsos disponiveis" : "sem creditos avulsos",
     },
     {
       title: "Subperfis",
@@ -108,13 +102,19 @@ function syncSubprofileCreation(context) {
   }
 }
 
-function renderCreditsBalance(context) {
-  const el = document.getElementById("billing-credits-balance");
-  if (!el) return;
-  const balance = context.usage.credits?.balance ?? 0;
-  el.textContent = balance > 0
-    ? `Saldo: ${balance} creditos avulsos disponiveis.`
-    : "Saldo: nenhum credito avulso.";
+function showPixSection(data) {
+  const section = document.getElementById("billing-pix-section");
+  const qrcode = document.getElementById("billing-pix-qrcode");
+  const copypaste = document.getElementById("billing-pix-copypaste");
+  if (!section) return;
+  if (qrcode && data.pixQrCodeImage) {
+    qrcode.src = `data:image/png;base64,${data.pixQrCodeImage}`;
+  }
+  if (copypaste && data.pixCopyPaste) {
+    copypaste.value = data.pixCopyPaste;
+  }
+  section.classList.remove("hidden");
+  section.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function render() {
@@ -145,23 +145,7 @@ function render() {
   if (select) select.value = context.subscription?.pendingPlan || (context.plan === "free" ? "premium" : context.plan);
   renderLimitCards(context);
   renderPlanCards(context);
-  renderCreditsBalance(context);
   syncSubprofileCreation(context);
-}
-
-function showPixSection(data) {
-  const section = document.getElementById("billing-pix-section");
-  const qrcode = document.getElementById("billing-pix-qrcode");
-  const copypaste = document.getElementById("billing-pix-copypaste");
-  if (!section) return;
-  if (qrcode && data.pixQrCodeImage) {
-    qrcode.src = `data:image/png;base64,${data.pixQrCodeImage}`;
-  }
-  if (copypaste && data.pixCopyPaste) {
-    copypaste.value = data.pixCopyPaste;
-  }
-  section.classList.remove("hidden");
-  section.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 export const billing = {
@@ -181,38 +165,25 @@ export const billing = {
     return result;
   },
 
-  async checkout() {
-    return this.buyCredits();
+  async checkout(plan, couponCode) {
+    const body = { plan };
+    if (couponCode?.trim()) body.couponCode = couponCode.trim();
+    const result = await api(
+      "/billing/checkout",
+      { method: "POST", body: JSON.stringify(body) },
+      state.token
+    );
+    if (result.status === "active") {
+      await this.load();
+      ui.notify("Plano ativado com cupom.");
+      return result;
+    }
+    showPixSection(result);
+    ui.notify("QR Code Pix gerado. Escaneie para pagar e ativar o plano.");
+    return result;
   },
 
-  async buyCredits() {
-    const btn = document.getElementById("btn-buy-credits");
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "Gerando cobranca...";
-    }
-    try {
-      const result = await api(
-        "/billing/credits/checkout",
-        { method: "POST" },
-        state.token
-      );
-      showPixSection(result);
-      ui.notify("QR Code Pix gerado. Escaneie para pagar.");
-    } catch (err) {
-      ui.notify(err.message || "Erro ao gerar cobranca Pix.");
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = "Comprar 500 matchings — R$ 29,90";
-      }
-    }
-  },
-
-  initCreditsEvents() {
-    const buyBtn = document.getElementById("btn-buy-credits");
-    if (buyBtn) buyBtn.addEventListener("click", () => this.buyCredits());
-
+  initPixCopyEvent() {
     const copyBtn = document.getElementById("btn-copy-pix");
     if (copyBtn) {
       copyBtn.addEventListener("click", () => {

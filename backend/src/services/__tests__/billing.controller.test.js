@@ -27,14 +27,14 @@ describe("billing controller", () => {
     expect(res.json).toHaveBeenCalledWith(context);
   });
 
-  it("retorna 410 Gone pois endpoint de checkout foi descontinuado", async () => {
+  it("inicia checkout e retorna QR code Pix pendente", async () => {
+    billingService.createCheckout.mockResolvedValue({ provider: "asaas", plan: "premium", pixCopyPaste: "00020126..." });
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
-    await checkout({}, res, jest.fn());
+    await checkout({ userId: "user", body: { plan: "premium", couponCode: "DUDA50" } }, res, jest.fn());
 
-    expect(res.status).toHaveBeenCalledWith(410);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "ENDPOINT_GONE" }));
-    expect(billingService.createCheckout).not.toHaveBeenCalled();
+    expect(billingService.createCheckout).toHaveBeenCalledWith("user", { plan: "premium", couponCode: "DUDA50" });
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 
   it("salva documento de cobranca em endpoint separado", async () => {

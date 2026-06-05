@@ -65,12 +65,10 @@ async function getPlanContext(userId, db = prisma) {
   const subscription = await getOrCreateSubscription(userId, db);
   const plan = effectivePlan(subscription);
   const rules = PLAN_RULES[plan];
-  const [{ period, used }, subprofilesUsed, trackedApplicationsUsed, creditBalance] = await Promise.all([
+  const [{ period, used }, subprofilesUsed, trackedApplicationsUsed] = await Promise.all([
     matchingUsage(userId, rules, db),
     db.careerProfile.count({ where: { userId, isGlobal: false } }),
     db.job.count({ where: { userId } }),
-    db.subscription.findUnique({ where: { userId }, select: { creditBalance: true } })
-      .then((s) => s?.creditBalance ?? 0),
   ]);
 
   return {
@@ -96,9 +94,6 @@ async function getPlanContext(userId, db = prisma) {
         period: rules.matchingPeriod,
         periodKey: period.key,
         remaining: Math.max(0, rules.matchingLimit - used),
-      },
-      credits: {
-        balance: creditBalance,
       },
       subprofiles: {
         used: subprofilesUsed,
@@ -141,51 +136,38 @@ async function consumeMatchingQuota(userId, db = prisma) {
   const { plan, rules } = await assertFeatureAccess(userId, FEATURES.MATCHING_ANALYSIS, db);
   const { period, used } = await matchingUsage(userId, rules, db);
 
-  // Plan quota still available
-  if (used < rules.matchingLimit) {
-    const key = {
-      userId_feature_periodKey: {
+  if (used >= rules.matchingLimit) {
+    throw planError("Limite de analises de matching atingido para o plano atual.", 402, "MATCHING_LIMIT_REACHED");
+  }
+
+  const key = {
+    userId_feature_periodKey: {
+      userId,
+      feature: FEATURES.MATCHING_ANALYSIS,
+      periodKey: period.key,
+    },
+  };
+  const existing = await db.usageCounter.findUnique({ where: key });
+  if (!existing) {
+    await db.usageCounter.create({
+      data: {
         userId,
         feature: FEATURES.MATCHING_ANALYSIS,
         periodKey: period.key,
+        count: used + 1,
       },
-    };
-    const existing = await db.usageCounter.findUnique({ where: key });
-    if (!existing) {
-      await db.usageCounter.create({
-        data: {
-          userId,
-          feature: FEATURES.MATCHING_ANALYSIS,
-          periodKey: period.key,
-          count: used + 1,
-        },
-      });
-      return { plan, used: used + 1, limit: rules.matchingLimit, source: "plan", periodKey: period.key };
-    }
-    const incremented = await db.usageCounter.updateMany({
-      where: { id: existing.id, count: { lt: rules.matchingLimit } },
-      data: { count: { increment: 1 } },
     });
-    if (!incremented.count) {
-      // Fell through race — check credits below
-    } else {
-      return { plan, used: existing.count + 1, limit: rules.matchingLimit, source: "plan", periodKey: period.key };
-    }
+    return { plan, used: used + 1, limit: rules.matchingLimit, periodKey: period.key };
   }
 
-  // Plan quota exhausted — consume 1 purchased credit
-  const sub = await db.subscription.findUnique({ where: { userId }, select: { creditBalance: true } });
-  if (!sub || sub.creditBalance <= 0) {
-    throw planError("Limite de analises de matching atingido para o plano atual.", 402, "MATCHING_LIMIT_REACHED");
-  }
-  const decremented = await db.subscription.updateMany({
-    where: { userId, creditBalance: { gt: 0 } },
-    data: { creditBalance: { decrement: 1 } },
+  const incremented = await db.usageCounter.updateMany({
+    where: { id: existing.id, count: { lt: rules.matchingLimit } },
+    data: { count: { increment: 1 } },
   });
-  if (!decremented.count) {
+  if (!incremented.count) {
     throw planError("Limite de analises de matching atingido para o plano atual.", 402, "MATCHING_LIMIT_REACHED");
   }
-  return { plan, used: sub.creditBalance - 1, limit: sub.creditBalance, source: "credits", periodKey: period.key };
+  return { plan, used: existing.count + 1, limit: rules.matchingLimit, periodKey: period.key };
 }
 
 async function assertSubprofileLimit(userId, db = prisma) {

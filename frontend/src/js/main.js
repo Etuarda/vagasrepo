@@ -398,7 +398,7 @@ function wireEvents() {
     });
   }
 
-  billing.initCreditsEvents();
+  billing.initPixCopyEvent();
 
   document.querySelectorAll("[data-cancel-edit]").forEach((button) => {
     button.addEventListener("click", () => career.cancelEdit(button.dataset.cancelEdit));

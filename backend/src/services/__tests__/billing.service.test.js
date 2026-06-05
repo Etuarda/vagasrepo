@@ -22,15 +22,11 @@ jest.mock("../asaas.service", () => ({
   createPixCharge: jest.fn(),
   getPixQrCode: jest.fn(),
 }));
-jest.mock("../credits.service", () => ({
-  activateCredits: jest.fn().mockResolvedValue({ found: false }),
-}));
 
 const { prisma } = require("../../lib/prisma");
 const subscriptionService = require("../subscription.service");
 const couponService = require("../coupon.service");
 const asaasService = require("../asaas.service");
-const creditsService = require("../credits.service");
 const billingService = require("../billing.service");
 
 const baseSubscription = {
@@ -40,9 +36,9 @@ const baseSubscription = {
   pendingPlan: "premium",
   providerCustomerId: null,
   couponId: null,
-  originalPriceCents: 2490,
+  originalPriceCents: 2990,
   discountCents: 0,
-  finalPriceCents: 2490,
+  finalPriceCents: 2990,
 };
 
 describe("billing checkout and webhook", () => {
@@ -57,10 +53,11 @@ describe("billing checkout and webhook", () => {
     });
     subscriptionService.getOrCreateSubscription.mockResolvedValue({ ...baseSubscription, pendingPlan: null });
     couponService.validateCouponForCheckout.mockResolvedValue(null);
-    couponService.calculateDiscount.mockReturnValue({ discountCents: 0, finalPriceCents: 2490 });
+    couponService.calculateDiscount.mockReturnValue({ discountCents: 0, finalPriceCents: 2990 });
     asaasService.createCustomer.mockResolvedValue({ id: "customer" });
     asaasService.createSubscription.mockResolvedValue({ id: "asaas-sub" });
-    asaasService.getSubscriptionPayments.mockResolvedValue({ data: [{ invoiceUrl: "https://pay.example/invoice" }] });
+    asaasService.getSubscriptionPayments.mockResolvedValue({ data: [{ id: "payment-1" }] });
+    asaasService.getPixQrCode.mockResolvedValue({ encodedImage: "base64img", payload: "00020126...", expirationDate: null });
   });
 
   it("rejeita checkout Free e exige CPF/CNPJ", async () => {
@@ -71,20 +68,26 @@ describe("billing checkout and webhook", () => {
       .rejects.toMatchObject({ message: "Informe CPF/CNPJ antes de assinar." });
   });
 
-  it("cria assinatura Asaas pendente e retorna URL de pagamento", async () => {
+  it("cria assinatura Asaas Pix pendente e retorna QR code", async () => {
     const result = await billingService.createCheckout("user", { plan: "premium" });
 
-    expect(asaasService.createSubscription).toHaveBeenCalledWith(expect.objectContaining({ value: 24.9, plan: "premium" }));
+    expect(asaasService.createSubscription).toHaveBeenCalledWith(expect.objectContaining({
+      value: 29.9,
+      plan: "premium",
+      billingType: "PIX",
+    }));
+    expect(asaasService.getPixQrCode).toHaveBeenCalledWith("payment-1");
     expect(prisma.subscription.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ plan: "free", pendingPlan: "premium", status: "pending" }),
     }));
-    expect(result.invoiceUrl).toBe("https://pay.example/invoice");
+    expect(result.pixCopyPaste).toBe("00020126...");
+    expect(result.pixQrCodeImage).toBe("base64img");
     expect(couponService.redeemCoupon).not.toHaveBeenCalled();
   });
 
   it("bloqueia cupom once em assinatura recorrente paga", async () => {
     couponService.validateCouponForCheckout.mockResolvedValue({ id: "coupon", code: "ONCE", duration: "once" });
-    couponService.calculateDiscount.mockReturnValue({ discountCents: 100, finalPriceCents: 2390 });
+    couponService.calculateDiscount.mockReturnValue({ discountCents: 100, finalPriceCents: 2890 });
 
     await expect(billingService.createCheckout("user", { plan: "premium", couponCode: "ONCE" }))
       .rejects.toMatchObject({ message: "Cupom de uso unico ainda nao esta disponivel para assinaturas recorrentes." });
@@ -94,13 +97,13 @@ describe("billing checkout and webhook", () => {
   it("ativa cupom integral sem cobranca e registra resgate", async () => {
     const coupon = { id: "coupon", code: "FULL", duration: "once" };
     couponService.validateCouponForCheckout.mockResolvedValue(coupon);
-    couponService.calculateDiscount.mockReturnValue({ discountCents: 2490, finalPriceCents: 0 });
+    couponService.calculateDiscount.mockReturnValue({ discountCents: 2990, finalPriceCents: 0 });
     const tx = { subscription: { update: jest.fn().mockResolvedValue({ id: "subscription", status: "active" }) } };
     prisma.$transaction.mockImplementation((operation) => operation(tx));
 
     const result = await billingService.createCheckout("user", { plan: "premium", couponCode: "FULL" });
 
-    expect(result).toEqual(expect.objectContaining({ status: "active", provider: "coupon", invoiceUrl: null }));
+    expect(result).toEqual(expect.objectContaining({ status: "active", provider: "coupon", pixQrCodeImage: null }));
     expect(couponService.redeemCoupon).toHaveBeenCalled();
     expect(asaasService.createSubscription).not.toHaveBeenCalled();
   });
@@ -196,47 +199,5 @@ describe("billing checkout and webhook", () => {
     await expect(billingService.processAsaasWebhook({
       id: "evt-orphan", event: "PAYMENT_RECEIVED", payment: { subscription: "unknown" },
     }, "webhook-secret")).resolves.toEqual({ processed: true, subscriptionFound: false });
-  });
-
-  it("ativa creditos quando webhook de cobranca avulsa Pix e confirmado", async () => {
-    creditsService.activateCredits.mockResolvedValue({ found: true, alreadyActive: false, userId: "user", credits: 500 });
-    const tx = {
-      ...webhookTx(null),
-      billingEvent: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockResolvedValue({}),
-        update: jest.fn().mockResolvedValue({}),
-      },
-    };
-    prisma.$transaction.mockImplementation((operation) => operation(tx));
-
-    const result = await billingService.processAsaasWebhook({
-      id: "evt-pix",
-      event: "PAYMENT_CONFIRMED",
-      payment: { id: "charge_abc", subscription: null, status: "CONFIRMED" },
-    }, "webhook-secret");
-
-    expect(creditsService.activateCredits).toHaveBeenCalledWith("charge_abc", tx);
-    expect(result).toEqual({ processed: true, creditPurchaseActivated: true });
-  });
-
-  it("nao duplica ativacao de creditos ja ativos", async () => {
-    creditsService.activateCredits.mockResolvedValue({ found: true, alreadyActive: true });
-    const tx = {
-      ...webhookTx(null),
-      billingEvent: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockResolvedValue({}),
-      },
-    };
-    prisma.$transaction.mockImplementation((operation) => operation(tx));
-
-    const result = await billingService.processAsaasWebhook({
-      id: "evt-pix-dup",
-      event: "PAYMENT_CONFIRMED",
-      payment: { id: "charge_abc", subscription: null, status: "CONFIRMED" },
-    }, "webhook-secret");
-
-    expect(result).toEqual({ processed: true, creditPurchaseActivated: false });
   });
 });

@@ -408,27 +408,15 @@
               <input id="billing-coupon" class="editorial-input text-sm" placeholder="Cupom (opcional)" maxlength="80" />
               <button type="submit" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Assinar plano</button>
             </form>
-          </section>
-
-          <section class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-label="Comprar matchings avulsos">
-            <div>
-              <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Creditos avulsos</p>
-              <h3 class="font-serif text-3xl mt-2">Matchings extras.</h3>
-              <p class="text-sm text-taupe mt-2">Compre 500 matchings adicionais via Pix, sem assinatura. Os creditos nao expiram e sao consumidos apos o limite do plano ser atingido.</p>
-              <p id="billing-credits-balance" class="text-sm text-taupe mt-1">Saldo: carregando...</p>
-            </div>
-            <button id="btn-buy-credits" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
-              Comprar 500 matchings — R$ 29,90
-            </button>
             <div id="billing-pix-section" class="hidden space-y-4 border-t border-borderLight pt-4">
-              <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Pague via Pix</p>
+              <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Pague via Pix para ativar o plano</p>
               <div class="flex flex-col sm:flex-row gap-6 items-start">
                 <img id="billing-pix-qrcode" src="" alt="QR Code Pix" class="w-40 h-40 border border-borderLight rounded-xl" />
                 <div class="flex-1 space-y-3">
                   <p class="text-xs text-taupe">Copie o codigo Pix abaixo ou escaneie o QR Code:</p>
                   <textarea id="billing-pix-copypaste" readonly class="editorial-input text-xs font-mono w-full h-20 resize-none" aria-label="Pix copia e cola"></textarea>
                   <button id="btn-copy-pix" type="button" class="border border-borderLight px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest">Copiar codigo Pix</button>
-                  <p class="text-xs text-taupe">Apos o pagamento, seus creditos serao ativados automaticamente em alguns instantes.</p>
+                  <p class="text-xs text-taupe">Apos a confirmacao do pagamento, seu plano sera ativado automaticamente.</p>
                 </div>
               </div>
             </div>
