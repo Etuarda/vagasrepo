@@ -3,7 +3,7 @@ const { z } = require("zod");
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   JWT_SECRET: z.string().min(32, "JWT_SECRET deve ter pelo menos 32 caracteres"),
-  DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatório"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL e obrigatorio"),
   CORS_ORIGIN: z.string().optional(),
   NODE_ENV: z.string().default("development"),
   REDIS_URL: z.string().optional(),
@@ -16,13 +16,30 @@ const envSchema = z.object({
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
   ASAAS_SUCCESS_URL: z.string().url().optional(),
   ASAAS_FAILURE_URL: z.string().url().optional(),
+}).superRefine((data, ctx) => {
+  if (data.ASAAS_ENV === "production") {
+    if (!data.ASAAS_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ASAAS_API_KEY"],
+        message: "ASAAS_API_KEY e obrigatorio quando ASAAS_ENV=production",
+      });
+    }
+    if (!data.ASAAS_WEBHOOK_TOKEN) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ASAAS_WEBHOOK_TOKEN"],
+        message: "ASAAS_WEBHOOK_TOKEN e obrigatorio quando ASAAS_ENV=production",
+      });
+    }
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   throw new Error(
-    `ENV inválida: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`
+    `ENV invalida: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`
   );
 }
 

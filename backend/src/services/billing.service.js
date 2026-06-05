@@ -143,7 +143,6 @@ async function createCheckout(userId, { plan, couponCode }) {
     plan,
     value: finalPriceCents / 100,
     description: "Vagas.io - Cobrancas Pix",
-    billingType: "PIX",
   });
   if (!providerSubscription.id) throw billingError("Asaas nao retornou a assinatura.", 502);
 

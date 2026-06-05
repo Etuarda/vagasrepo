@@ -39,7 +39,7 @@ function createCustomer({ name, email, cpfCnpj, mobilePhone }) {
   });
 }
 
-function createSubscription({ customerId, plan, value, description, billingType = "UNDEFINED" }) {
+function createSubscription({ customerId, plan, value, description }) {
   const callback = env.ASAAS_SUCCESS_URL
     ? { successUrl: env.ASAAS_SUCCESS_URL, autoRedirect: true }
     : undefined;
@@ -47,7 +47,7 @@ function createSubscription({ customerId, plan, value, description, billingType 
     method: "POST",
     body: {
       customer: customerId,
-      billingType,
+      billingType: "PIX",
       value,
       nextDueDate: new Date().toISOString().slice(0, 10),
       cycle: "MONTHLY",

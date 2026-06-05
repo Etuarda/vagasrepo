@@ -77,7 +77,6 @@ describe("billing checkout and webhook", () => {
     expect(asaasService.createSubscription).toHaveBeenCalledWith(expect.objectContaining({
       value: 29.9,
       plan: "premium",
-      billingType: "PIX",
     }));
     expect(asaasService.getPixQrCode).toHaveBeenCalledWith("payment-1");
     expect(prisma.subscription.update).toHaveBeenCalledWith(expect.objectContaining({
