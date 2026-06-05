@@ -146,8 +146,9 @@ async function createCheckout(userId, { plan, couponCode }) {
   });
   if (!providerSubscription.id) throw billingError("Asaas nao retornou a assinatura.", 502);
 
-  const pixData = await getPixData(providerSubscription.id);
-
+  // Salvar providerSubscriptionId imediatamente antes de buscar QR code.
+  // Isso fecha a janela de race condition: se o webhook Asaas chegar durante
+  // getPixData(), ele já consegue localizar a subscription pelo providerSubscriptionId.
   await prisma.subscription.update({
     where: { id: subscription.id },
     data: {
@@ -166,6 +167,9 @@ async function createCheckout(userId, { plan, couponCode }) {
       finalPriceCents,
     },
   });
+
+  const pixData = await getPixData(providerSubscription.id);
+
   return {
     message: "Assinatura criada. Conclua o pagamento Pix para ativar o plano.",
     plan,

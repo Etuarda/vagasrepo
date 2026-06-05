@@ -85,7 +85,10 @@ async function getPlanContext(userId, db = prisma) {
     billingProfile: {
       name: billingUser?.name || "",
       email: billingUser?.email || "",
-      cpfCnpj: billingUser?.cpfCnpj || "",
+      cpfCnpj: billingUser?.cpfCnpj
+        ? billingUser.cpfCnpj.replace(/^(\d{3})\d{3}(\d{3})(\d{2})$/, "$1.***.***-$3")
+        : "",
+      cpfConfigured: !!billingUser?.cpfCnpj,
     },
     features: {
       [FEATURES.MATCHING_ANALYSIS]: true,

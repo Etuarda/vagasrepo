@@ -103,16 +103,16 @@ function syncSubprofileCreation(context) {
 }
 
 function showPixSection(data) {
+  if (!data.pixQrCodeImage || !data.pixCopyPaste) {
+    ui.notify("Erro ao gerar QR Code Pix. Tente novamente ou entre em contato com o suporte.");
+    return;
+  }
   const section = document.getElementById("billing-pix-section");
   const qrcode = document.getElementById("billing-pix-qrcode");
   const copypaste = document.getElementById("billing-pix-copypaste");
   if (!section) return;
-  if (qrcode && data.pixQrCodeImage) {
-    qrcode.src = `data:image/png;base64,${data.pixQrCodeImage}`;
-  }
-  if (copypaste && data.pixCopyPaste) {
-    copypaste.value = data.pixCopyPaste;
-  }
+  if (qrcode) qrcode.src = `data:image/png;base64,${data.pixQrCodeImage}`;
+  if (copypaste) copypaste.value = data.pixCopyPaste;
   section.classList.remove("hidden");
   section.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }

@@ -74,7 +74,7 @@ describe("coupon service", () => {
   it("permite cupom integral somente com expiracao e limite de usos", () => {
     expect(() => assertAllowedFullDiscount(coupon({ value: 100 }), 1990, 0)).not.toThrow();
     expect(() => assertAllowedFullDiscount(coupon({ value: 100, maxRedemptions: null }), 1990, 0))
-      .toThrow("Cupom de 100% requer limite de usos e expiracao.");
+      .toThrow("Cupom de 100% requer limite de usos e data de expiracao.");
   });
 
   it("audita resgate e incrementa uso uma unica vez por chamada confirmada", async () => {

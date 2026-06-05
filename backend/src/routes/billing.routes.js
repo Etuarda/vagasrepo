@@ -1,8 +1,11 @@
 const router = require("express").Router();
 const { authMiddleware } = require("../middlewares/auth");
+const { rateLimit } = require("../middlewares/security");
 const billingController = require("../controllers/billing.controller");
 
-router.post("/webhooks/asaas", billingController.asaasWebhook);
+const webhookLimiter = rateLimit({ windowMs: 60_000, max: 120, keyPrefix: "webhook" });
+
+router.post("/webhooks/asaas", webhookLimiter, billingController.asaasWebhook);
 router.use(authMiddleware);
 router.get("/me", billingController.me);
 router.put("/customer", billingController.saveCustomer);

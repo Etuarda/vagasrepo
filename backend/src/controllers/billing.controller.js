@@ -33,7 +33,7 @@ async function saveCustomer(req, res, next) {
 
 async function asaasWebhook(req, res, next) {
   try {
-    const token = req.query.token || req.headers["asaas-access-token"];
+    const token = req.headers["asaas-access-token"];
     const result = await billingService.processAsaasWebhook(req.body, token);
     return res.json(result);
   } catch (err) {

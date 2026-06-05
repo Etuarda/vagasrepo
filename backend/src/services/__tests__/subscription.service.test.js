@@ -142,7 +142,8 @@ describe("subscription plans and quotas", () => {
       billingProfile: expect.objectContaining({
         name: "Pessoa Teste",
         email: "pessoa@example.com",
-        cpfCnpj: "12345678909",
+        cpfCnpj: "123.***.***-09",
+        cpfConfigured: true,
       }),
     }));
   });

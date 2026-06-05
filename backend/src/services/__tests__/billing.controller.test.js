@@ -57,7 +57,7 @@ describe("billing controller", () => {
     billingService.processAsaasWebhook.mockResolvedValue({ processed: true });
     const res = { json: jest.fn() };
 
-    await asaasWebhook({ query: { token: "token" }, headers: {}, body: { id: "evt" } }, res, jest.fn());
+    await asaasWebhook({ headers: { "asaas-access-token": "token" }, body: { id: "evt" } }, res, jest.fn());
 
     expect(billingService.processAsaasWebhook).toHaveBeenCalledWith({ id: "evt" }, "token");
   });
