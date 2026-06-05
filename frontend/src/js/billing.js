@@ -150,6 +150,13 @@ function renderBillingProfile(context) {
   if (cpfInput && profile.cpfCnpj) cpfInput.value = profile.cpfCnpj;
 }
 
+function renderCancelSection(context) {
+  const section = document.getElementById("billing-cancel-section");
+  if (!section) return;
+  const isActivePro = context.plan === "premium" && context.subscription?.status === "active";
+  section.classList.toggle("hidden", !isActivePro);
+}
+
 function render() {
   const context = state.billing;
   if (!context) return;
@@ -179,6 +186,7 @@ function render() {
   renderLimitCards(context);
   renderPlanCards(context);
   renderBillingProfile(context);
+  renderCancelSection(context);
   syncSubprofileCreation(context);
 }
 
@@ -240,6 +248,51 @@ export const billing = {
           ui.notify("Codigo Pix copiado!");
         });
       });
+    }
+
+    const cancelBtn = document.getElementById("btn-cancel-subscription");
+    const confirmSection = document.getElementById("billing-cancel-confirm");
+    const confirmBtn = document.getElementById("btn-cancel-confirm");
+    const abortBtn = document.getElementById("btn-cancel-abort");
+
+    if (cancelBtn && confirmSection) {
+      cancelBtn.addEventListener("click", () => {
+        confirmSection.classList.remove("hidden");
+        cancelBtn.classList.add("hidden");
+        confirmSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    }
+
+    if (abortBtn && confirmSection && cancelBtn) {
+      abortBtn.addEventListener("click", () => {
+        confirmSection.classList.add("hidden");
+        cancelBtn.classList.remove("hidden");
+      });
+    }
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener("click", () => this.cancelSubscription());
+    }
+  },
+
+  async cancelSubscription() {
+    const confirmBtn = document.getElementById("btn-cancel-confirm");
+    const abortBtn = document.getElementById("btn-cancel-abort");
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = "Cancelando..."; }
+    if (abortBtn) abortBtn.disabled = true;
+    try {
+      await api("/billing/cancel", { method: "POST" }, state.token);
+      await this.load();
+      ui.notify("Assinatura cancelada. Voce mantem o acesso ate o fim do periodo pago.");
+    } catch (err) {
+      ui.notify(err.message || "Erro ao cancelar assinatura.");
+      const confirmSection = document.getElementById("billing-cancel-confirm");
+      const cancelBtn = document.getElementById("btn-cancel-subscription");
+      if (confirmSection) confirmSection.classList.add("hidden");
+      if (cancelBtn) cancelBtn.classList.remove("hidden");
+    } finally {
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = "Confirmar cancelamento"; }
+      if (abortBtn) abortBtn.disabled = false;
     }
   },
 };

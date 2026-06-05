@@ -428,6 +428,24 @@
               </div>
             </div>
           </section>
+
+          <section id="billing-cancel-section" class="hidden border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-4" aria-label="Cancelamento de assinatura">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Cancelamento</p>
+              <h3 class="font-serif text-3xl mt-2">Cancelar plano.</h3>
+              <p class="text-sm text-taupe mt-2">Ao cancelar, a proxima renovacao sera removida. Voce mantem o acesso Pro ate o fim do periodo ja pago.</p>
+            </div>
+            <div id="billing-cancel-confirm" class="hidden space-y-3 border-t border-borderLight pt-4">
+              <p class="text-sm font-medium">Tem certeza? Esta acao nao pode ser desfeita.</p>
+              <div class="flex gap-3">
+                <button id="btn-cancel-confirm" type="button" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Confirmar cancelamento</button>
+                <button id="btn-cancel-abort" type="button" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Manter plano</button>
+              </div>
+            </div>
+            <button id="btn-cancel-subscription" type="button" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
+              Cancelar assinatura
+            </button>
+          </section>
         </div>
       </section>
 
