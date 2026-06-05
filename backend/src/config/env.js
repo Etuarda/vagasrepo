@@ -5,7 +5,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, "JWT_SECRET deve ter pelo menos 32 caracteres"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL e obrigatorio"),
   CORS_ORIGIN: z.string().optional(),
-  NODE_ENV: z.string().default("development"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   REDIS_URL: z.string().optional(),
   FRONTEND_URL: z.string().url().default("https://gestaodevagas.vercel.app"),
   RESEND_API_KEY: z.string().optional(),
@@ -32,6 +32,20 @@ const envSchema = z.object({
         message: "ASAAS_WEBHOOK_TOKEN e obrigatorio quando ASAAS_ENV=production",
       });
     }
+    if (!data.CORS_ORIGIN) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["CORS_ORIGIN"],
+        message: "CORS_ORIGIN e obrigatorio quando ASAAS_ENV=production",
+      });
+    }
+  }
+  if (data.EMAIL_FROM && !data.RESEND_API_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["RESEND_API_KEY"],
+      message: "RESEND_API_KEY e obrigatorio quando EMAIL_FROM esta definido",
+    });
   }
 });
 

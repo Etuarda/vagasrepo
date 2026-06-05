@@ -7,6 +7,18 @@ const PLAN_NAMES = Object.freeze({
   premium: "Pro",
 });
 
+function isValidCpf(value) {
+  const d = value.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  const calc = (len) => {
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += Number(d[i]) * (len + 1 - i);
+    const rem = sum % 11;
+    return rem < 2 ? 0 : 11 - rem;
+  };
+  return calc(9) === Number(d[9]) && calc(10) === Number(d[10]);
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -178,9 +190,21 @@ export const billing = {
   },
 
   async saveCustomer({ name, cpfCnpj, email }) {
+    if (!name?.trim() || name.trim().length < 2) {
+      ui.notify("Informe o nome completo.");
+      return null;
+    }
+    if (!isValidCpf(cpfCnpj || "")) {
+      ui.notify("CPF invalido. Verifique os digitos.");
+      return null;
+    }
+    if (!email?.includes("@")) {
+      ui.notify("Informe um e-mail valido.");
+      return null;
+    }
     const result = await api(
       "/billing/customer",
-      { method: "PUT", body: JSON.stringify({ name, cpfCnpj, email }) },
+      { method: "PUT", body: JSON.stringify({ name: name.trim(), cpfCnpj, email: email.trim() }) },
       state.token
     );
     await this.load();

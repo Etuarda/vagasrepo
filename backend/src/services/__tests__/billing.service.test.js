@@ -202,4 +202,40 @@ describe("billing checkout and webhook", () => {
       id: "evt-orphan", event: "PAYMENT_RECEIVED", payment: { subscription: "unknown" },
     }, "webhook-secret")).resolves.toEqual({ processed: true, subscriptionFound: false });
   });
+
+  it("reativa plano apos past_due quando pagamento e confirmado", async () => {
+    const pastDueSubscription = { ...baseSubscription, status: "past_due", pendingPlan: null, plan: "premium" };
+    const tx = webhookTx(pastDueSubscription);
+    prisma.$transaction.mockImplementation((operation) => operation(tx));
+
+    await billingService.processAsaasWebhook({
+      id: "evt-reactivation",
+      event: "PAYMENT_RECEIVED",
+      payment: { subscription: "provider-sub", id: "payment-new", status: "RECEIVED" },
+    }, "webhook-secret");
+
+    expect(tx.subscription.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: "active", plan: "premium", pendingPlan: null }),
+    }));
+  });
+
+  it("cancela assinatura ativa e atualiza status local", async () => {
+    prisma.subscription = {
+      ...prisma.subscription,
+      findUnique: jest.fn().mockResolvedValue({
+        id: "subscription",
+        userId: "user",
+        status: "active",
+        providerSubscriptionId: "asaas-sub",
+      }),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    const asaasServiceMock = require("../asaas.service");
+    asaasServiceMock.cancelSubscription = jest.fn().mockResolvedValue({});
+
+    const result = await billingService.cancelSubscription("user");
+
+    expect(asaasServiceMock.cancelSubscription).toHaveBeenCalledWith("asaas-sub");
+    expect(result).toEqual({ canceled: true });
+  });
 });

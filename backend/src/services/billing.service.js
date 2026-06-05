@@ -59,6 +59,7 @@ async function createCheckout(userId, { plan, couponCode }) {
   if (plan === PLAN_KEYS.FREE || !PLAN_RULES[plan]) {
     throw billingError("Plano invalido para checkout.");
   }
+  console.log(JSON.stringify({ event: "checkout_started", userId, plan, hasCoupon: !!couponCode }));
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, name: true, email: true, phone: true, cpfCnpj: true },
@@ -232,6 +233,14 @@ async function processAsaasWebhook(payload, receivedToken) {
     if (PAID_EVENTS.has(eventType)) {
       const now = new Date();
       const plan = subscription.pendingPlan || subscription.plan;
+      console.log(JSON.stringify({
+        event: "payment_confirmed",
+        userId: subscription.userId,
+        subscriptionId: subscription.id,
+        plan,
+        periodEnd: addMonth(now).toISOString(),
+        asaasEventType: eventType,
+      }));
       await tx.subscription.update({
         where: { id: subscription.id },
         data: {
@@ -279,9 +288,24 @@ async function processAsaasWebhook(payload, receivedToken) {
   });
 }
 
+async function cancelSubscription(userId) {
+  const subscription = await prisma.subscription.findUnique({ where: { userId } });
+  if (!subscription?.providerSubscriptionId || subscription.status !== "active") {
+    throw billingError("Nenhuma assinatura ativa para cancelar.", 400, "NO_ACTIVE_SUBSCRIPTION");
+  }
+  await asaasService.cancelSubscription(subscription.providerSubscriptionId);
+  await prisma.subscription.update({
+    where: { id: subscription.id },
+    data: { status: "canceled", pendingPlan: null },
+  });
+  console.log(JSON.stringify({ event: "subscription_canceled", userId, subscriptionId: subscription.id }));
+  return { canceled: true };
+}
+
 module.exports = {
   createCheckout,
   saveBillingProfile,
+  cancelSubscription,
   processAsaasWebhook,
   assertWebhookToken,
 };

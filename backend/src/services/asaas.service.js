@@ -80,6 +80,12 @@ function getPixQrCode(chargeId) {
   return requestAsaas(`/payments/${encodeURIComponent(chargeId)}/pixQrCode`);
 }
 
+function cancelSubscription(subscriptionId) {
+  return requestAsaas(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: "DELETE",
+  });
+}
+
 module.exports = {
   requestAsaas,
   createCustomer,
@@ -87,4 +93,5 @@ module.exports = {
   getSubscriptionPayments,
   createPixCharge,
   getPixQrCode,
+  cancelSubscription,
 };
