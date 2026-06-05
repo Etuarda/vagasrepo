@@ -66,9 +66,9 @@ describe("billing checkout and webhook", () => {
     prisma.user.findUnique.mockResolvedValue({ id: "user", name: "", email: "", cpfCnpj: "" });
     await expect(billingService.createCheckout("user", { plan: "premium" }))
       .rejects.toMatchObject({ message: "Informe nome completo e e-mail nos dados de cobranca antes de assinar." });
-    prisma.user.findUnique.mockResolvedValue({ id: "user", name: "Pessoa", email: "p@example.com", cpfCnpj: "" });
+    prisma.user.findUnique.mockResolvedValue({ id: "user", name: "Pessoa", email: "p@example.com", cpfCnpj: "00000000000" });
     await expect(billingService.createCheckout("user", { plan: "premium" }))
-      .rejects.toMatchObject({ message: "Informe CPF/CNPJ nos dados de cobranca antes de assinar." });
+      .rejects.toMatchObject({ message: "Informe um CPF valido nos dados de cobranca antes de assinar." });
   });
 
   it("cria assinatura Asaas Pix pendente e retorna QR code", async () => {

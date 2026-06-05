@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const env = require("../config/env");
 const { prisma } = require("../lib/prisma");
 const { PLAN_KEYS, PLAN_RULES } = require("../constants/subscription-plans");
+const { isValidCpf } = require("../schemas/billing.schema");
 const subscriptionService = require("./subscription.service");
 const couponService = require("./coupon.service");
 const asaasService = require("./asaas.service");
@@ -33,7 +34,7 @@ function digits(value) {
 
 async function saveBillingProfile(userId, { name, cpfCnpj, email }) {
   const normalized = digits(cpfCnpj);
-  if (![11, 14].includes(normalized.length)) throw billingError("CPF/CNPJ invalido.");
+  if (!isValidCpf(normalized)) throw billingError("CPF invalido.");
   await prisma.user.update({ where: { id: userId }, data: { name, cpfCnpj: normalized, email } });
   return { saved: true };
 }
@@ -66,8 +67,8 @@ async function createCheckout(userId, { plan, couponCode }) {
   if (!user.name?.trim() || !user.email?.trim()) {
     throw billingError("Informe nome completo e e-mail nos dados de cobranca antes de assinar.");
   }
-  if (![11, 14].includes(digits(user.cpfCnpj).length)) {
-    throw billingError("Informe CPF/CNPJ nos dados de cobranca antes de assinar.");
+  if (!isValidCpf(user.cpfCnpj || "")) {
+    throw billingError("Informe um CPF valido nos dados de cobranca antes de assinar.");
   }
 
   const subscription = await subscriptionService.getOrCreateSubscription(userId);
