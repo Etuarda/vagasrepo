@@ -156,23 +156,38 @@ describe("billing checkout and webhook", () => {
     expect(tx.subscription.findFirst).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ["PAYMENT_OVERDUE", "past_due"],
-    ["PAYMENT_REFUNDED", "refunded"],
-  ])("muda status para %s sem apagar historico", async (event, status) => {
+  it("muda status para past_due sem alterar plano (PAYMENT_OVERDUE)", async () => {
     const tx = webhookTx();
     prisma.$transaction.mockImplementation((operation) => operation(tx));
 
     await billingService.processAsaasWebhook({
-      id: `evt-${event}`,
-      event,
-      payment: { subscription: "provider-sub", id: "payment", status: event },
+      id: "evt-overdue",
+      event: "PAYMENT_OVERDUE",
+      payment: { subscription: "provider-sub", id: "payment", status: "OVERDUE" },
     }, "webhook-secret");
 
-    expect(tx.subscription.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status }),
-    }));
+    const call = tx.subscription.update.mock.calls[0][0];
+    expect(call.data.status).toBe("past_due");
+    expect(call.data.plan).toBeUndefined();
   });
+
+  it.each(["PAYMENT_REFUNDED", "PAYMENT_CHARGEBACK_REQUESTED"])(
+    "encerra acesso ao plano imediatamente no evento %s",
+    async (event) => {
+      const tx = webhookTx();
+      prisma.$transaction.mockImplementation((operation) => operation(tx));
+
+      await billingService.processAsaasWebhook({
+        id: `evt-${event}`,
+        event,
+        payment: { subscription: "provider-sub", id: "payment", status: event },
+      }, "webhook-secret");
+
+      expect(tx.subscription.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ plan: "free", pendingPlan: null }),
+      }));
+    }
+  );
 
   it("resgata cupom uma unica vez na confirmacao", async () => {
     const tx = webhookTx({ ...baseSubscription, couponId: "coupon" });

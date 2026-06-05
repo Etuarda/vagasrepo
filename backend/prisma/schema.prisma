@@ -67,6 +67,7 @@ model Subscription {
   updatedAt              DateTime  @updatedAt
 
   creditBalance          Int       @default(0)
+  refundReason           String?
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   coupon            Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)

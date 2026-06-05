@@ -282,6 +282,8 @@ export const billing = {
       refundAbortBtn.addEventListener("click", () => {
         refundConfirm.classList.add("hidden");
         refundBtn.classList.remove("hidden");
+        const reasonInput = document.getElementById("refund-reason");
+        if (reasonInput) reasonInput.value = "";
       });
     }
     if (refundConfirmBtn) {
@@ -316,10 +318,18 @@ export const billing = {
   async requestRefund() {
     const confirmBtn = document.getElementById("btn-refund-confirm");
     const abortBtn = document.getElementById("btn-refund-abort");
+    const reasonInput = document.getElementById("refund-reason");
+    const reason = reasonInput?.value?.trim() || "";
+
+    if (reason.length < 5) {
+      ui.notify("Informe o motivo do estorno (minimo 5 caracteres).");
+      return;
+    }
+
     if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = "Processando..."; }
     if (abortBtn) abortBtn.disabled = true;
     try {
-      await api("/billing/refund", { method: "POST" }, state.token);
+      await api("/billing/refund", { method: "POST", body: JSON.stringify({ reason }) }, state.token);
       await this.load();
       ui.notify("Estorno solicitado. O valor sera devolvido em ate 7 dias uteis.");
     } catch (err) {

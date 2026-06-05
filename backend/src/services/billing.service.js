@@ -275,10 +275,14 @@ async function processAsaasWebhook(payload, receivedToken) {
         }
       }
     } else if (PROBLEM_EVENTS[eventType]) {
+      // Estorno e chargeback encerram o acesso ao plano imediatamente.
+      // Overdue e cancelled mantêm o plan registrado (acesso controlado por effectivePlan).
+      const terminatesAccess = eventType === "PAYMENT_REFUNDED" || eventType === "PAYMENT_CHARGEBACK_REQUESTED";
       await tx.subscription.update({
         where: { id: subscription.id },
         data: {
           status: PROBLEM_EVENTS[eventType],
+          ...(terminatesAccess ? { plan: PLAN_KEYS.FREE, pendingPlan: null } : {}),
           lastPaymentStatus: payload.payment?.status || eventType,
           providerPaymentId: payload.payment?.id || subscription.providerPaymentId,
         },
@@ -291,14 +295,25 @@ async function processAsaasWebhook(payload, receivedToken) {
 
 const REFUND_WINDOW_DAYS = 7;
 
-async function requestRefund(userId) {
+async function requestRefund(userId, { reason }) {
+  // Ownership: subscription é buscada pelo userId do token autenticado.
+  // O providerPaymentId pertence exclusivamente a esta subscription.
   const subscription = await prisma.subscription.findUnique({ where: { userId } });
 
-  if (!subscription || subscription.status !== "active" || subscription.provider !== "asaas") {
+  if (!subscription) {
+    throw billingError("Assinatura nao encontrada.", 404, "SUBSCRIPTION_NOT_FOUND");
+  }
+
+  // Impede estorno duplicado — status já foi marcado como refunded
+  if (subscription.status === "refunded") {
+    throw billingError("Estorno ja foi solicitado para esta assinatura.", 400, "ALREADY_REFUNDED");
+  }
+
+  if (subscription.status !== "active" || subscription.provider !== "asaas") {
     throw billingError("Nenhuma assinatura elegivel para estorno.", 400, "NOT_ELIGIBLE_FOR_REFUND");
   }
   if (!subscription.providerPaymentId) {
-    throw billingError("Pagamento nao encontrado para estorno.", 400, "NO_PAYMENT_ID");
+    throw billingError("Pagamento nao encontrado. Entre em contato com o suporte.", 400, "NO_PAYMENT_ID");
   }
 
   const windowStart = new Date();
@@ -311,16 +326,39 @@ async function requestRefund(userId) {
     );
   }
 
+  // Chama Asaas ANTES de atualizar o banco.
+  // Se Asaas falhar, o banco permanece inalterado e o usuario pode tentar novamente.
+  // Se Asaas retornar erro de "already refunded", tratamos como idempotente abaixo.
   await asaasService.refundPayment(subscription.providerPaymentId);
-  await prisma.subscription.update({
-    where: { id: subscription.id },
-    data: { status: "refunded", plan: PLAN_KEYS.FREE, pendingPlan: null },
+
+  // Atualiza banco com advisory lock para evitar race condition entre
+  // esta request e um webhook PAYMENT_REFUNDED que possa chegar simultaneamente.
+  await prisma.$transaction(async (tx) => {
+    if (typeof tx.$executeRaw === "function") {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"refund:" + userId}))`;
+    }
+    const current = await tx.subscription.findUnique({
+      where: { userId },
+      select: { status: true },
+    });
+    // Webhook pode ter processado o estorno antes desta transação
+    if (current?.status === "refunded") return;
+
+    await tx.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: "refunded",
+        plan: PLAN_KEYS.FREE,
+        pendingPlan: null,
+        refundReason: reason,
+      },
+    });
   });
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
   if (user) emailService.sendRefundConfirmationEmail(user).catch(() => {});
 
-  console.log(JSON.stringify({ event: "refund_requested", userId, subscriptionId: subscription.id }));
+  console.log(JSON.stringify({ event: "refund_requested", userId, subscriptionId: subscription.id, reason }));
   return { refunded: true };
 }
 

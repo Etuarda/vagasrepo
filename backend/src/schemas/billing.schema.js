@@ -29,4 +29,8 @@ const billingCustomerSchema = z.object({
   email: z.string().trim().email("E-mail invalido"),
 });
 
-module.exports = { planSchema, paidPlanSchema, checkoutSchema, billingCustomerSchema, isValidCpf };
+const refundSchema = z.object({
+  reason: z.string().trim().min(5, "Informe o motivo do estorno").max(500),
+});
+
+module.exports = { planSchema, paidPlanSchema, checkoutSchema, billingCustomerSchema, refundSchema, isValidCpf };
