@@ -99,6 +99,25 @@ function toProjectShape(project) {
   };
 }
 
+function projectIdentity(project) {
+  return project.id || normalizeTerm(project.customTitle || project.title || "");
+}
+
+function selectResumeProjects(profile, matchResult, rules) {
+  const selected = [...(matchResult.selectedProjects || []), ...(profile.projects || [])];
+  const seen = new Set();
+  return selected
+    .filter((project) => project && String(project.title || project.customTitle || "").trim())
+    .filter((project) => {
+      const key = projectIdentity(project);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map(toProjectShape)
+    .slice(0, rules.maxProjects);
+}
+
 function toEducationShape(education) {
   return {
     id: education.id,
@@ -131,7 +150,7 @@ function toCertificationShape(certification) {
 }
 
 function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
-  const projects = (matchResult.selectedProjects || []).map(toProjectShape).slice(0, rules.maxProjects);
+  const projects = selectResumeProjects(profile, matchResult, rules);
 
   const learningItems = rankLearningItems(profile, matchResult, rules.maxLearningItems, { includeUnmatched: true });
 
@@ -166,13 +185,13 @@ function compileResume({ profile, matchResult, rules = RESUME_LAYOUT_RULES }) {
     },
     summary: profile.summary || "",
     education: (profile.educations || []).map(toEducationShape),
-    projects,
     experiences: (profile.experiences || []).map((experience) => ({
       title: `${experience.role} | ${experience.company}`,
       period: experience.period,
       workload: experience.workload || "",
       description: experience.description || "",
     })),
+    projects,
     skillsInline,
     courses,
     certifications,
@@ -189,6 +208,7 @@ module.exports = {
   parseHours,
   parseMostRecentYear,
   collectLearnedSkillItems,
+  selectResumeProjects,
   MIN_PROJECTS,
   MIN_LEARNING_ITEMS,
   MIN_SKILLS,

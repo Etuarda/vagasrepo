@@ -219,6 +219,15 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
       ctx.y -= 4;
     });
   }
+  if (resume.experiences.length) {
+    section(ctx, "Experiencia profissional");
+    resume.experiences.forEach((item) => {
+      write(ctx, item.title, { font: bold });
+      write(ctx, [item.period, item.workload].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
+      bullet(ctx, item.description);
+      ctx.y -= 4;
+    });
+  }
   if (resume.projects.length) {
     section(ctx, "Projetos");
     resume.projects.forEach((item) => {
@@ -228,15 +237,6 @@ async function generateOptimizedResumePdf({ profile, matchResult, compiledResume
         { label: item.deployUrl, uri: toUrl(item.deployUrl) },
       ], { size: 10.5 });
       write(ctx, item.summary);
-      ctx.y -= 4;
-    });
-  }
-  if (resume.experiences.length) {
-    section(ctx, "Experiencia profissional");
-    resume.experiences.forEach((item) => {
-      write(ctx, item.title, { font: bold });
-      write(ctx, [item.period, item.workload].filter(Boolean).join(" | "), { size: 10, color: ctx.muted, lineHeight: 13 });
-      bullet(ctx, item.description);
       ctx.y -= 4;
     });
   }

@@ -131,11 +131,30 @@ describe("resume compiler", () => {
     const keys = Object.keys(resume);
     expect(keys.indexOf("header")).toBeLessThan(keys.indexOf("summary"));
     expect(keys.indexOf("summary")).toBeLessThan(keys.indexOf("education"));
-    expect(keys.indexOf("education")).toBeLessThan(keys.indexOf("projects"));
-    expect(keys.indexOf("projects")).toBeLessThan(keys.indexOf("experiences"));
-    expect(keys.indexOf("experiences")).toBeLessThan(keys.indexOf("skillsInline"));
+    expect(keys.indexOf("education")).toBeLessThan(keys.indexOf("experiences"));
+    expect(keys.indexOf("experiences")).toBeLessThan(keys.indexOf("projects"));
+    expect(keys.indexOf("projects")).toBeLessThan(keys.indexOf("skillsInline"));
     expect(keys.indexOf("skillsInline")).toBeLessThan(keys.indexOf("courses"));
     expect(keys.indexOf("courses")).toBeLessThan(keys.indexOf("languagesInline"));
+  });
+
+  it("completa o curriculo com ate 2 projetos usando projetos cadastrados no perfil", () => {
+    const resume = compileResume({
+      profile: {
+        ...profile,
+        projects: [
+          { id: "p1", title: "API", shortDescription: "Resumo do projeto selecionado." },
+          { id: "p2", title: "Dashboard", shortDescription: "Resumo do segundo projeto cadastrado." },
+          { id: "p3", title: "CLI", shortDescription: "Resumo do terceiro projeto cadastrado." },
+        ],
+      },
+      matchResult: {
+        ...match,
+        selectedProjects: [{ id: "p1", title: "API", shortDescription: "Resumo do projeto selecionado." }],
+      },
+    });
+
+    expect(resume.projects.map((project) => project.id)).toEqual(["p1", "p2"]);
   });
 
   it("compileResume inclui cursos mesmo sem match perfeito com a vaga", () => {
