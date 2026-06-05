@@ -52,7 +52,7 @@ async function loginUser({ email, password }) {
     throw err;
   }
 
-  const token = jwt.sign({ id: user.id }, env.JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL_SECONDS });
+  const token = jwt.sign({ id: user.id }, env.JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL_SECONDS, algorithm: "HS256" });
   await sessionService.createSession(
     user.id,
     token,

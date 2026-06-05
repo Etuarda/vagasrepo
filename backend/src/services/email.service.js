@@ -88,7 +88,7 @@ async function sendRefundConfirmationEmail(user) {
   });
 }
 
-const SUPPORT_EMAIL = "eduardadeveloperr@gmail.com";
+const SUPPORT_EMAIL = env.SUPPORT_EMAIL;
 
 async function sendSupportEmail({ userName, userEmail, subject, message }) {
   if (!env.RESEND_API_KEY || !env.EMAIL_FROM) {

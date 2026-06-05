@@ -1,5 +1,6 @@
 const { prisma } = require("../lib/prisma");
 const asaasService = require("./asaas.service");
+const { decrypt } = require("../lib/crypto");
 
 const CREDIT_PACKAGE = Object.freeze({
   credits: 500,
@@ -16,7 +17,8 @@ function creditsError(message, statusCode = 400, code = "CREDITS_ERROR") {
 
 async function getOrCreateAsaasCustomer(userId, db = prisma) {
   const user = await db.user.findUnique({ where: { id: userId } });
-  if (!user?.cpfCnpj) {
+  const rawCpf = decrypt(user?.cpfCnpj || "");
+  if (!rawCpf) {
     throw creditsError("Informe CPF/CNPJ antes de comprar creditos.", 400, "CPF_CNPJ_REQUIRED");
   }
 
@@ -28,7 +30,7 @@ async function getOrCreateAsaasCustomer(userId, db = prisma) {
   const customer = await asaasService.createCustomer({
     name: user.name,
     email: user.email,
-    cpfCnpj: user.cpfCnpj,
+    cpfCnpj: rawCpf,
     mobilePhone: user.phone || undefined,
   });
 

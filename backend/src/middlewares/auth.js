@@ -18,7 +18,7 @@ async function authMiddleware(req, res, next) {
   if (!token) return res.status(401).json({ error: "Sessao nao fornecida" });
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET);
+    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] });
     const active = await sessionService.validateSession(decoded.id, token);
     if (!active) return res.status(401).json({ error: "Sessao invalida" });
     req.userId = decoded.id;

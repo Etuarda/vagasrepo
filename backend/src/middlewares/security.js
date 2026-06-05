@@ -97,11 +97,12 @@ function rateLimit({ windowMs, max, keyPrefix = "default" }) {
 
 function metricsEndpoint(req, res) {
   const expectedToken = process.env.METRICS_TOKEN;
-  if (expectedToken) {
-    const providedToken = req.headers["x-metrics-token"] || req.query?.token;
-    if (providedToken !== expectedToken) {
-      return res.status(401).type("text/plain").send("Unauthorized\n");
-    }
+  if (!expectedToken) {
+    return res.status(503).type("text/plain").send("Metrics nao configurado. Defina METRICS_TOKEN.\n");
+  }
+  const providedToken = req.headers["x-metrics-token"] || req.query?.token;
+  if (providedToken !== expectedToken) {
+    return res.status(401).type("text/plain").send("Unauthorized\n");
   }
 
   const averageDuration = metrics.requests ? metrics.durationMs / metrics.requests : 0;

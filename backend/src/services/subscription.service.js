@@ -1,5 +1,6 @@
 const { prisma } = require("../lib/prisma");
 const { PLAN_KEYS, FEATURES, PLAN_RULES, PLAN_DETAILS } = require("../constants/subscription-plans");
+const { decrypt } = require("../lib/crypto");
 
 function planError(message, statusCode, code) {
   const err = new Error(message);
@@ -82,14 +83,16 @@ async function getPlanContext(userId, db = prisma) {
       rules: PLAN_RULES[key],
     })),
     coupon: subscription.coupon ? { code: subscription.coupon.code } : null,
-    billingProfile: {
-      name: billingUser?.name || "",
-      email: billingUser?.email || "",
-      cpfCnpj: billingUser?.cpfCnpj
-        ? billingUser.cpfCnpj.replace(/^(\d{3})\d{3}(\d{3})(\d{2})$/, "$1.***.***-$3")
-        : "",
-      cpfConfigured: !!billingUser?.cpfCnpj,
-    },
+    billingProfile: (() => {
+      const rawCpf = decrypt(billingUser?.cpfCnpj || "");
+      const masked = rawCpf.replace(/^(\d{3})\d{3}(\d{3})(\d{2})$/, "$1.***.***-$3");
+      return {
+        name: billingUser?.name || "",
+        email: billingUser?.email || "",
+        cpfCnpj: masked || "",
+        cpfConfigured: rawCpf.length === 11,
+      };
+    })(),
     features: {
       [FEATURES.MATCHING_ANALYSIS]: true,
       [FEATURES.SHARED_MATCHED_JOBS]: rules.sharedMatchedJobs,

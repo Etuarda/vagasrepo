@@ -16,6 +16,8 @@ const envSchema = z.object({
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
   ASAAS_SUCCESS_URL: z.string().url().optional(),
   ASAAS_FAILURE_URL: z.string().url().optional(),
+  SUPPORT_EMAIL: z.string().email().default("eduardadeveloperr@gmail.com"),
+  CPF_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
 }).superRefine((data, ctx) => {
   if (data.ASAAS_ENV === "production") {
     if (!data.ASAAS_API_KEY) {
@@ -37,6 +39,13 @@ const envSchema = z.object({
         code: z.ZodIssueCode.custom,
         path: ["CORS_ORIGIN"],
         message: "CORS_ORIGIN e obrigatorio quando ASAAS_ENV=production",
+      });
+    }
+    if (!data.CPF_ENCRYPTION_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["CPF_ENCRYPTION_KEY"],
+        message: "CPF_ENCRYPTION_KEY (64 hex chars) e obrigatorio quando ASAAS_ENV=production",
       });
     }
   }

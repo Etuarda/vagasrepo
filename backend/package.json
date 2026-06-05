@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "seed:beta": "node scripts/seed-beta-coupon.js"
+    "seed:beta": "node scripts/seed-beta-coupon.js",
+    "encrypt:cpfs": "node scripts/encrypt-existing-cpfs.js"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",

@@ -7,6 +7,7 @@ const subscriptionService = require("./subscription.service");
 const couponService = require("./coupon.service");
 const asaasService = require("./asaas.service");
 const emailService = require("./email.service");
+const { encrypt, decrypt } = require("../lib/crypto");
 
 const PAID_EVENTS = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]);
 const PROBLEM_EVENTS = Object.freeze({
@@ -36,7 +37,7 @@ function digits(value) {
 async function saveBillingProfile(userId, { name, cpfCnpj, email }) {
   const normalized = digits(cpfCnpj);
   if (!isValidCpf(normalized)) throw billingError("CPF invalido.");
-  await prisma.user.update({ where: { id: userId }, data: { name, cpfCnpj: normalized, email } });
+  await prisma.user.update({ where: { id: userId }, data: { name, cpfCnpj: encrypt(normalized), email } });
   return { saved: true };
 }
 
@@ -69,7 +70,8 @@ async function createCheckout(userId, { plan, couponCode }) {
   if (!user.name?.trim() || !user.email?.trim()) {
     throw billingError("Informe nome completo e e-mail nos dados de cobranca antes de assinar.");
   }
-  if (!isValidCpf(user.cpfCnpj || "")) {
+  const rawCpf = decrypt(user.cpfCnpj || "");
+  if (!isValidCpf(rawCpf)) {
     throw billingError("Informe um CPF valido nos dados de cobranca antes de assinar.");
   }
 
@@ -133,7 +135,7 @@ async function createCheckout(userId, { plan, couponCode }) {
     const customer = await asaasService.createCustomer({
       name: user.name,
       email: user.email,
-      cpfCnpj: digits(user.cpfCnpj),
+      cpfCnpj: digits(rawCpf),
       mobilePhone: digits(user.phone),
     });
     providerCustomerId = customer.id;
