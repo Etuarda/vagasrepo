@@ -147,6 +147,21 @@ describe("job match evaluator", () => {
     expect(result.scores.skills).toBe(0);
   });
 
+  it("faz matching de habilidades com variacoes de espaco, separador e caixa", () => {
+    const result = evaluateJobMatch({
+      profile: baseProfile({
+        skillItems: [{ name: "CleanCode" }],
+        projects: [],
+      }),
+      jobTitle: "Backend",
+      jobDescription: "Vaga exige CLEAN CODE e boas praticas.",
+    });
+
+    expect(result.jobKeywords).toContain("clean-code");
+    expect(result.matchedSkills).toEqual(["CleanCode"]);
+    expect(result.missingSkills).not.toContain("clean-code");
+  });
+
   it("matching individual usa a mesma logica exposta pelo avaliador", () => {
     const profile = baseProfile();
     const metadata = { jobTitle: "Backend Junior", company: "Empresa" };

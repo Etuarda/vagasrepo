@@ -1,4 +1,4 @@
-const { TECH_ALIASES, CATEGORY_KEYWORDS } = require("../../shared/constants/tech-dictionary");
+const { TECH_ALIASES, CATEGORY_KEYWORDS, TRANSVERSAL_SKILLS } = require("../../shared/constants/tech-dictionary");
 
 function stripDiacritics(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -7,24 +7,49 @@ function stripDiacritics(value) {
 function basicNormalize(value) {
   return stripDiacritics(value)
     .toLowerCase()
+    .replace(/_/g, " ")
     .replace(/[^\w\s./+#-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
+function compactNormalize(value) {
+  return basicNormalize(value).replace(/[\s._/+#-]+/g, "");
+}
+
+function aliasVariants(value) {
+  const basic = basicNormalize(value);
+  const words = basic.replace(/[._/+#-]+/g, " ").split(/\s+/).filter(Boolean);
+  const variants = new Set([basic, compactNormalize(value)]);
+  if (words.length > 1) {
+    [" ", "-", ".", "_", "/", ""].forEach((separator) => variants.add(words.join(separator)));
+  }
+  return [...variants].filter(Boolean);
+}
+
+function technicalAliasEntries() {
+  const entries = new Map();
+  Object.entries(TECH_ALIASES).forEach(([canonical, aliases]) => {
+    [canonical, ...aliases].flatMap(aliasVariants).forEach((alias) => {
+      entries.set(`${canonical}:${alias}`, { canonical, alias });
+    });
+  });
+  return [...entries.values()];
+}
+
 function normalizeTerm(value) {
   const input = basicNormalize(value);
+  const compactInput = compactNormalize(value);
   for (const [canonical, aliases] of Object.entries(TECH_ALIASES)) {
-    if (aliases.some((alias) => input === basicNormalize(alias))) return canonical;
+    const variants = [canonical, ...aliases].flatMap(aliasVariants);
+    if (variants.some((alias) => input === alias || compactInput === compactNormalize(alias))) return canonical;
   }
   return input.replace(/\s+/g, "-");
 }
 
 function normalizeText(value) {
   let output = ` ${basicNormalize(value)} `;
-  const aliases = Object.entries(TECH_ALIASES).flatMap(([canonical, values]) =>
-    values.map((alias) => ({ canonical, alias: basicNormalize(alias) }))
-  );
+  const aliases = technicalAliasEntries();
 
   aliases.sort((a, b) => b.alias.length - a.alias.length).forEach(({ canonical, alias }) => {
     const expression = new RegExp(`(^|\\s)${escapeRegExp(alias)}(?=\\s|[.,;/]|$)`, "g");
@@ -39,7 +64,7 @@ function escapeRegExp(value) {
 }
 
 function vocabulary() {
-  return [...new Set(Object.values(CATEGORY_KEYWORDS).flat())];
+  return [...new Set([...Object.values(CATEGORY_KEYWORDS).flat(), ...(TRANSVERSAL_SKILLS || [])])];
 }
 
 function extractTechnicalKeywords(value) {

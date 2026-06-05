@@ -9,6 +9,17 @@ describe("keyword normalizer", () => {
     expect(normalizeText("API REST com Power BI e Docker Compose")).toContain("docker-compose");
   });
 
+  it("trata variacoes de espaco, separador e caixa como a mesma habilidade", () => {
+    expect(normalizeTerm("CleanCode")).toBe("clean-code");
+    expect(normalizeTerm("clean code")).toBe("clean-code");
+    expect(normalizeTerm("CLEAN CODE")).toBe("clean-code");
+    expect(normalizeTerm("clean-code")).toBe("clean-code");
+    expect(normalizeTerm("clean_code")).toBe("clean-code");
+    expect(normalizeTerm("clean.code")).toBe("clean-code");
+    expect(normalizeText("CleanCode, CLEAN CODE e clean-code")).toContain("clean-code");
+    expect(extractTechnicalKeywords("Vaga com CleanCode e boas praticas.")).toContain("clean-code");
+  });
+
   it("classifica vaga backend por keywords reconhecidas", () => {
     const result = classifyJob("Backend Node.js, Express, APIs REST, JWT, Prisma e PostgreSQL.");
     expect(result.category).toBe("backend");
