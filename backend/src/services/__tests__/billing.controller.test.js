@@ -27,14 +27,14 @@ describe("billing controller", () => {
     expect(res.json).toHaveBeenCalledWith(context);
   });
 
-  it("inicia checkout pago sem aceitar plano Free", async () => {
-    billingService.createCheckout.mockResolvedValue({ provider: "asaas", plan: "premium" });
+  it("retorna 410 Gone pois endpoint de checkout foi descontinuado", async () => {
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
-    await checkout({ userId: "user", body: { plan: "premium", couponCode: "DUDA50" } }, res, jest.fn());
+    await checkout({}, res, jest.fn());
 
-    expect(billingService.createCheckout).toHaveBeenCalledWith("user", { plan: "premium", couponCode: "DUDA50" });
-    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.status).toHaveBeenCalledWith(410);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "ENDPOINT_GONE" }));
+    expect(billingService.createCheckout).not.toHaveBeenCalled();
   });
 
   it("salva documento de cobranca em endpoint separado", async () => {

@@ -3,7 +3,7 @@ const asaasService = require("./asaas.service");
 
 const CREDIT_PACKAGE = Object.freeze({
   credits: 500,
-  priceCents: 2490,
+  priceCents: 2990,
   label: "500 matchings avulsos",
 });
 

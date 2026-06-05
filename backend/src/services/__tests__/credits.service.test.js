@@ -44,7 +44,7 @@ describe("credits service", () => {
       expect(asaasService.createCustomer).not.toHaveBeenCalled();
       expect(asaasService.createPixCharge).toHaveBeenCalledWith(expect.objectContaining({
         customerId: "cus_abc",
-        value: 24.9,
+        value: 29.9,
       }));
       expect(result.pixQrCodeImage).toBe("base64img");
       expect(result.pixCopyPaste).toBe("00020126...");
@@ -76,7 +76,7 @@ describe("credits service", () => {
           userId: "user",
           status: "pending",
           credits: 500,
-          priceCents: 2490,
+          priceCents: 2990,
           asaasChargeId: "charge_abc",
         }),
       }));

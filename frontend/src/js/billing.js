@@ -181,21 +181,8 @@ export const billing = {
     return result;
   },
 
-  async checkout(plan, couponCode) {
-    const body = { plan };
-    if (couponCode.trim()) body.couponCode = couponCode.trim();
-    const result = await api(
-      "/billing/checkout",
-      { method: "POST", body: JSON.stringify(body) },
-      state.token
-    );
-    if (result.invoiceUrl) {
-      window.location.href = result.invoiceUrl;
-      return result;
-    }
-    await this.load();
-    ui.notify(result.status === "active" ? "Plano ativado com cupom." : "Assinatura criada. Aguarde a geracao da cobranca pelo Asaas.");
-    return result;
+  async checkout() {
+    return this.buyCredits();
   },
 
   async buyCredits() {
@@ -217,7 +204,7 @@ export const billing = {
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = "Comprar 500 matchings — R$ 24,90";
+        btn.textContent = "Comprar 500 matchings — R$ 29,90";
       }
     }
   },

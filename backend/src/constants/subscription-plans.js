@@ -21,7 +21,7 @@ const PLAN_RULES = Object.freeze({
     applicationTracking: false,
   }),
   [PLAN_KEYS.PREMIUM]: Object.freeze({
-    priceCents: 2490,
+    priceCents: 2990,
     matchingLimit: 500,
     matchingPeriod: "monthly",
     maxSubprofiles: 10,
@@ -45,7 +45,7 @@ const PLAN_DETAILS = Object.freeze({
   }),
   [PLAN_KEYS.PREMIUM]: Object.freeze({
     name: "Pro",
-    priceLabel: "R$ 24,90/mes",
+    priceLabel: "R$ 29,90/mes",
     description: "Acesso completo com todas as funcionalidades.",
     benefits: [
       "500 analises de matching por mes",
@@ -53,6 +53,8 @@ const PLAN_DETAILS = Object.freeze({
       "Acesso ao mural de vagas compartilhadas",
       "Acompanhamento de candidaturas sem limite visivel",
       "Geracao de curriculos otimizados",
+      "Historico de analises",
+      "Suporte ao Perfil Global e subperfis",
     ],
   }),
 });

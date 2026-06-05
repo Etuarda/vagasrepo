@@ -12,14 +12,8 @@ async function me(req, res, next) {
   }
 }
 
-async function checkout(req, res, next) {
-  try {
-    const payload = checkoutSchema.parse(req.body);
-    const result = await billingService.createCheckout(req.userId, payload);
-    return res.status(result.status === "active" ? 200 : 201).json(result);
-  } catch (err) {
-    return next(err);
-  }
+async function checkout(req, res) {
+  return res.status(410).json({ message: "Endpoint descontinuado. Use POST /billing/credits/checkout.", code: "ENDPOINT_GONE" });
 }
 
 async function saveCustomer(req, res, next) {
