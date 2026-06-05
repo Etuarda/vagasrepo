@@ -150,6 +150,21 @@ function renderBillingProfile(context) {
   if (cpfInput && profile.cpfCnpj) cpfInput.value = profile.cpfCnpj;
 }
 
+function isRefundEligible(context) {
+  if (context.plan !== "premium" || context.subscription?.status !== "active") return false;
+  if (context.subscription?.provider !== "asaas") return false;
+  const start = context.subscription?.currentPeriodStart;
+  if (!start) return false;
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  return Date.now() - new Date(start).getTime() <= sevenDaysMs;
+}
+
+function renderRefundSection(context) {
+  const section = document.getElementById("billing-refund-section");
+  if (!section) return;
+  section.classList.toggle("hidden", !isRefundEligible(context));
+}
+
 function renderCancelSection(context) {
   const section = document.getElementById("billing-cancel-section");
   if (!section) return;
@@ -186,6 +201,7 @@ function render() {
   renderLimitCards(context);
   renderPlanCards(context);
   renderBillingProfile(context);
+  renderRefundSection(context);
   renderCancelSection(context);
   syncSubprofileCreation(context);
 }
@@ -250,6 +266,28 @@ export const billing = {
       });
     }
 
+    const refundBtn = document.getElementById("btn-request-refund");
+    const refundConfirm = document.getElementById("billing-refund-confirm");
+    const refundConfirmBtn = document.getElementById("btn-refund-confirm");
+    const refundAbortBtn = document.getElementById("btn-refund-abort");
+
+    if (refundBtn && refundConfirm) {
+      refundBtn.addEventListener("click", () => {
+        refundConfirm.classList.remove("hidden");
+        refundBtn.classList.add("hidden");
+        refundConfirm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    }
+    if (refundAbortBtn && refundConfirm && refundBtn) {
+      refundAbortBtn.addEventListener("click", () => {
+        refundConfirm.classList.add("hidden");
+        refundBtn.classList.remove("hidden");
+      });
+    }
+    if (refundConfirmBtn) {
+      refundConfirmBtn.addEventListener("click", () => this.requestRefund());
+    }
+
     const cancelBtn = document.getElementById("btn-cancel-subscription");
     const confirmSection = document.getElementById("billing-cancel-confirm");
     const confirmBtn = document.getElementById("btn-cancel-confirm");
@@ -272,6 +310,27 @@ export const billing = {
 
     if (confirmBtn) {
       confirmBtn.addEventListener("click", () => this.cancelSubscription());
+    }
+  },
+
+  async requestRefund() {
+    const confirmBtn = document.getElementById("btn-refund-confirm");
+    const abortBtn = document.getElementById("btn-refund-abort");
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = "Processando..."; }
+    if (abortBtn) abortBtn.disabled = true;
+    try {
+      await api("/billing/refund", { method: "POST" }, state.token);
+      await this.load();
+      ui.notify("Estorno solicitado. O valor sera devolvido em ate 7 dias uteis.");
+    } catch (err) {
+      ui.notify(err.message || "Erro ao solicitar estorno.");
+      const refundConfirm = document.getElementById("billing-refund-confirm");
+      const refundBtn = document.getElementById("btn-request-refund");
+      if (refundConfirm) refundConfirm.classList.add("hidden");
+      if (refundBtn) refundBtn.classList.remove("hidden");
+    } finally {
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = "Confirmar estorno"; }
+      if (abortBtn) abortBtn.disabled = false;
     }
   },
 

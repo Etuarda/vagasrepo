@@ -75,4 +75,48 @@ async function sendPasswordResetEmail(user, token) {
   return {};
 }
 
-module.exports = { sendPasswordResetEmail, resetUrl, resetEmailIdempotencyKey, isTestingSender, canSendWithTestingSender };
+async function sendRefundConfirmationEmail(user) {
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return;
+  if (env.NODE_ENV === "production" && isTestingSender() && !canSendWithTestingSender(user.email)) return;
+  const safeName = escapeHtml(user.name);
+  await getResendClient().emails.send({
+    from: env.EMAIL_FROM,
+    to: [user.email],
+    subject: "Solicitacao de estorno recebida - Vagas.io",
+    text: `Ola, ${user.name}. Recebemos sua solicitacao de estorno. O valor sera estornado em ate 7 dias uteis, conforme o seu banco.`,
+    html: `<p>Ola, ${safeName}.</p><p>Recebemos sua solicitacao de estorno. O valor sera estornado em ate 7 dias uteis, conforme o processamento do seu banco.</p><p>Se tiver duvidas, entre em contato pelo suporte.</p>`,
+  });
+}
+
+const SUPPORT_EMAIL = "eduardadeveloperr@gmail.com";
+
+async function sendSupportEmail({ userName, userEmail, subject, message }) {
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) {
+    if (env.NODE_ENV !== "production") return;
+    const err = new Error("Servico de e-mail nao configurado.");
+    err.statusCode = 503;
+    throw err;
+  }
+  const safeName = escapeHtml(userName);
+  const safeEmail = escapeHtml(userEmail);
+  const safeSubject = escapeHtml(subject);
+  const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+  await getResendClient().emails.send({
+    from: env.EMAIL_FROM,
+    to: [SUPPORT_EMAIL],
+    replyTo: userEmail,
+    subject: `[Suporte Vagas.io] ${subject}`,
+    text: `De: ${userName} <${userEmail}>\nAssunto: ${subject}\n\n${message}`,
+    html: `<p><strong>De:</strong> ${safeName} &lt;${safeEmail}&gt;</p><p><strong>Assunto:</strong> ${safeSubject}</p><hr><p>${safeMessage}</p>`,
+  });
+}
+
+module.exports = {
+  sendPasswordResetEmail,
+  sendRefundConfirmationEmail,
+  sendSupportEmail,
+  resetUrl,
+  resetEmailIdempotencyKey,
+  isTestingSender,
+  canSendWithTestingSender,
+};

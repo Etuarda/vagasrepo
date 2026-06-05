@@ -4,6 +4,7 @@ import { auth } from "./auth.js";
 import { jobs } from "./jobs.js";
 import { career } from "./career.js";
 import { billing } from "./billing.js";
+import { support } from "./support.js";
 
 async function runWithFeedback(button, options, action) {
   const target = button || null;
@@ -403,6 +404,7 @@ function wireEvents() {
   }
 
   billing.initPixCopyEvent();
+  support.init();
 
   document.querySelectorAll("[data-cancel-edit]").forEach((button) => {
     button.addEventListener("click", () => career.cancelEdit(button.dataset.cancelEdit));

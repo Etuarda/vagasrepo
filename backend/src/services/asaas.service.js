@@ -86,6 +86,12 @@ function cancelSubscription(subscriptionId) {
   });
 }
 
+function refundPayment(paymentId) {
+  return requestAsaas(`/payments/${encodeURIComponent(paymentId)}/refund`, {
+    method: "POST",
+  });
+}
+
 module.exports = {
   requestAsaas,
   createCustomer,
@@ -94,4 +100,5 @@ module.exports = {
   createPixCharge,
   getPixQrCode,
   cancelSubscription,
+  refundPayment,
 };

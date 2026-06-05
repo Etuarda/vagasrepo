@@ -90,6 +90,9 @@
         <button type="button" data-dashboard-tab="shared-jobs" class="dashboard-tab shrink-0 px-4 sm:px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
           Vagas compartilhadas
         </button>
+        <button type="button" data-dashboard-tab="support" class="dashboard-tab shrink-0 px-4 sm:px-5 py-3 rounded-full border border-borderLight text-[10px] font-bold uppercase tracking-[0.25em]">
+          Ajuda e suporte
+        </button>
       </div>
 
       <div id="panel-jobs" data-dashboard-panel="jobs" class="space-y-8 sm:space-y-12 lg:space-y-16">
@@ -429,6 +432,24 @@
             </div>
           </section>
 
+          <section id="billing-refund-section" class="hidden border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-4" aria-label="Solicitacao de estorno">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Estorno</p>
+              <h3 class="font-serif text-3xl mt-2">Solicitar estorno.</h3>
+              <p class="text-sm text-taupe mt-2">Disponivel nos primeiros 7 dias apos a ativacao do plano. O valor e estornado em ate 7 dias uteis, conforme o seu banco. O acesso Pro e encerrado imediatamente apos a solicitacao.</p>
+            </div>
+            <div id="billing-refund-confirm" class="hidden space-y-3 border-t border-borderLight pt-4">
+              <p class="text-sm font-medium">Confirma a solicitacao de estorno? Seu acesso Pro sera removido.</p>
+              <div class="flex gap-3">
+                <button id="btn-refund-confirm" type="button" class="bg-ink text-paper px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Confirmar estorno</button>
+                <button id="btn-refund-abort" type="button" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Cancelar</button>
+              </div>
+            </div>
+            <button id="btn-request-refund" type="button" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
+              Solicitar estorno
+            </button>
+          </section>
+
           <section id="billing-cancel-section" class="hidden border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-4" aria-label="Cancelamento de assinatura">
             <div>
               <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Cancelamento</p>
@@ -445,6 +466,30 @@
             <button id="btn-cancel-subscription" type="button" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">
               Cancelar assinatura
             </button>
+          </section>
+        </div>
+      </section>
+
+      <section id="panel-support" data-dashboard-panel="support" class="hidden space-y-8" aria-labelledby="support-title">
+        <div class="editorial-card rounded-2xl sm:rounded-3xl editorial-shadow p-4 sm:p-8 lg:p-10 space-y-8">
+          <header class="max-w-4xl">
+            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-stone">Ajuda</p>
+            <h2 id="support-title" class="font-serif text-4xl sm:text-5xl tracking-tight mt-3">Suporte.</h2>
+            <p class="text-sm text-taupe leading-relaxed mt-4">Descreva sua duvida ou problema e responderemos pelo e-mail cadastrado.</p>
+          </header>
+          <section class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-label="Formulario de suporte">
+            <form id="form-support" class="space-y-4 max-w-2xl">
+              <div class="space-y-2">
+                <label for="support-subject" class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Assunto *</label>
+                <input id="support-subject" class="editorial-input text-sm w-full" placeholder="Ex: Problema com pagamento, duvida sobre matching..." required maxlength="100" />
+              </div>
+              <div class="space-y-2">
+                <label for="support-message" class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Mensagem *</label>
+                <textarea id="support-message" class="editorial-input text-sm w-full h-32 resize-none" placeholder="Descreva com detalhes..." required minlength="10" maxlength="2000"></textarea>
+                <p class="text-xs text-taupe text-right"><span id="support-msg-count">0</span>/2000</p>
+              </div>
+              <button type="submit" class="bg-ink text-paper px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Enviar mensagem</button>
+            </form>
           </section>
         </div>
       </section>

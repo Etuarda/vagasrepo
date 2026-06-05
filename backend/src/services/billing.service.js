@@ -6,6 +6,7 @@ const { isValidCpf } = require("../schemas/billing.schema");
 const subscriptionService = require("./subscription.service");
 const couponService = require("./coupon.service");
 const asaasService = require("./asaas.service");
+const emailService = require("./email.service");
 
 const PAID_EVENTS = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]);
 const PROBLEM_EVENTS = Object.freeze({
@@ -288,6 +289,41 @@ async function processAsaasWebhook(payload, receivedToken) {
   });
 }
 
+const REFUND_WINDOW_DAYS = 7;
+
+async function requestRefund(userId) {
+  const subscription = await prisma.subscription.findUnique({ where: { userId } });
+
+  if (!subscription || subscription.status !== "active" || subscription.provider !== "asaas") {
+    throw billingError("Nenhuma assinatura elegivel para estorno.", 400, "NOT_ELIGIBLE_FOR_REFUND");
+  }
+  if (!subscription.providerPaymentId) {
+    throw billingError("Pagamento nao encontrado para estorno.", 400, "NO_PAYMENT_ID");
+  }
+
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - REFUND_WINDOW_DAYS);
+  if (!subscription.currentPeriodStart || new Date(subscription.currentPeriodStart) < windowStart) {
+    throw billingError(
+      `Estorno disponivel apenas nos primeiros ${REFUND_WINDOW_DAYS} dias apos a assinatura.`,
+      400,
+      "REFUND_WINDOW_EXPIRED"
+    );
+  }
+
+  await asaasService.refundPayment(subscription.providerPaymentId);
+  await prisma.subscription.update({
+    where: { id: subscription.id },
+    data: { status: "refunded", plan: PLAN_KEYS.FREE, pendingPlan: null },
+  });
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+  if (user) emailService.sendRefundConfirmationEmail(user).catch(() => {});
+
+  console.log(JSON.stringify({ event: "refund_requested", userId, subscriptionId: subscription.id }));
+  return { refunded: true };
+}
+
 async function cancelSubscription(userId) {
   const subscription = await prisma.subscription.findUnique({ where: { userId } });
   if (!subscription?.providerSubscriptionId || subscription.status !== "active") {
@@ -305,6 +341,7 @@ async function cancelSubscription(userId) {
 module.exports = {
   createCheckout,
   saveBillingProfile,
+  requestRefund,
   cancelSubscription,
   processAsaasWebhook,
   assertWebhookToken,

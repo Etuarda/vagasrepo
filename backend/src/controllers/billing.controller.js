@@ -41,6 +41,15 @@ async function asaasWebhook(req, res, next) {
   }
 }
 
+async function refund(req, res, next) {
+  try {
+    const result = await billingService.requestRefund(req.userId);
+    return res.json(result);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function cancel(req, res, next) {
   try {
     const result = await billingService.cancelSubscription(req.userId);
@@ -50,4 +59,4 @@ async function cancel(req, res, next) {
   }
 }
 
-module.exports = { me, checkout, saveCustomer, cancel, asaasWebhook };
+module.exports = { me, checkout, saveCustomer, refund, cancel, asaasWebhook };
