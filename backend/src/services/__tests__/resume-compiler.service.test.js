@@ -69,6 +69,27 @@ describe("resume compiler", () => {
     expect(resume.certifications[0]).not.toHaveProperty("learnedSkills");
   });
 
+  it("ordena habilidades alfabeticamente no curriculo otimizado", () => {
+    const resume = compileResume({
+      profile: {
+        ...profile,
+        skillItems: [
+          { name: "PostgreSQL" },
+          { name: "Docker" },
+          { name: "APIs REST" },
+          { name: "Node.js" },
+        ],
+      },
+      matchResult: {
+        ...match,
+        matchedSkills: ["PostgreSQL", "Docker", "APIs REST", "Node.js"],
+        jobKeywords: ["postgresql", "docker", "api-rest", "nodejs"],
+      },
+    });
+
+    expect(resume.skillsInline.split(", ")).toEqual(["APIs REST", "Docker", "Node.js", "PostgreSQL", "SQL"]);
+  });
+
   it("nao usa descricao legada como resumo de projeto", () => {
     const resume = compileResume({
       profile,
@@ -102,6 +123,24 @@ describe("resume compiler", () => {
     const ranked = rankLearningItems(items, { jobKeywords: ["nodejs"] }, 5);
     expect(ranked[0].id).toBe("cert1");
     expect(ranked[0].itemType).toBe("certification");
+  });
+
+  it("ordena cursos e certificacoes do mais recente para o mais antigo", () => {
+    const { rankLearningItems } = require("../../modules/resume/resume-compiler.service");
+    const items = {
+      courses: [
+        { id: "course-2022", title: "Node 2022", period: "2022", workload: "120h", learnedSkills: ["Node.js"] },
+        { id: "course-2025", title: "Node 2025", period: "2025", workload: "120h", learnedSkills: ["Node.js"] },
+      ],
+      certifications: [
+        { id: "cert-2024", title: "Node Cert 2024", period: "2024", workload: "120h", learnedSkills: ["Node.js"] },
+      ],
+    };
+
+    const ranked = rankLearningItems(items, { jobKeywords: ["nodejs"] }, 5);
+
+    expect(ranked.map((item) => item.id)).toEqual(["course-2025", "cert-2024", "course-2022"]);
+    expect(ranked.map((item) => item.period)).toEqual(["2025", "2024", "2022"]);
   });
 
   it("penaliza curso abaixo de 100h na pontuacao", () => {

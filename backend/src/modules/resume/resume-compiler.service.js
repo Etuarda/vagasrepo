@@ -12,6 +12,10 @@ function uniqueByNormalized(values) {
   });
 }
 
+function compareSkillNames(a, b) {
+  return String(a.name || a).localeCompare(String(b.name || b), "pt-BR", { sensitivity: "base" });
+}
+
 function compileSkills(profile, matchResult, rules) {
   const catalogItems = [
     ...(profile.skillItems || (profile.skills || []).map((name) => ({ name, category: "other" }))),
@@ -29,7 +33,8 @@ function compileSkills(profile, matchResult, rules) {
   const targeted = matched.length || (matchResult.jobKeywords || []).length ? matched : [...catalog.values()];
   const ordered = uniqueByNormalized([...targeted, ...transversal, ...catalog.values()])
     .filter((skill) => !stackLabels.has(normalizeTerm(skill.name)))
-    .slice(0, rules.maxSkills);
+    .slice(0, rules.maxSkills)
+    .sort(compareSkillNames);
   return ordered.map((skill) => skill.name).join(", ");
 }
 
@@ -77,7 +82,11 @@ function rankLearningItems({ courses = [], certifications = [] }, matchResult, l
     return { ...item, matchedKeywords, score };
   })
     .filter((item) => includeUnmatched || item.matchedKeywords.length)
-    .sort((a, b) => b.matchedKeywords.length - a.matchedKeywords.length || b.score - a.score)
+    .sort((a, b) =>
+      parseMostRecentYear(b.period) - parseMostRecentYear(a.period) ||
+      b.matchedKeywords.length - a.matchedKeywords.length ||
+      b.score - a.score
+    )
     .slice(0, limit);
 }
 
@@ -207,6 +216,7 @@ module.exports = {
   rankLearningItems,
   parseHours,
   parseMostRecentYear,
+  compareSkillNames,
   collectLearnedSkillItems,
   selectResumeProjects,
   MIN_PROJECTS,
