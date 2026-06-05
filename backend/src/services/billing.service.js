@@ -31,11 +31,11 @@ function digits(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
-async function saveCustomerDocument(userId, cpfCnpj) {
+async function saveBillingProfile(userId, { name, cpfCnpj, email }) {
   const normalized = digits(cpfCnpj);
   if (![11, 14].includes(normalized.length)) throw billingError("CPF/CNPJ invalido.");
-  await prisma.user.update({ where: { id: userId }, data: { cpfCnpj: normalized } });
-  return { cpfCnpjConfigured: true };
+  await prisma.user.update({ where: { id: userId }, data: { name, cpfCnpj: normalized, email } });
+  return { saved: true };
 }
 
 function couponResponse(coupon, discountCents, finalPriceCents) {
@@ -63,8 +63,11 @@ async function createCheckout(userId, { plan, couponCode }) {
     select: { id: true, name: true, email: true, phone: true, cpfCnpj: true },
   });
   if (!user) throw billingError("Usuario nao encontrado.", 404);
+  if (!user.name?.trim() || !user.email?.trim()) {
+    throw billingError("Informe nome completo e e-mail nos dados de cobranca antes de assinar.");
+  }
   if (![11, 14].includes(digits(user.cpfCnpj).length)) {
-    throw billingError("Informe CPF/CNPJ antes de assinar.");
+    throw billingError("Informe CPF/CNPJ nos dados de cobranca antes de assinar.");
   }
 
   const subscription = await subscriptionService.getOrCreateSubscription(userId);
@@ -274,7 +277,7 @@ async function processAsaasWebhook(payload, receivedToken) {
 
 module.exports = {
   createCheckout,
-  saveCustomerDocument,
+  saveBillingProfile,
   processAsaasWebhook,
   assertWebhookToken,
 };

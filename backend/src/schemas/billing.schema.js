@@ -11,10 +11,12 @@ const checkoutSchema = z.object({
 });
 
 const billingCustomerSchema = z.object({
+  name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres"),
   cpfCnpj: z.string().trim().refine((value) => {
-    const digits = value.replace(/\D/g, "");
-    return digits.length === 11 || digits.length === 14;
+    const d = value.replace(/\D/g, "");
+    return d.length === 11 || d.length === 14;
   }, "CPF/CNPJ invalido"),
+  email: z.string().trim().email("E-mail invalido"),
 });
 
 module.exports = { planSchema, paidPlanSchema, checkoutSchema, billingCustomerSchema };

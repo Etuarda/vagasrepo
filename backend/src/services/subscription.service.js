@@ -65,10 +65,11 @@ async function getPlanContext(userId, db = prisma) {
   const subscription = await getOrCreateSubscription(userId, db);
   const plan = effectivePlan(subscription);
   const rules = PLAN_RULES[plan];
-  const [{ period, used }, subprofilesUsed, trackedApplicationsUsed] = await Promise.all([
+  const [{ period, used }, subprofilesUsed, trackedApplicationsUsed, billingUser] = await Promise.all([
     matchingUsage(userId, rules, db),
     db.careerProfile.count({ where: { userId, isGlobal: false } }),
     db.job.count({ where: { userId } }),
+    db.user.findUnique({ where: { id: userId }, select: { name: true, email: true, cpfCnpj: true } }),
   ]);
 
   return {
@@ -81,6 +82,11 @@ async function getPlanContext(userId, db = prisma) {
       rules: PLAN_RULES[key],
     })),
     coupon: subscription.coupon ? { code: subscription.coupon.code } : null,
+    billingProfile: {
+      name: billingUser?.name || "",
+      email: billingUser?.email || "",
+      cpfCnpj: billingUser?.cpfCnpj || "",
+    },
     features: {
       [FEATURES.MATCHING_ANALYSIS]: true,
       [FEATURES.SHARED_MATCHED_JOBS]: rules.sharedMatchedJobs,

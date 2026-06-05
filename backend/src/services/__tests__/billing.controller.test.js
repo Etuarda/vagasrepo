@@ -3,7 +3,7 @@ jest.mock("../subscription.service", () => ({
 }));
 jest.mock("../billing.service", () => ({
   createCheckout: jest.fn(),
-  saveCustomerDocument: jest.fn(),
+  saveBillingProfile: jest.fn(),
   processAsaasWebhook: jest.fn(),
 }));
 
@@ -37,13 +37,20 @@ describe("billing controller", () => {
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
-  it("salva documento de cobranca em endpoint separado", async () => {
-    billingService.saveCustomerDocument.mockResolvedValue({ cpfCnpjConfigured: true });
+  it("salva dados de cobranca com nome, cpfCnpj e email", async () => {
+    billingService.saveBillingProfile.mockResolvedValue({ saved: true });
     const res = { json: jest.fn() };
 
-    await saveCustomer({ userId: "user", body: { cpfCnpj: "123.456.789-09" } }, res, jest.fn());
+    await saveCustomer({
+      userId: "user",
+      body: { name: "Pessoa Teste", cpfCnpj: "123.456.789-09", email: "pessoa@example.com" },
+    }, res, jest.fn());
 
-    expect(billingService.saveCustomerDocument).toHaveBeenCalledWith("user", "123.456.789-09");
+    expect(billingService.saveBillingProfile).toHaveBeenCalledWith("user", {
+      name: "Pessoa Teste",
+      cpfCnpj: "123.456.789-09",
+      email: "pessoa@example.com",
+    });
   });
 
   it("encaminha webhook publico com token para processamento", async () => {

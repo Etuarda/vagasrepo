@@ -60,12 +60,15 @@ describe("billing checkout and webhook", () => {
     asaasService.getPixQrCode.mockResolvedValue({ encodedImage: "base64img", payload: "00020126...", expirationDate: null });
   });
 
-  it("rejeita checkout Free e exige CPF/CNPJ", async () => {
+  it("rejeita checkout Free e bloqueia sem dados de cobranca completos", async () => {
     await expect(billingService.createCheckout("user", { plan: "free" }))
       .rejects.toMatchObject({ statusCode: 400 });
-    prisma.user.findUnique.mockResolvedValue({ id: "user", cpfCnpj: "" });
+    prisma.user.findUnique.mockResolvedValue({ id: "user", name: "", email: "", cpfCnpj: "" });
     await expect(billingService.createCheckout("user", { plan: "premium" }))
-      .rejects.toMatchObject({ message: "Informe CPF/CNPJ antes de assinar." });
+      .rejects.toMatchObject({ message: "Informe nome completo e e-mail nos dados de cobranca antes de assinar." });
+    prisma.user.findUnique.mockResolvedValue({ id: "user", name: "Pessoa", email: "p@example.com", cpfCnpj: "" });
+    await expect(billingService.createCheckout("user", { plan: "premium" }))
+      .rejects.toMatchObject({ message: "Informe CPF/CNPJ nos dados de cobranca antes de assinar." });
   });
 
   it("cria assinatura Asaas Pix pendente e retorna QR code", async () => {

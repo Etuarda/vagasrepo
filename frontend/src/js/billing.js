@@ -117,6 +117,27 @@ function showPixSection(data) {
   section.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
+function renderBillingProfile(context) {
+  const display = document.getElementById("billing-profile-display");
+  const nameInput = document.getElementById("billing-name");
+  const emailInput = document.getElementById("billing-email");
+  const cpfInput = document.getElementById("billing-cpf-cnpj");
+  const profile = context.billingProfile;
+  if (!profile) return;
+
+  const hasAll = profile.name && profile.email && profile.cpfCnpj;
+  if (display) {
+    display.innerHTML = hasAll
+      ? `<p><strong>Nome:</strong> ${escapeHtml(profile.name)}</p>
+         <p><strong>E-mail:</strong> ${escapeHtml(profile.email)}</p>
+         <p><strong>CPF/CNPJ:</strong> ${escapeHtml(profile.cpfCnpj)}</p>`
+      : `<p class="text-amber-700">Preencha os dados abaixo para gerar a cobranca.</p>`;
+  }
+  if (nameInput && profile.name) nameInput.value = profile.name;
+  if (emailInput && profile.email) emailInput.value = profile.email;
+  if (cpfInput && profile.cpfCnpj) cpfInput.value = profile.cpfCnpj;
+}
+
 function render() {
   const context = state.billing;
   if (!context) return;
@@ -145,6 +166,7 @@ function render() {
   if (select) select.value = context.subscription?.pendingPlan || (context.plan === "free" ? "premium" : context.plan);
   renderLimitCards(context);
   renderPlanCards(context);
+  renderBillingProfile(context);
   syncSubprofileCreation(context);
 }
 
@@ -155,13 +177,14 @@ export const billing = {
     return state.billing;
   },
 
-  async saveCustomer(cpfCnpj) {
+  async saveCustomer({ name, cpfCnpj, email }) {
     const result = await api(
       "/billing/customer",
-      { method: "PUT", body: JSON.stringify({ cpfCnpj }) },
+      { method: "PUT", body: JSON.stringify({ name, cpfCnpj, email }) },
       state.token
     );
-    ui.notify("CPF/CNPJ salvo para cobranca.");
+    await this.load();
+    ui.notify("Dados de cobranca salvos.");
     return result;
   },
 

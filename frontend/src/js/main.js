@@ -378,7 +378,11 @@ function wireEvents() {
       await runWithFeedback(
         getSubmitButton(e, billingCustomerForm),
         { busyText: "Salvando...", notice: "Salvando dados de cobranca..." },
-        () => billing.saveCustomer(document.getElementById("billing-cpf-cnpj")?.value || "")
+        () => billing.saveCustomer({
+            name: document.getElementById("billing-name")?.value || "",
+            cpfCnpj: document.getElementById("billing-cpf-cnpj")?.value || "",
+            email: document.getElementById("billing-email")?.value || "",
+          })
       );
     });
   }

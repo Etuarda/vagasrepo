@@ -34,6 +34,13 @@ function dbFor(plan, options = {}) {
     job: {
       count: jest.fn().mockResolvedValue(options.applicationsUsed || 0),
     },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({
+        name: options.userName || "Pessoa",
+        email: options.userEmail || "pessoa@example.com",
+        cpfCnpj: options.userCpfCnpj || "12345678909",
+      }),
+    },
     rules,
   };
 }
@@ -116,11 +123,14 @@ describe("subscription plans and quotas", () => {
     expect(db.$executeRaw).toHaveBeenCalledTimes(1);
   });
 
-  it("retorna contexto de billing com uso e saldo remanescente", async () => {
+  it("retorna contexto de billing com uso, saldo e perfil de cobranca", async () => {
     const context = await getPlanContext("user", dbFor(PLAN_KEYS.PREMIUM, {
       matchingUsed: 12,
       subprofilesUsed: 2,
       applicationsUsed: 4,
+      userName: "Pessoa Teste",
+      userEmail: "pessoa@example.com",
+      userCpfCnpj: "12345678909",
     }));
 
     expect(context).toEqual(expect.objectContaining({
@@ -129,8 +139,12 @@ describe("subscription plans and quotas", () => {
         matching: expect.objectContaining({ used: 12, limit: 500, remaining: 488, period: "monthly" }),
         subprofiles: expect.objectContaining({ used: 2, limit: 10, remaining: 8 }),
       }),
+      billingProfile: expect.objectContaining({
+        name: "Pessoa Teste",
+        email: "pessoa@example.com",
+        cpfCnpj: "12345678909",
+      }),
     }));
-    expect(context.usage.credits).toBeUndefined();
   });
 
   it("mantem regras Free enquanto o pagamento do plano pago esta pendente", async () => {

@@ -397,9 +397,16 @@
               <p id="billing-status" class="text-sm text-taupe mt-2">Carregando status da assinatura...</p>
             </div>
             <div id="billing-plan-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl"></div>
-            <form id="form-billing-customer" class="flex flex-col sm:flex-row gap-3 max-w-xl">
-              <input id="billing-cpf-cnpj" class="editorial-input text-sm" placeholder="CPF ou CNPJ para cobranca" required />
-              <button type="submit" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0">Salvar CPF/CNPJ</button>
+            <div class="space-y-3">
+              <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-stone">Dados de cobranca</p>
+              <p class="text-xs text-taupe">Usados apenas para identificar a cobranca no Asaas. O CPF nao e necessario para pagar o QR Code.</p>
+              <div id="billing-profile-display" class="text-sm text-taupe space-y-1"></div>
+            </div>
+            <form id="form-billing-customer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
+              <input id="billing-name" class="editorial-input text-sm" placeholder="Nome completo *" required minlength="2" />
+              <input id="billing-email" class="editorial-input text-sm" type="email" placeholder="E-mail *" required />
+              <input id="billing-cpf-cnpj" class="editorial-input text-sm" placeholder="CPF ou CNPJ *" required />
+              <button type="submit" class="border border-borderLight px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest sm:col-span-2 justify-self-start">Salvar dados de cobranca</button>
             </form>
             <form id="form-billing-checkout" class="flex flex-col sm:flex-row gap-3 max-w-3xl">
               <select id="billing-plan" class="editorial-input text-sm bg-white" aria-label="Selecionar plano">
