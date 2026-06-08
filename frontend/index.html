@@ -245,14 +245,21 @@
                 <input type="url" id="profile-github" placeholder="GitHub ou portfolio" class="editorial-input" />
                 <input type="url" id="profile-lattes" placeholder="Currículo Lattes (opcional)" class="editorial-input md:col-span-2" />
               </div>
+              <div class="flex justify-end">
+                <button type="submit" class="bg-ink text-paper px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
+                  Salvar dados pessoais
+                </button>
+              </div>
             </section>
+          </form>
+          <form id="form-profile-summary" class="space-y-8">
             <section class="border border-borderLight rounded-2xl p-4 sm:p-6 bg-white space-y-5" aria-labelledby="summary-title">
               <h3 id="summary-title" class="font-serif text-3xl">Resumo profissional.</h3>
               <textarea id="profile-summary" rows="5" maxlength="3000" placeholder="Resumo profissional (max. 3.000 caracteres)" class="editorial-input"></textarea>
               <p id="profile-summary-counter" class="text-xs text-taupe text-right">0/3000 caracteres</p>
               <div class="flex justify-end">
                 <button type="submit" class="bg-ink text-paper px-10 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.25em]">
-                  Salvar perfil
+                  Salvar resumo
                 </button>
               </div>
             </section>

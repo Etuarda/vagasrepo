@@ -423,8 +423,20 @@ function wireEvents() {
       e.preventDefault();
       await runWithFeedback(
         getSubmitButton(e, formProfile),
-        { busyText: "Salvando...", notice: "Salvando perfil profissional..." },
+        { busyText: "Salvando...", notice: "Salvando dados pessoais..." },
         () => career.saveProfile()
+      );
+    });
+  }
+
+  const formProfileSummary = document.getElementById("form-profile-summary");
+  if (formProfileSummary) {
+    formProfileSummary.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await runWithFeedback(
+        getSubmitButton(e, formProfileSummary),
+        { busyText: "Salvando...", notice: "Salvando resumo profissional..." },
+        () => career.saveProfile({ includeSummary: true })
       );
     });
   }

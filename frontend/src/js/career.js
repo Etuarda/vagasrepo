@@ -989,7 +989,7 @@ export const career = {
     }
   },
 
-  async saveProfile() {
+  async saveProfile({ includeSummary = false } = {}) {
     const payload = {
       profileId: state.activeProfileId,
       profileName: document.getElementById("profile-profile-name")?.value || "",
@@ -1003,12 +1003,12 @@ export const career = {
       github: document.getElementById("profile-github")?.value || "",
       lattes: document.getElementById("profile-lattes")?.value || "",
       objective: document.getElementById("profile-objective")?.value || "",
-      summary: document.getElementById("profile-summary")?.value || "",
     };
+    if (includeSummary) payload.summary = document.getElementById("profile-summary")?.value || "";
     const out = await api("/profile", { method: "PUT", body: JSON.stringify(payload) }, state.token);
     replaceEditedProfile(out.user);
     await career.loadProfiles();
-    ui.notify("Perfil profissional atualizado.");
+    ui.notify(includeSummary ? "Resumo profissional atualizado." : "Dados pessoais atualizados.");
   },
 
   async addSkill(value) {
