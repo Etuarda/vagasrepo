@@ -241,7 +241,6 @@ function renderSubprofileAllocation() {
     return;
   }
   const groups = [
-    ["skillIds", "Habilidades", "skills", (item) => item.name],
     ["projectIds", "Projetos", "projects", (item) => item.title],
     ["experienceIds", "Experiências", "experiences", (item) => `${item.role} | ${item.company}`],
     ["educationIds", "Formação", "educations", (item) => `${item.title} | ${item.institution}`],

@@ -489,7 +489,6 @@ async function updateSubprofileAllocation(userId, data) {
         linkedin: catalog.linkedin,
         github: catalog.github,
         lattes: catalog.lattes,
-        summary: catalog.summary,
         objective: catalog.objective,
       },
     }));

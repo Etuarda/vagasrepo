@@ -476,7 +476,6 @@ function wireEvents() {
       e.preventDefault();
       const selected = (field) => [...formAllocation.querySelectorAll(`[name="allocation-${field}"]:checked`)].map((item) => item.value);
       const payload = {
-        skillIds: selected("skillIds"),
         projectIds: selected("projectIds"),
         experienceIds: selected("experienceIds"),
         courseIds: selected("courseIds"),
