@@ -33,7 +33,7 @@ describe("password reset e-mail delivery", () => {
       expect.objectContaining({
         from: "Vagas.io <recuperacao@example.com>",
         to: ["pessoa@example.com"],
-        subject: "Recuperacao de senha - Vagas.io",
+        subject: "Redefinição de senha - Vagason",
       }),
       { idempotencyKey: resetEmailIdempotencyKey("raw-token") }
     );

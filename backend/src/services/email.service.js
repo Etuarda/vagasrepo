@@ -59,7 +59,7 @@ async function sendPasswordResetEmail(user, token) {
     {
       from: env.EMAIL_FROM,
       to: [user.email],
-      subject: "Recuperacao de senha - Vagas.io",
+      subject: "Redefinição de senha - Vagason",
       text: `Ola, ${user.name}. Use este link para criar uma nova senha. O link expira em 30 minutos: ${link}`,
       html: `<p>Ola, ${safeName}.</p><p>Use o link abaixo para criar uma nova senha. Ele expira em 30 minutos.</p><p><a href="${safeLink}">Redefinir senha</a></p>`,
     },
@@ -82,7 +82,7 @@ async function sendRefundConfirmationEmail(user) {
   await getResendClient().emails.send({
     from: env.EMAIL_FROM,
     to: [user.email],
-    subject: "Solicitacao de estorno recebida - Vagas.io",
+    subject: "Solicitação de estorno recebida - Vagason",
     text: `Ola, ${user.name}. Recebemos sua solicitacao de estorno. O valor sera estornado em ate 7 dias uteis, conforme o seu banco.`,
     html: `<p>Ola, ${safeName}.</p><p>Recebemos sua solicitacao de estorno. O valor sera estornado em ate 7 dias uteis, conforme o processamento do seu banco.</p><p>Se tiver duvidas, entre em contato pelo suporte.</p>`,
   });
@@ -105,7 +105,7 @@ async function sendSupportEmail({ userName, userEmail, subject, message }) {
     from: env.EMAIL_FROM,
     to: [SUPPORT_EMAIL],
     replyTo: userEmail,
-    subject: `[Suporte Vagas.io] ${subject}`,
+    subject: `[Suporte Vagason] ${subject}`,
     text: `De: ${userName} <${userEmail}>\nAssunto: ${subject}\n\n${message}`,
     html: `<p><strong>De:</strong> ${safeName} &lt;${safeEmail}&gt;</p><p><strong>Assunto:</strong> ${safeSubject}</p><hr><p>${safeMessage}</p>`,
   });
