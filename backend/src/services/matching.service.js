@@ -251,7 +251,6 @@ function buildResultPayload({ result, profile, targetTitle, metadata, savedResum
     globalAnalysisStatus,
     analysisStatus,
     linkVaga: metadata.linkVaga || metadata.jobUrl || "",
-    warnings: (result.overallScore || 0) < 40 ? (result.warnings || []) : [],
     suggestedSummary: profile.summary,
     semanticFeedback: analysisStatus === "complete" ? buildRecommendation(result) : "Analise incompleta. Complete o perfil para obter uma recomendacao precisa.",
     id: savedResume?.id || jobAnalysis.id,
