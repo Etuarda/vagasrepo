@@ -36,9 +36,9 @@ const baseSubscription = {
   pendingPlan: "premium",
   providerCustomerId: null,
   couponId: null,
-  originalPriceCents: 2990,
+  originalPriceCents: 1490,
   discountCents: 0,
-  finalPriceCents: 2990,
+  finalPriceCents: 1490,
 };
 
 describe("billing checkout and webhook", () => {
@@ -53,7 +53,7 @@ describe("billing checkout and webhook", () => {
     });
     subscriptionService.getOrCreateSubscription.mockResolvedValue({ ...baseSubscription, pendingPlan: null });
     couponService.validateCouponForCheckout.mockResolvedValue(null);
-    couponService.calculateDiscount.mockReturnValue({ discountCents: 0, finalPriceCents: 2990 });
+    couponService.calculateDiscount.mockReturnValue({ discountCents: 0, finalPriceCents: 1490 });
     asaasService.createCustomer.mockResolvedValue({ id: "customer" });
     asaasService.createSubscription.mockResolvedValue({ id: "asaas-sub" });
     asaasService.getSubscriptionPayments.mockResolvedValue({ data: [{ id: "payment-1" }] });
@@ -75,7 +75,7 @@ describe("billing checkout and webhook", () => {
     const result = await billingService.createCheckout("user", { plan: "premium" });
 
     expect(asaasService.createSubscription).toHaveBeenCalledWith(expect.objectContaining({
-      value: 29.9,
+      value: 14.9,
       plan: "premium",
     }));
     expect(asaasService.getPixQrCode).toHaveBeenCalledWith("payment-1");
@@ -89,7 +89,7 @@ describe("billing checkout and webhook", () => {
 
   it("bloqueia cupom once em assinatura recorrente paga", async () => {
     couponService.validateCouponForCheckout.mockResolvedValue({ id: "coupon", code: "ONCE", duration: "once" });
-    couponService.calculateDiscount.mockReturnValue({ discountCents: 100, finalPriceCents: 2890 });
+    couponService.calculateDiscount.mockReturnValue({ discountCents: 100, finalPriceCents: 1390 });
 
     await expect(billingService.createCheckout("user", { plan: "premium", couponCode: "ONCE" }))
       .rejects.toMatchObject({ message: "Cupom de uso unico ainda nao esta disponivel para assinaturas recorrentes." });
@@ -99,7 +99,7 @@ describe("billing checkout and webhook", () => {
   it("ativa cupom integral sem cobranca e registra resgate", async () => {
     const coupon = { id: "coupon", code: "FULL", duration: "once" };
     couponService.validateCouponForCheckout.mockResolvedValue(coupon);
-    couponService.calculateDiscount.mockReturnValue({ discountCents: 2990, finalPriceCents: 0 });
+    couponService.calculateDiscount.mockReturnValue({ discountCents: 1490, finalPriceCents: 0 });
     const tx = { subscription: { update: jest.fn().mockResolvedValue({ id: "subscription", status: "active" }) } };
     prisma.$transaction.mockImplementation((operation) => operation(tx));
 

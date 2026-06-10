@@ -4,7 +4,7 @@ const { decrypt } = require("../lib/crypto");
 
 const CREDIT_PACKAGE = Object.freeze({
   credits: 500,
-  priceCents: 2990,
+  priceCents: 1490,
   label: "500 matchings avulsos",
 });
 
