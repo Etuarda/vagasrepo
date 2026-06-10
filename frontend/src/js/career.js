@@ -666,9 +666,9 @@ function renderMatchResult(result) {
     </section>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       ${block("Skills aderentes", result.matchedSkills || [], true)}
-      ${block("Skills ausentes", result.missingSkills || [])}
+      ${block("Lacunas de desenvolvimento", result.missingSkills || [])}
       ${block("Keywords reconhecidas", result.jobKeywords || [], true)}
-      ${block("Avisos", result.warnings || [])}
+      ${block("Observacoes", result.warnings || [])}
     </div>
     <section class="editorial-card rounded-2xl sm:rounded-3xl p-4 sm:p-8">
       <h4 class="font-serif text-3xl mb-4">Projetos mais fortes.</h4>
@@ -684,7 +684,7 @@ function renderMatchResult(result) {
               <p class="text-sm text-taupe mt-2">${escapeHtml(item.reason)}</p>
             </article>
           `)
-          .join("") || `<p class="text-sm text-taupe">Nenhum projeto aderente suficiente foi encontrado.</p>`}
+          .join("") || `<p class="text-sm text-taupe">Nenhum projeto selecionado para esta analise. Adicionar projetos ao perfil pode fortalecer a aderencia.</p>`}
       </div>
     </section>
   `;

@@ -166,11 +166,11 @@ function evaluateJobMatch(input = {}) {
     riskFlags,
     warnings: riskFlags.map((flag) => ({
       no_job_keywords_detected: "Nenhuma keyword tecnica reconhecida na vaga; revise a descricao informada.",
-      insufficient_matched_skills: `Foram encontradas apenas ${matchedSkills.length} habilidades compativeis com a vaga.`,
-      no_structured_projects: "Nao ha projetos estruturados suficientes para gerar um curriculo otimizado com qualidade.",
-      no_compatible_projects: "Nenhum projeto compatível com a vaga foi encontrado.",
-      insufficient_learning_items: `Foram encontrados apenas ${learningItems.length} cursos ou certificações compatíveis com a vaga.`,
-      invalid_projects_ignored: "Projetos sem estrutura valida foram ignorados; revise os dados cadastrados no perfil.",
+      insufficient_matched_skills: `${matchedSkills.length} habilidades compativeis identificadas; enriquecer o perfil com habilidades relacionadas pode ampliar a aderencia.`,
+      no_structured_projects: "Projetos com detalhes tecnicos contribuem para um curriculo mais robusto; considere enriquecer os projetos cadastrados.",
+      no_compatible_projects: "Nenhum projeto compativel identificado; adicionar ou detalhar projetos pode ampliar a aderencia a esta vaga.",
+      insufficient_learning_items: `${learningItems.length} curso${learningItems.length !== 1 ? "s" : ""} ou certificacao${learningItems.length !== 1 ? "s" : ""} compativel${learningItems.length !== 1 ? "is" : ""} identificado${learningItems.length !== 1 ? "s" : ""}; ampliar a formacao nesta area pode fortalecer o perfil.`,
+      invalid_projects_ignored: "Alguns projetos foram desconsiderados por falta de informacoes tecnicas; revise o perfil para melhorar a analise.",
     }[flag])).filter(Boolean),
   };
 }

@@ -105,7 +105,7 @@ describe("job match evaluator", () => {
     });
 
     expect(result.riskFlags).toContain("insufficient_matched_skills");
-    expect(result.warnings.join(" ")).toContain("habilidades compativeis");
+    expect(result.warnings.join(" ")).toContain("habilidades compativeis identificadas");
   });
 
   it("cursos e certificacoes complementam sem inflar artificialmente o score", () => {

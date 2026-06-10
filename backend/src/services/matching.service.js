@@ -23,6 +23,43 @@ function inferSeniority(text) {
   return inferJobSeniority(text);
 }
 
+function buildRecommendation(result) {
+  const score = Number(result.overallScore || 0);
+  const matched = (result.matchedSkills || []).length;
+  const total = matched + (result.missingSkills || []).length;
+  const attends = `Voce atende ${matched} de ${total} requisito${total !== 1 ? "s" : ""} analisado${total !== 1 ? "s" : ""}.`;
+
+  if (score >= 80) return [
+    "Recomendacao: Vale a candidatura.",
+    attends,
+    "Seu perfil apresenta forte aderencia a vaga. Suas habilidades, projetos e formacoes demonstram compatibilidade com a maior parte dos requisitos solicitados.",
+  ].join("\n\n");
+
+  if (score >= 60) return [
+    "Recomendacao: Vale a candidatura.",
+    attends,
+    "Seu perfil possui boa compatibilidade com a vaga. Suas habilidades e projetos estao alinhados a requisitos importantes, e as lacunas identificadas podem ser tratadas como pontos de desenvolvimento.",
+  ].join("\n\n");
+
+  if (score >= 40) return [
+    "Recomendacao: Candidatura possivel.",
+    attends,
+    "Seu perfil possui aderencia parcial com a vaga. Existem pontos compativeis, mas tambem ha requisitos relevantes que ainda nao aparecem no seu perfil cadastrado.\n\nCaso a vaga esteja alinhada ao seu objetivo profissional, a candidatura pode ser valida, especialmente se o curriculo destacar melhor seus projetos, cursos e habilidades relacionadas.",
+  ].join("\n\n");
+
+  if (score >= 20) return [
+    "Recomendacao: Candidatura opcional.",
+    attends,
+    "Foram identificados alguns pontos de compatibilidade, porem a vaga exige requisitos que ainda nao estao bem representados no seu perfil.\n\nAntes de investir tempo nessa candidatura, avalie se ela esta alinhada ao seu momento profissional. Esta vaga tambem pode servir como referencia para direcionar seus proximos estudos e projetos.",
+  ].join("\n\n");
+
+  return [
+    "Recomendacao: Priorize outras oportunidades neste momento.",
+    attends,
+    "A vaga exige conhecimentos e experiencias que ainda nao aparecem de forma significativa no seu perfil cadastrado.\n\nPode ser mais estrategico buscar vagas mais alinhadas ao seu momento atual e usar esta analise para identificar quais habilidades, cursos ou projetos desenvolver.",
+  ].join("\n\n");
+}
+
 function getMissingResumeFields(profile) {
   const missing = [];
   if (!String(profile.name || "").trim() || !String(profile.emailContact || profile.phone || "").trim()) {
@@ -215,14 +252,14 @@ function buildResultPayload({ result, profile, targetTitle, metadata, savedResum
     analysisStatus,
     linkVaga: metadata.linkVaga || metadata.jobUrl || "",
     suggestedSummary: profile.summary,
-    semanticFeedback: `Matching deterministico: score por habilidades 70% e projetos 30%. Senioridade nao participa do calculo ATS. Perfil usado: ${profile.profileName}.`,
+    semanticFeedback: analysisStatus === "complete" ? buildRecommendation(result) : "Analise incompleta. Complete o perfil para obter uma recomendacao precisa.",
     id: savedResume?.id || jobAnalysis.id,
     analysisId: jobAnalysis.id,
     status: jobAnalysis.status,
     generatedPdfAvailable: Boolean(savedResume?.generatedPdf || savedResume?.generatedFileName),
     generatedFileName: savedResume?.generatedFileName,
     message: analysisStatus === "complete"
-      ? `Curriculo gerado com ${result.overallScore}% de aderencia. Status: ainda nao aplicado. Revise antes de enviar.`
+      ? "Curriculo otimizado gerado. Revise antes de enviar."
       : "Analise salva como incompleta. Complete o perfil antes de confiar no percentual.",
   };
 }

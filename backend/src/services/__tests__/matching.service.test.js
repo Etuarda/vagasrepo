@@ -41,8 +41,8 @@ describe("deterministic matching", () => {
     }, "Vaga backend Node.js e APIs REST.");
 
     expect(result.selectedProjects).toEqual([]);
-    expect(result.warnings.join(" ")).toContain("Projetos sem estrutura valida");
-    expect(result.warnings.join(" ")).toContain("Nao ha projetos estruturados");
+    expect(result.warnings.join(" ")).toContain("Alguns projetos foram desconsiderados");
+    expect(result.warnings.join(" ")).toContain("Projetos com detalhes tecnicos");
   });
 
   it("bloqueia geracao se dados manuais minimos estiverem incompletos", () => {
