@@ -5,6 +5,7 @@ describe("CORS origin configuration", () => {
     const allows = createOriginMatcher(HOSTED_FRONTEND_ORIGINS);
 
     expect(allows("https://onvagas.com.br")).toBe(true);
+    expect(allows("https://www.onvagas.com.br")).toBe(true);
     expect(allows("https://gestaodevagas.vercel.app")).toBe(true);
     expect(allows("https://gestaodevagas-ntp28778w-eduardas-projects-9a8623c8.vercel.app")).toBe(true);
     expect(allows("https://outro-projeto-ntp28778w-eduardas-projects-9a8623c8.vercel.app")).toBe(false);

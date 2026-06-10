@@ -4,6 +4,7 @@ function escapeRegExp(value) {
 
 const HOSTED_FRONTEND_ORIGINS = Object.freeze([
   "https://onvagas.com.br",
+  "https://www.onvagas.com.br",
   "https://gestaodevagas.vercel.app",
   "https://gestaodevagas-*-eduardas-projects-9a8623c8.vercel.app",
 ]);

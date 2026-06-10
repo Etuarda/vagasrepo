@@ -46,6 +46,8 @@ const devFallbackOrigins =
 const origins = [...new Set([...HOSTED_FRONTEND_ORIGINS, ...allowedOrigins, ...devFallbackOrigins])];
 const isAllowedOrigin = createOriginMatcher(origins);
 
+console.log(JSON.stringify({ event: "cors_init", origins, CORS_ORIGIN: env.CORS_ORIGIN ?? null }));
+
 const corsOptions = {
   origin: (origin, callback) => {
     // permite chamadas sem origin (ex: Postman, curl, Render healthcheck)
