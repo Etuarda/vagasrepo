@@ -142,7 +142,7 @@ export const jobs = {
     const wrap = (text) => doc.splitTextToSize(safe(text), maxWidth);
 
     // Header
-    const title = "Vagas.io — Exportação de Candidaturas";
+    const title = "OnVagas — Exportação de Candidaturas";
     const subtitle = periodLabelFromFilters(state.filters);
     const generatedAt = `Gerado em: ${formatPtBRDateTime(new Date())}`;
 
