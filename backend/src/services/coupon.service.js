@@ -67,7 +67,11 @@ function assertAllowedFullDiscount(coupon, priceCents, finalPriceCents) {
   if (finalPriceCents !== 0) return;
   const grantsFullDiscount = (coupon?.type === "percentage" && coupon.value >= 100)
     || (coupon?.type === "fixed" && coupon.value >= priceCents);
-  if (!grantsFullDiscount || !coupon.maxRedemptions || !coupon.expiresAt) {
+  if (!grantsFullDiscount) {
+    throw couponError("Cupom de 100% requer limite de usos e data de expiracao.");
+  }
+  // Cupons trial (com trialDays) nao precisam de maxRedemptions nem expiresAt
+  if (!coupon.trialDays && (!coupon.maxRedemptions || !coupon.expiresAt)) {
     throw couponError("Cupom de 100% requer limite de usos e data de expiracao.");
   }
 }

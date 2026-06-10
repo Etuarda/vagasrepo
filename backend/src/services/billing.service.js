@@ -30,6 +30,12 @@ function addMonth(date) {
   return end;
 }
 
+function addDays(date, days) {
+  const end = new Date(date);
+  end.setUTCDate(end.getUTCDate() + days);
+  return end;
+}
+
 function digits(value) {
   return String(value || "").replace(/\D/g, "");
 }
@@ -100,7 +106,7 @@ async function createCheckout(userId, { plan, couponCode }) {
           discountCents,
           finalPriceCents,
           currentPeriodStart: now,
-          currentPeriodEnd: addMonth(now),
+          currentPeriodEnd: coupon.trialDays ? addDays(now, coupon.trialDays) : addMonth(now),
         },
       });
       await couponService.redeemCoupon({

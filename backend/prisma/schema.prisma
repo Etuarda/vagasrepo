@@ -145,6 +145,7 @@ model Coupon {
   maxRedemptions        Int?
   redeemedCount         Int       @default(0)
   maxRedemptionsPerUser Int?      @default(1)
+  trialDays             Int?
   startsAt              DateTime?
   expiresAt             DateTime?
   active                Boolean   @default(true)
