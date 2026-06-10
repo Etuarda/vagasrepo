@@ -12,7 +12,7 @@ describe("login session delivery", () => {
       user: { name: "Pessoa", email: "pessoa@example.com" },
     });
     const req = {
-      headers: { origin: "https://gestaodevagas.vercel.app" },
+      headers: { origin: "https://onvagas.com.br" },
       body: { email: "pessoa@example.com", password: "senha-segura-123" },
     };
     const res = { setHeader: jest.fn(), json: jest.fn() };

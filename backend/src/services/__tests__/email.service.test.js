@@ -6,10 +6,10 @@ function loadService(config = {}) {
     Resend: jest.fn(() => ({ emails: { send: sendMock } })),
   }));
   jest.doMock("../../config/env", () => ({
-    FRONTEND_URL: "https://gestaodevagas.vercel.app",
+    FRONTEND_URL: "https://onvagas.com.br",
     NODE_ENV: "production",
     RESEND_API_KEY: "re_test_key",
-    EMAIL_FROM: "Vagas.io <recuperacao@example.com>",
+    EMAIL_FROM: "Vagason <no-reply@onvagas.com.br>",
     ...config,
   }));
   return require("../email.service");
@@ -31,7 +31,7 @@ describe("password reset e-mail delivery", () => {
 
     expect(sendMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: "Vagas.io <recuperacao@example.com>",
+        from: "Vagason <no-reply@onvagas.com.br>",
         to: ["pessoa@example.com"],
         subject: "Redefinição de senha - Vagason",
       }),
@@ -55,7 +55,7 @@ describe("password reset e-mail delivery", () => {
       { name: "Pessoa", email: "pessoa@example.com" },
       "local-token"
     )).resolves.toEqual({
-      previewUrl: "https://gestaodevagas.vercel.app/?resetToken=local-token",
+      previewUrl: "https://onvagas.com.br/?resetToken=local-token",
     });
     expect(sendMock).not.toHaveBeenCalled();
   });
