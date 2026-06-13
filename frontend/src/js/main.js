@@ -1025,6 +1025,12 @@ function wireEvents() {
 document.addEventListener("DOMContentLoaded", async () => {
   safeInitVlibras();
 
+  // Fallback: se o script defer ainda nao terminou quando DOMContentLoaded disparou
+  if (!__vlibrasStarted) {
+    const vlibrasScript = document.getElementById("vlibras-script");
+    if (vlibrasScript) vlibrasScript.addEventListener("load", safeInitVlibras);
+  }
+
   if (localStorage.getItem("vagas_contrast") === "true") ui.toggleContrast();
 
   wireEvents();
